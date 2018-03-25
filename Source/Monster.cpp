@@ -872,7 +872,7 @@ bool CMonsterWeenie::MergeItem(DWORD sourceItemId, DWORD targetItemId, DWORD amo
 		}
 
 		DWORD targetCurrentAmount = targetItem->InqIntQuality(STACK_SIZE_INT, 1);
-		DWORD targetMaxStackSize = targetItem->InqIntQuality(MAX_STACK_SIZE_INT, 0);
+		DWORD targetMaxStackSize = targetItem->InqIntQuality(MAX_STACK_SIZE_INT, 1);
 
 		int maxTransferAmount = targetMaxStackSize - targetCurrentAmount;
 		if (maxTransferAmount <= 0)

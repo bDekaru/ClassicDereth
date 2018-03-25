@@ -5384,7 +5384,7 @@ void CWeenieObject::SimulateGiveObject(class CContainerWeenie *target_container,
 
 	if (amount > 1)
 	{
-		int maxStackSize = object_weenie->m_Qualities.GetInt(MAX_STACK_SIZE_INT, 0);
+		int maxStackSize = object_weenie->m_Qualities.GetInt(MAX_STACK_SIZE_INT, 1);
 		if (amount <= maxStackSize)
 			object_weenie->SetStackSize(amount);
 		else

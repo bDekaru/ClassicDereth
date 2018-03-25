@@ -632,7 +632,7 @@ bool CContainerWeenie::SpawnInContainer(DWORD wcid, int amount, int ptid, float 
 
 	if (amount > 1)
 	{
-		int maxStackSize = item->m_Qualities.GetInt(MAX_STACK_SIZE_INT, 0);
+		int maxStackSize = item->m_Qualities.GetInt(MAX_STACK_SIZE_INT, 1);
 		if (amount <= maxStackSize)
 			item->SetStackSize(amount);
 		else
@@ -1434,8 +1434,13 @@ DWORD CContainerWeenie::ConsumeCoin(int amountToConsume)
 	if (amountToConsume < 1)
 		return 0;
 
-	if (RecalculateCoinAmount() < amountToConsume) //force recalculate our coin amount and check so we don't even try to consume if we don't have enough.
-		return 0;
+	if (AsPlayer()) //we don't need to recalculate this if we're a subcontainer
+	{
+		if (RecalculateCoinAmount() < amountToConsume) //force recalculate our coin amount and check so we don't even try to consume if we don't have enough.
+			return 0;
+	}
+
+	std::list<CWeenieObject *> removeList;
 
 	DWORD amountConsumed = 0;
 	for (auto item : m_Items)
@@ -1445,7 +1450,7 @@ DWORD CContainerWeenie::ConsumeCoin(int amountToConsume)
 			int stackSize = item->InqIntQuality(STACK_SIZE_INT, 1, true);
 			if (stackSize <= amountToConsume)
 			{
-				item->Remove();
+				removeList.push_back(item);
 				amountToConsume -= stackSize;
 				amountConsumed += stackSize;
 			}
@@ -1453,26 +1458,29 @@ DWORD CContainerWeenie::ConsumeCoin(int amountToConsume)
 			{
 				item->SetStackSize(stackSize - amountToConsume);
 				amountConsumed += amountToConsume;
-				RecalculateCoinAmount();
-				return amountConsumed;
+				break;
 			}
 		}
 	}
 
-	for (auto pack : m_Packs)
-	{
-		DWORD amountFromPack = pack->ConsumeCoin(amountToConsume);
-		amountToConsume -= amountFromPack;
-		amountConsumed += amountFromPack;
+	for (auto item : removeList)
+		item->Remove();
 
-		if (amountToConsume <= 0)
+	if (amountToConsume <= 0)
+	{
+		for (auto pack : m_Packs)
 		{
-			RecalculateCoinAmount();
-			return amountConsumed;
+			DWORD amountFromPack = pack->ConsumeCoin(amountToConsume);
+			amountToConsume -= amountFromPack;
+			amountConsumed += amountFromPack;
+
+			if (amountToConsume <= 0)
+				break;
 		}
 	}
 
-	RecalculateCoinAmount();
+	if(AsPlayer())
+		RecalculateCoinAmount();
 	return amountConsumed;
 }
 

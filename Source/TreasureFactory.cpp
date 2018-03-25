@@ -874,8 +874,8 @@ CWeenieObject *CreateFromEntry(PackableList<TreasureEntry>::iterator entry , uns
 	{
 		if (entry->_amount > 1)
 		{
-			int maxStackSize = newItem->InqIntQuality(MAX_STACK_SIZE_INT, 0);
-			if (maxStackSize)
+			int maxStackSize = newItem->InqIntQuality(MAX_STACK_SIZE_INT, 1);
+			if (maxStackSize > 1)
 			{
 				double minAmount = (double)entry->_amount * entry->_amountVariance;
 				int modifiedAmount = round(Random::RollDice(minAmount, entry->_amount));
