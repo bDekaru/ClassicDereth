@@ -1198,9 +1198,6 @@
     <Image Include="Resource\client.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="Resource\logo.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource\PhatAC.rc">

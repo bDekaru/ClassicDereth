@@ -680,7 +680,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 
 				weenie->SetInitialPosition(startPos);
 				weenie->m_Qualities.SetPosition(SANCTUARY_POSITION, startPos);
-				weenie->m_Qualities.SetInt(AVAILABLE_SKILL_CREDITS_INT, 56 - max(0, min(56, numCreditsUsed)));
+				weenie->m_Qualities.SetInt(AVAILABLE_SKILL_CREDITS_INT, 50 - max(0, min(50, numCreditsUsed)));
 				weenie->m_Qualities.SetInt(CONTAINERS_CAPACITY_INT, 7);
 
 				weenie->SetMaxVitals(false);

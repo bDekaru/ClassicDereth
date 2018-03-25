@@ -844,7 +844,6 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Resource\client.ico" />
-    <Image Include="Resource\logo.bmp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource\PhatAC.rc" />
