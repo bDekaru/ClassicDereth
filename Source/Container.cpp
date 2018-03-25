@@ -1466,7 +1466,7 @@ DWORD CContainerWeenie::ConsumeCoin(int amountToConsume)
 	for (auto item : removeList)
 		item->Remove();
 
-	if (amountToConsume <= 0)
+	if (amountToConsume > 0)
 	{
 		for (auto pack : m_Packs)
 		{
