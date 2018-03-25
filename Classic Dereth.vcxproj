@@ -1,0 +1,855 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug - Quickstart|x64">
+      <Configuration>Debug - Quickstart</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug DLL|x64">
+      <Configuration>Debug DLL</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release - Public|x64">
+      <Configuration>Release - Public</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <ProjectName>Classic Dereth</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - Public|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - Public|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - Quickstart|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - Quickstart|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release - Public|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release - Public|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug - Quickstart|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug - Quickstart|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>14.0.25431.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>PhatAC - Debug</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>PhatACEngine</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>PhatAC - Classic Dereth - Debug</TargetName>
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>PhatAC - Classic Dereth</TargetName>
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - Quickstart|Win32'">
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>PhatAC - Debug</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - Quickstart|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>PhatAC - Classic Dereth - Debug</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <TargetName>PhatAC</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - Public|Win32'">
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <TargetName>PhatAC</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <TargetName>PhatAC - Classic Dereth</TargetName>
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - Public|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <TargetName>PhatAC - Classic Dereth</TargetName>
+    <OutDir>$(SolutionDir)\Bin\</OutDir>
+    <IntDir>Intermediate\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;__BUILDNAME__=DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level2</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./;./PhatSDK;./PhatSDK/Support;</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlib.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)PhatAC.pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;__BUILDNAME__=DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level2</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./;./PhatSDK;./PhatSDK/Support;</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlib.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)PhatACEngine.pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;__BUILDNAME__=DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level2</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zm200 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlibstatDebug.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;__BUILDNAME__=DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level2</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zm200 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlibstatDebug.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)" </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - Quickstart|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;QUICKSTART;_WINDOWS;__BUILDNAME__=DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level2</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./;./PhatSDK;./PhatSDK/Support;</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlib.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)PhatAC.pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - Quickstart|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;QUICKSTART;_WINDOWS;__BUILDNAME__=DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level2</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zm200 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlibstatDebug.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>Full</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;__BUILDNAME__=RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./;./PhatSDK;./PhatSDK/Support;</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlib.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+      <Profile>true</Profile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - Public|Win32'">
+    <ClCompile>
+      <Optimization>Full</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;__BUILDNAME__=RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./;./PhatSDK;./PhatSDK/Support;</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlib.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+      <Profile>true</Profile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <Optimization>Full</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;__BUILDNAME__=RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <AdditionalOptions>/Zm200 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlibstat.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+      <Profile>true</Profile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - Public|x64'">
+    <ClCompile>
+      <Optimization>Full</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PreprocessorDefinitions>PUBLIC_BUILD;WIN32;NDEBUG;_WINDOWS;__BUILDNAME__=RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <AdditionalOptions>/Zm200 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlibstat.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>libc.lib</IgnoreSpecificDefaultLibraries>
+      <Profile>true</Profile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\BindStone.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\CombatFormulas.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\Random.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\RandomRange.cpp" />
+    <ClCompile Include="Source\TreasureFactory.cpp" />
+    <ClCompile Include="Source\AllegianceManager.cpp" />
+    <ClCompile Include="Source\Ammunition.cpp" />
+    <ClCompile Include="Source\Animate.cpp" />
+    <ClCompile Include="Source\AttackManager.cpp" />
+    <ClCompile Include="Source\AttributeTransferDevice.cpp" />
+    <ClCompile Include="Source\Book.cpp" />
+    <ClCompile Include="Source\Caster.cpp" />
+    <ClCompile Include="Source\Chest.cpp" />
+    <ClCompile Include="Source\Clothing.cpp" />
+    <ClCompile Include="Source\Config.cpp" />
+    <ClCompile Include="Source\Container.cpp" />
+    <ClCompile Include="Source\Corpse.cpp" />
+    <ClCompile Include="Source\Database2.cpp" />
+    <ClCompile Include="Source\DatabaseIO.cpp" />
+    <ClCompile Include="Source\EmoteManager.cpp" />
+    <ClCompile Include="Source\GameEventManager.cpp" />
+    <ClCompile Include="Source\Gem.cpp" />
+    <ClCompile Include="Source\Healer.cpp" />
+    <ClCompile Include="Source\House.cpp" />
+    <ClCompile Include="Source\InferredCellData.cpp" />
+    <ClCompile Include="Source\InferredPortalData.cpp" />
+    <ClCompile Include="Source\FellowshipManager.cpp" />
+    <ClCompile Include="Source\Food.cpp" />
+    <ClCompile Include="Source\GameMode.cpp" />
+    <ClCompile Include="Source\HotSpot.cpp" />
+    <ClCompile Include="Source\Key.cpp" />
+    <ClCompile Include="Source\Lifestone.cpp" />
+    <ClCompile Include="Source\Lockpick.cpp" />
+    <ClCompile Include="Source\Logging.cpp" />
+    <ClCompile Include="Source\Client.cpp" />
+    <ClCompile Include="Source\ClientCommands.cpp" />
+    <ClCompile Include="Source\ClientEvents.cpp" />
+    <ClCompile Include="Source\ChatMsgs.cpp" />
+    <ClCompile Include="Source\crc.cpp" />
+    <ClCompile Include="Source\crcwheel.cpp" />
+    <ClCompile Include="Source\Database.cpp" />
+    <ClCompile Include="Source\Door.cpp" />
+    <ClCompile Include="Source\FragStack.cpp" />
+    <ClCompile Include="Source\Globals.cpp" />
+    <ClCompile Include="Source\MeleeWeapon.cpp" />
+    <ClCompile Include="Source\Missile.cpp" />
+    <ClCompile Include="Source\MissileLauncher.cpp" />
+    <ClCompile Include="Source\Monster.cpp" />
+    <ClCompile Include="Source\MonsterAI.cpp" />
+    <ClCompile Include="Source\Moves.cpp" />
+    <ClCompile Include="Source\Network.cpp" />
+    <ClCompile Include="Source\ObjectIDGen.cpp" />
+    <ClCompile Include="Source\ObjectMsgs.cpp" />
+    <ClCompile Include="Source\PacketController.cpp" />
+    <ClCompile Include="Source\PhatAC.cpp" />
+    <ClCompile Include="Source\PhatSDKImpl.cpp" />
+    <ClCompile Include="Source\PhatSDK\ACCharGenData.cpp" />
+    <ClCompile Include="Source\PhatSDK\ACCharGenResult.cpp" />
+    <ClCompile Include="Source\PhatSDK\AllegianceProfile.cpp" />
+    <ClCompile Include="Source\PhatSDK\Animation.cpp" />
+    <ClCompile Include="Source\PhatSDK\AnimHooks.cpp" />
+    <ClCompile Include="Source\PhatSDK\Appraisal.cpp" />
+    <ClCompile Include="Source\PhatSDK\BSPData.cpp" />
+    <ClCompile Include="Source\PhatSDK\BuildingObj.cpp" />
+    <ClCompile Include="Source\PhatSDK\ChildList.cpp" />
+    <ClCompile Include="Source\PhatSDK\ClothingTable.cpp" />
+    <ClCompile Include="Source\PhatSDK\CombatSystem.cpp" />
+    <ClCompile Include="Source\PhatSDK\Housing.cpp" />
+    <ClCompile Include="Source\PhatSDK\MutationFilter.cpp" />
+    <ClCompile Include="Source\PhatSDK\PlayerModule.cpp" />
+    <ClCompile Include="Source\PhatSDK\QuestDefDB.cpp" />
+    <ClCompile Include="Source\PhatSDK\EnvCell.cpp" />
+    <ClCompile Include="Source\PhatSDK\Environment.cpp" />
+    <ClCompile Include="Source\PhatSDK\ExperienceTable.cpp" />
+    <ClCompile Include="Source\PhatSDK\Frame.cpp" />
+    <ClCompile Include="Source\PhatSDK\GameSky.cpp" />
+    <ClCompile Include="Source\PhatSDK\GameTime.cpp" />
+    <ClCompile Include="Source\PhatSDK\GfxObj.cpp" />
+    <ClCompile Include="Source\PhatSDK\LandBlock.cpp" />
+    <ClCompile Include="Source\PhatSDK\LandBlockInfo.cpp" />
+    <ClCompile Include="Source\PhatSDK\LandBlockStruct.cpp" />
+    <ClCompile Include="Source\PhatSDK\LandCell.cpp" />
+    <ClCompile Include="Source\PhatSDK\LandDefs.cpp" />
+    <ClCompile Include="Source\PhatSDK\LandScape.cpp" />
+    <ClCompile Include="Source\PhatSDK\LegacyPackObj.cpp" />
+    <ClCompile Include="Source\PhatSDK\LegacyStubs.cpp" />
+    <ClCompile Include="Source\PhatSDK\MagicSystem.cpp" />
+    <ClCompile Include="Source\PhatSDK\Material.cpp" />
+    <ClCompile Include="Source\PhatSDK\MathLib.cpp" />
+    <ClCompile Include="Source\PhatSDK\MotionTable.cpp" />
+    <ClCompile Include="Source\PhatSDK\Movement.cpp" />
+    <ClCompile Include="Source\PhatSDK\MovementManager.cpp" />
+    <ClCompile Include="Source\PhatSDK\ObjCache.cpp" />
+    <ClCompile Include="Source\PhatSDK\ObjCell.cpp" />
+    <ClCompile Include="Source\PhatSDK\ObjDesc.cpp" />
+    <ClCompile Include="Source\PhatSDK\ObjectInventory.cpp" />
+    <ClCompile Include="Source\PhatSDK\ObjectMaint.cpp" />
+    <ClCompile Include="Source\PhatSDK\OldPublicWeenieDesc.cpp" />
+    <ClCompile Include="Source\PhatSDK\Palette.cpp" />
+    <ClCompile Include="Source\PhatSDK\PalSet.cpp" />
+    <ClCompile Include="Source\PhatSDK\PartArray.cpp" />
+    <ClCompile Include="Source\PhatSDK\PartCell.cpp" />
+    <ClCompile Include="Source\PhatSDK\Particles.cpp" />
+    <ClCompile Include="Source\PhatSDK\PhatSDK.cpp" />
+    <ClCompile Include="Source\PhatSDK\Physics.cpp" />
+    <ClCompile Include="Source\PhatSDK\PhysicsObj.cpp" />
+    <ClCompile Include="Source\PhatSDK\PhysicsPart.cpp" />
+    <ClCompile Include="Source\PhatSDK\Polygon.cpp" />
+    <ClCompile Include="Source\PhatSDK\PositionManager.cpp" />
+    <ClCompile Include="Source\PhatSDK\PString.cpp" />
+    <ClCompile Include="Source\PhatSDK\PublicWeenieDesc.cpp" />
+    <ClCompile Include="Source\PhatSDK\Qualities.cpp" />
+    <ClCompile Include="Source\PhatSDK\QualityFilter.cpp" />
+    <ClCompile Include="Source\PhatSDK\QuestTable.cpp" />
+    <ClCompile Include="Source\PhatSDK\RegionDesc.cpp" />
+    <ClCompile Include="Source\PhatSDK\Scene.cpp" />
+    <ClCompile Include="Source\PhatSDK\Scripts.cpp" />
+    <ClCompile Include="Source\PhatSDK\Setup.cpp" />
+    <ClCompile Include="Source\PhatSDK\SkillTable.cpp" />
+    <ClCompile Include="Source\PhatSDK\SkyDesc.cpp" />
+    <ClCompile Include="Source\PhatSDK\SmartBox.cpp" />
+    <ClCompile Include="Source\PhatSDK\SortCell.cpp" />
+    <ClCompile Include="Source\PhatSDK\SoundDesc.cpp" />
+    <ClCompile Include="Source\PhatSDK\SpellComponentTable.cpp" />
+    <ClCompile Include="Source\PhatSDK\SpellTable.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\BinaryReader.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\BinaryWriter.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\ClothingCache.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\CraftTable.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\DATDisk.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\GameEventDefDB.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\LandBlockExtendedData.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\PhatDataBin.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\RegionDescExtendedData.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\SkillChecks.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\SpellTableExtendedData.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\TreasureTable.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\WeenieDefaults.cpp" />
+    <ClCompile Include="Source\PhatSDK\Support\WeenieSave.cpp" />
+    <ClCompile Include="Source\PhatSDK\Surface.cpp" />
+    <ClCompile Include="Source\PhatSDK\TargetManager.cpp" />
+    <ClCompile Include="Source\PhatSDK\Texture.cpp" />
+    <ClCompile Include="Source\PhatSDK\Transition.cpp" />
+    <ClCompile Include="Source\PhatSDK\VendorProfile.cpp" />
+    <ClCompile Include="Source\PhatSDK\Vertex.cpp" />
+    <ClCompile Include="Source\PhatSDK\VitaeSystem.cpp" />
+    <ClCompile Include="Source\PhatSDK\WClassID.cpp" />
+    <ClCompile Include="Source\PhysicsObjCustom.cpp" />
+    <ClCompile Include="Source\PKModifier.cpp" />
+    <ClCompile Include="Source\Player.cpp" />
+    <ClCompile Include="Source\Portal.cpp" />
+    <ClCompile Include="Source\Precompiled.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - Public|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Quickstart|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Source\PressurePlate.cpp" />
+    <ClCompile Include="Source\Scroll.cpp" />
+    <ClCompile Include="Source\Server.cpp" />
+    <ClCompile Include="Source\ServerAPI.cpp" />
+    <ClCompile Include="Source\ServerCellManager.cpp" />
+    <ClCompile Include="Source\ServerObjectMaint.cpp" />
+    <ClCompile Include="Source\SHA512.cpp" />
+    <ClCompile Include="Source\SkillAlterationDevice.cpp" />
+    <ClCompile Include="Source\SpellcastingManager.cpp" />
+    <ClCompile Include="Source\SpellProjectile.cpp" />
+    <ClCompile Include="Source\StatTracker.cpp" />
+    <ClCompile Include="Source\Switch.cpp" />
+    <ClCompile Include="Source\TownCrier.cpp" />
+    <ClCompile Include="Source\TurbineCell.cpp" />
+    <ClCompile Include="Source\TurbineData.cpp" />
+    <ClCompile Include="Source\TurbineFile.cpp" />
+    <ClCompile Include="Source\TurbineObject.cpp" />
+    <ClCompile Include="Source\TurbinePortal.cpp" />
+    <ClCompile Include="Source\UseManager.cpp" />
+    <ClCompile Include="Source\Util.cpp" />
+    <ClCompile Include="Source\Vendor.cpp" />
+    <ClCompile Include="Source\WeenieFactory.cpp" />
+    <ClCompile Include="Source\WeenieLandCoverage.cpp" />
+    <ClCompile Include="Source\WeenieObject.cpp" />
+    <ClCompile Include="Source\World.cpp" />
+    <ClCompile Include="Source\WorldLandBlock.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\BindStone.h" />
+    <ClInclude Include="Source\PhatSDK\Support\CombatFormulas.h" />
+    <ClInclude Include="Source\PhatSDK\Support\Random.h" />
+    <ClInclude Include="Source\PhatSDK\Support\RandomRange.h" />
+    <ClInclude Include="Source\TreasureFactory.h" />
+    <ClInclude Include="Source\AllegianceManager.h" />
+    <ClInclude Include="Source\Ammunition.h" />
+    <ClInclude Include="Source\Animate.h" />
+    <ClInclude Include="Source\AttackManager.h" />
+    <ClInclude Include="Source\AttributeTransferDevice.h" />
+    <ClInclude Include="Source\Book.h" />
+    <ClInclude Include="Source\Caster.h" />
+    <ClInclude Include="Source\Chest.h" />
+    <ClInclude Include="Source\Clothing.h" />
+    <ClInclude Include="Source\Container.h" />
+    <ClInclude Include="Source\Corpse.h" />
+    <ClInclude Include="Source\DatabaseIO.h" />
+    <ClInclude Include="Source\EmoteManager.h" />
+    <ClInclude Include="Source\GameEventManager.h" />
+    <ClInclude Include="Source\Gem.h" />
+    <ClInclude Include="Source\Healer.h" />
+    <ClInclude Include="Source\House.h" />
+    <ClInclude Include="Source\InferredCellData.h" />
+    <ClInclude Include="Source\InferredPortalData.h" />
+    <ClInclude Include="Source\FellowshipManager.h" />
+    <ClInclude Include="Source\Food.h" />
+    <ClInclude Include="Source\HotSpot.h" />
+    <ClInclude Include="Source\Key.h" />
+    <ClInclude Include="Source\Lockpick.h" />
+    <ClInclude Include="Source\MeleeWeapon.h" />
+    <ClInclude Include="Source\Missile.h" />
+    <ClInclude Include="Source\MissileLauncher.h" />
+    <ClInclude Include="Source\MonsterAI.h" />
+    <ClInclude Include="Source\ObjectIDGen.h" />
+    <ClInclude Include="Source\PhatSDK\ACCharGenData.h" />
+    <ClInclude Include="Source\PhatSDK\ACCharGenResult.h" />
+    <ClInclude Include="Source\PhatSDK\AllegianceProfile.h" />
+    <ClInclude Include="Source\PhatSDK\Animation.h" />
+    <ClInclude Include="Source\PhatSDK\AnimHooks.h" />
+    <ClInclude Include="Source\PhatSDK\Appraisal.h" />
+    <ClInclude Include="Source\PhatSDK\BSPData.h" />
+    <ClInclude Include="Source\PhatSDK\BuildingObj.h" />
+    <ClInclude Include="Source\PhatSDK\ChildList.h" />
+    <ClInclude Include="Source\PhatSDK\ClothingTable.h" />
+    <ClInclude Include="Source\PhatSDK\CombatSystem.h" />
+    <ClInclude Include="Source\PhatSDK\Housing.h" />
+    <ClInclude Include="Source\PhatSDK\MutationFilter.h" />
+    <ClInclude Include="Source\PhatSDK\PlayerModule.h" />
+    <ClInclude Include="Source\PhatSDK\QuestDefDB.h" />
+    <ClInclude Include="Source\PhatSDK\DArray.h" />
+    <ClInclude Include="Source\PhatSDK\DLListBase.h" />
+    <ClInclude Include="Source\PhatSDK\GameEnums.h" />
+    <ClInclude Include="Source\PhatSDK\EnvCell.h" />
+    <ClInclude Include="Source\PhatSDK\Environment.h" />
+    <ClInclude Include="Source\PhatSDK\ExperienceTable.h" />
+    <ClInclude Include="Source\PhatSDK\Frame.h" />
+    <ClInclude Include="Source\PhatSDK\GameSky.h" />
+    <ClInclude Include="Source\PhatSDK\GameTime.h" />
+    <ClInclude Include="Source\PhatSDK\GfxObj.h" />
+    <ClInclude Include="Source\PhatSDK\HashData.h" />
+    <ClInclude Include="Source\PhatSDK\LandBlock.h" />
+    <ClInclude Include="Source\PhatSDK\LandBlockInfo.h" />
+    <ClInclude Include="Source\PhatSDK\LandBlockStruct.h" />
+    <ClInclude Include="Source\PhatSDK\LandCell.h" />
+    <ClInclude Include="Source\PhatSDK\LandDefs.h" />
+    <ClInclude Include="Source\PhatSDK\LandScape.h" />
+    <ClInclude Include="Source\PhatSDK\LegacyPackObj.h" />
+    <ClInclude Include="Source\PhatSDK\LegacyStubs.h" />
+    <ClInclude Include="Source\PhatSDK\MagicSystem.h" />
+    <ClInclude Include="Source\PhatSDK\Material.h" />
+    <ClInclude Include="Source\PhatSDK\MathLib.h" />
+    <ClInclude Include="Source\PhatSDK\MotionTable.h" />
+    <ClInclude Include="Source\PhatSDK\Movement.h" />
+    <ClInclude Include="Source\PhatSDK\MovementManager.h" />
+    <ClInclude Include="Source\PhatSDK\ObjCache.h" />
+    <ClInclude Include="Source\PhatSDK\ObjCell.h" />
+    <ClInclude Include="Source\PhatSDK\ObjDesc.h" />
+    <ClInclude Include="Source\PhatSDK\ObjectInventory.h" />
+    <ClInclude Include="Source\PhatSDK\ObjectMaint.h" />
+    <ClInclude Include="Source\PhatSDK\OldPublicWeenieDesc.h" />
+    <ClInclude Include="Source\PhatSDK\Palette.h" />
+    <ClInclude Include="Source\PhatSDK\PalSet.h" />
+    <ClInclude Include="Source\PhatSDK\PartArray.h" />
+    <ClInclude Include="Source\PhatSDK\PartCell.h" />
+    <ClInclude Include="Source\PhatSDK\Particles.h" />
+    <ClInclude Include="Source\PhatSDK\PhatSDK.h" />
+    <ClInclude Include="Source\PhatSDK\PhatSDKSettings.h" />
+    <ClInclude Include="Source\PhatSDK\Physics.h" />
+    <ClInclude Include="Source\PhatSDK\PhysicsDesc.h" />
+    <ClInclude Include="Source\PhatSDK\PhysicsObj.h" />
+    <ClInclude Include="Source\PhatSDK\PhysicsPart.h" />
+    <ClInclude Include="Source\PhatSDK\Polygon.h" />
+    <ClInclude Include="Source\PhatSDK\PositionManager.h" />
+    <ClInclude Include="Source\PhatSDK\PString.h" />
+    <ClInclude Include="Source\PhatSDK\PublicWeenieDesc.h" />
+    <ClInclude Include="Source\PhatSDK\Qualities.h" />
+    <ClInclude Include="Source\PhatSDK\QualityFilter.h" />
+    <ClInclude Include="Source\PhatSDK\QuestTable.h" />
+    <ClInclude Include="Source\PhatSDK\RegionDesc.h" />
+    <ClInclude Include="Source\PhatSDK\SArray.h" />
+    <ClInclude Include="Source\PhatSDK\Scene.h" />
+    <ClInclude Include="Source\PhatSDK\Scripts.h" />
+    <ClInclude Include="Source\PhatSDK\Setup.h" />
+    <ClInclude Include="Source\PhatSDK\SkillTable.h" />
+    <ClInclude Include="Source\PhatSDK\SkyDesc.h" />
+    <ClInclude Include="Source\PhatSDK\SmartArray.h" />
+    <ClInclude Include="Source\PhatSDK\SmartBox.h" />
+    <ClInclude Include="Source\PhatSDK\SortCell.h" />
+    <ClInclude Include="Source\PhatSDK\SoundDesc.h" />
+    <ClInclude Include="Source\PhatSDK\GameStatEnums.h" />
+    <ClInclude Include="Source\PhatSDK\SpellComponentTable.h" />
+    <ClInclude Include="Source\PhatSDK\SpellEnums.h" />
+    <ClInclude Include="Source\PhatSDK\SpellTable.h" />
+    <ClInclude Include="Source\PhatSDK\Support\BinaryReader.h" />
+    <ClInclude Include="Source\PhatSDK\Support\BinaryWriter.h" />
+    <ClInclude Include="Source\PhatSDK\Support\ClothingCache.h" />
+    <ClInclude Include="Source\PhatSDK\Support\CraftTable.h" />
+    <ClInclude Include="Source\PhatSDK\Support\DATDisk.h" />
+    <ClInclude Include="Source\PhatSDK\Support\GameEventDefDB.h" />
+    <ClInclude Include="Source\PhatSDK\Support\ISAAC.h" />
+    <ClInclude Include="Source\PhatSDK\Support\Json.h" />
+    <ClInclude Include="Source\PhatSDK\Support\LandBlockExtendedData.h" />
+    <ClInclude Include="Source\PhatSDK\Support\Packable.h" />
+    <ClInclude Include="Source\PhatSDK\Support\PackableJson.h" />
+    <ClInclude Include="Source\PhatSDK\Support\PhatDataBin.h" />
+    <ClInclude Include="Source\PhatSDK\Support\RegionDescExtendedData.h" />
+    <ClInclude Include="Source\PhatSDK\Support\SkillChecks.h" />
+    <ClInclude Include="Source\PhatSDK\Support\SpellTableExtendedData.h" />
+    <ClInclude Include="Source\PhatSDK\Support\TreasureTable.h" />
+    <ClInclude Include="Source\PhatSDK\Support\WeenieDefaults.h" />
+    <ClInclude Include="Source\PhatSDK\Support\WeenieSave.h" />
+    <ClInclude Include="Source\PhatSDK\Surface.h" />
+    <ClInclude Include="Source\PhatSDK\TargetManager.h" />
+    <ClInclude Include="Source\PhatSDK\Texture.h" />
+    <ClInclude Include="Source\PhatSDK\Transition.h" />
+    <ClInclude Include="Source\PhatSDK\VendorProfile.h" />
+    <ClInclude Include="Source\PhatSDK\Vertex.h" />
+    <ClInclude Include="Source\PhatSDK\VitaeSystem.h" />
+    <ClInclude Include="Source\PhatSDK\WClassID.h" />
+    <ClInclude Include="Source\PhatSDK\WeenieObjectStub.h" />
+    <ClInclude Include="Source\PKModifier.h" />
+    <ClInclude Include="Source\PressurePlate.h" />
+    <ClInclude Include="Source\Scroll.h" />
+    <ClInclude Include="Source\ServerAPI.h" />
+    <ClInclude Include="Source\ServerCellManager.h" />
+    <ClInclude Include="Source\ServerObjectMaint.h" />
+    <ClInclude Include="Source\SkillAlterationDevice.h" />
+    <ClInclude Include="Source\SpellcastingManager.h" />
+    <ClInclude Include="Source\SpellProjectile.h" />
+    <ClInclude Include="Source\AnimationPackage.h" />
+    <ClInclude Include="Source\Config.h" />
+    <ClInclude Include="Source\PacketCaptureCredits.h" />
+    <ClInclude Include="Source\PhysicsObjCustom.h" />
+    <ClInclude Include="Source\Database2.h" />
+    <ClInclude Include="Source\GameMode.h" />
+    <ClInclude Include="Source\Lifestone.h" />
+    <ClInclude Include="Source\Logging.h" />
+    <ClInclude Include="Source\NetworkDefs.h" />
+    <ClInclude Include="Source\PhysicsDesc.h" />
+    <ClInclude Include="Source\Client.h" />
+    <ClInclude Include="Source\ClientCommands.h" />
+    <ClInclude Include="Source\ClientEvents.h" />
+    <ClInclude Include="Source\Common.h" />
+    <ClInclude Include="Source\ChatMsgs.h" />
+    <ClInclude Include="Source\crc.h" />
+    <ClInclude Include="Source\crcwheel.h" />
+    <ClInclude Include="Source\Database.h" />
+    <ClInclude Include="Source\Door.h" />
+    <ClInclude Include="Source\FragStack.h" />
+    <ClInclude Include="Source\Globals.h" />
+    <ClInclude Include="Source\Killable.h" />
+    <ClInclude Include="Source\Monster.h" />
+    <ClInclude Include="Source\Moves.h" />
+    <ClInclude Include="Source\Network.h" />
+    <ClInclude Include="Source\ObjectMsgs.h" />
+    <ClInclude Include="Source\PacketController.h" />
+    <ClInclude Include="Source\Player.h" />
+    <ClInclude Include="Source\Portal.h" />
+    <ClInclude Include="Resource\resource.h" />
+    <ClInclude Include="Source\Server.h" />
+    <ClInclude Include="Source\SHA512.h" />
+    <ClInclude Include="Source\StatTracker.h" />
+    <ClInclude Include="Source\StdAfx.h" />
+    <ClInclude Include="Source\Switch.h" />
+    <ClInclude Include="Source\TownCrier.h" />
+    <ClInclude Include="Source\TurbineCell.h" />
+    <ClInclude Include="Source\TurbineData.h" />
+    <ClInclude Include="Source\TurbineFile.h" />
+    <ClInclude Include="Source\TurbineFormats.h" />
+    <ClInclude Include="Source\TurbineObject.h" />
+    <ClInclude Include="Source\TurbinePortal.h" />
+    <ClInclude Include="Source\UseManager.h" />
+    <ClInclude Include="Source\Util.h" />
+    <ClInclude Include="Source\Vendor.h" />
+    <ClInclude Include="Source\WeenieFactory.h" />
+    <ClInclude Include="Source\WeenieLandCoverage.h" />
+    <ClInclude Include="Source\WeenieObject.h" />
+    <ClInclude Include="Source\World.h" />
+    <ClInclude Include="Source\WorldLandBlock.h" />
+    <ClInclude Include="Lib\zlib\zconf.h" />
+    <ClInclude Include="Lib\zlib\zlib.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Resource\client.ico" />
+    <Image Include="Resource\logo.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource\PhatAC.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

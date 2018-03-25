@@ -1,0 +1,36 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2036
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Classic Dereth", "Classic Dereth.vcxproj", "{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug - Quickstart|x64 = Debug - Quickstart|x64
+		Debug DLL|x64 = Debug DLL|x64
+		Debug|x64 = Debug|x64
+		Release - Public|x64 = Release - Public|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Debug - Quickstart|x64.ActiveCfg = Debug - Quickstart|x64
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Debug - Quickstart|x64.Build.0 = Debug - Quickstart|x64
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Debug DLL|x64.ActiveCfg = Debug DLL|x64
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Debug DLL|x64.Build.0 = Debug DLL|x64
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Debug|x64.ActiveCfg = Debug|x64
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Debug|x64.Build.0 = Debug|x64
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Release - Public|x64.ActiveCfg = Release - Public|x64
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Release - Public|x64.Build.0 = Release - Public|x64
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Release|x64.ActiveCfg = Release|x64
+		{79CD1CA2-76B3-4FFC-9825-DC29E861CE25}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C2FE2B30-1891-4BA7-84B2-88D0930422E5}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+EndGlobal

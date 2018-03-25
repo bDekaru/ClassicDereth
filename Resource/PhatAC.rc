@@ -1,0 +1,286 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_MAIN DIALOGEX 0, 0, 431, 292
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_STATICEDGE
+CAPTION "PhatAC - Classic Dereth"
+MENU IDR_MENU
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_CONSOLE,15,59,399,158,ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL
+    LTEXT           "Config Filename:",IDC_STATIC,15,17,61,8
+    PUSHBUTTON      "Start",IDC_TOGGLE,155,30,45,12
+    PUSHBUTTON      "Launch Admin",IDC_LAUNCH,203,30,56,12
+    EDITTEXT        IDC_BROADCASTTEXT,15,233,348,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "Broadcast",IDC_BROADCAST,367,233,48,12
+    LTEXT           "",IDC_VERSION,18,47,393,8
+    PUSHBUTTON      "Clear Log",IDC_CLEARLOG,15,217,60,12
+    GROUPBOX        "",IDC_STATIC,7,7,420,278
+    EDITTEXT        IDC_CONNECTLINK,13,270,402,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER
+    CONTROL         "Debug",IDC_DEBUGCHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,381,251,35,12
+    EDITTEXT        IDC_SERVERCONFIG,15,30,136,12,ES_AUTOHSCROLL
+    CONTROL         "Report player population (anonymously)",IDC_SHARESTATS,
+                    "Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,15,251,153,12
+    PUSHBUTTON      "Edit",IDC_EDIT,261,30,56,12
+END
+
+IDD_STATUS DIALOGEX 0, 0, 161, 111
+STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | DS_FIXEDSYS | DS_CENTER | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_OVERLAPPEDWINDOW | WS_EX_TOOLWINDOW
+CAPTION "Status"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,64,92,36,12
+    RTEXT           "Framerate:",IDC_STATIC,4,24,60,8
+    LTEXT           "0",IDC_FRAMERATE,72,24,68,8
+    RTEXT           "Packets Sent:",IDC_STATIC,4,36,60,8
+    RTEXT           "Packets Received:",IDC_STATIC,4,48,60,8
+    LTEXT           "0",IDC_RP,72,48,64,8
+    LTEXT           "0",IDC_SP,72,36,64,8
+    COMBOBOX        IDC_PRIORITY,68,4,84,80,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Thread Priority:",IDC_STATIC,8,6,56,10
+    RTEXT           "Bytes Received:",IDC_STATIC,4,72,60,8
+    RTEXT           "Bytes Sent:",IDC_STATIC,4,60,60,8
+    LTEXT           "0",IDC_BS,72,60,64,8
+    LTEXT           "0",IDC_BR,72,72,64,8
+END
+
+IDD_LAUNCHER DIALOGEX 0, 0, 180, 118
+STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | DS_FIXEDSYS | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "Launcher"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Launch",IDC_LAUNCHCLIENT,68,68,52,15
+    CONTROL         "",IDC_REMOTEIP,"SysIPAddress32",WS_TABSTOP,32,20,98,12
+    EDITTEXT        IDC_REMOTEPORT,132,20,36,12,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_ACCOUNT,69,36,99,12,NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_PASSWORD,69,52,99,12,NOT WS_BORDER,WS_EX_STATICEDGE
+    RTEXT           "Account Name:",IDC_STATIC,4,36,60,12
+    RTEXT           "Password:",IDC_STATIC,4,52,60,12
+    CTEXT           "If the account name you specify does not exist, one will be created along with the password you entered.",IDC_STATIC,4,92,172,16
+    LTEXT           "Remote Server IP:",IDC_STATIC,32,8,66,8
+    LTEXT           "Port:",IDC_STATIC,132,8,36,8
+END
+
+IDD_ABOUT DIALOGEX 0, 0, 255, 152
+STYLE DS_SETFONT | DS_MODALFRAME | DS_NOIDLEMSG | DS_3DLOOK | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION
+CAPTION "About PhatAC - Classic Dereth"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Close",IDOK,198,130,50,14
+    LTEXT           "",IDC_CREDITS,7,7,241,122,0,WS_EX_TRANSPARENT
+    DEFPUSHBUTTON   "Visit Github",IDC_WEBSITE,6,130,76,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_MAIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 424
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 285
+    END
+
+    IDD_STATUS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 154
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 104
+    END
+
+    IDD_LAUNCHER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 173
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 111
+    END
+
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 248
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 145
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_PHATAC              ICON                    "client.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "E&xit",                       40002
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About",                      40009
+    END
+END
+
+IDR_MENUOLD MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "E&xit",                       40002
+    END
+    POPUP "&Options"
+    BEGIN
+        MENUITEM "&Launcher",                   40007
+        MENUITEM "&Status",                     40004
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About",                      40009
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_BANNER              BITMAP                  "logo.bmp"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_ABOUT AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_MAIN AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,11
+ PRODUCTVERSION 1,0,0,11
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040004b0"
+        BEGIN
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "ProductName", "PhatAC - Classic Dereth"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x400, 1200
+    END
+END
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

@@ -1,0 +1,1210 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Network">
+      <UniqueIdentifier>{5a67bb75-3f37-4cc8-8c08-84ec2886d281}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Client">
+      <UniqueIdentifier>{79bcf0ec-fa80-477e-ba72-e510508f22b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\World">
+      <UniqueIdentifier>{b842ab99-73aa-425f-b097-6dee7ce94fad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Objects">
+      <UniqueIdentifier>{63c8bc12-9e24-448d-8ce8-71aab4e757d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Object Capabilities">
+      <UniqueIdentifier>{0d8e9324-e844-4a74-9ab3-5449d027f067}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ZLib">
+      <UniqueIdentifier>{e759c91a-cce8-41f9-b940-43fa1d6eaba4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Database">
+      <UniqueIdentifier>{4e34f860-5a55-43f9-9f84-da5ba16dfe4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Old Turbine Data Code %28To be replaced%29">
+      <UniqueIdentifier>{64ec52ac-7a51-4ab2-b9ea-61deb90880c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PhatSDK">
+      <UniqueIdentifier>{26d8a46b-f8dd-4654-bb55-8b525a914514}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PhatSDK\Support">
+      <UniqueIdentifier>{32688d61-7962-44a4-b5cd-590ab449c380}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Data">
+      <UniqueIdentifier>{dce358c1-7c09-4078-995d-298fa0f5ced3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Objects\Weenie Types">
+      <UniqueIdentifier>{f73082e1-82df-40aa-b738-67865d777b12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PhatSDK\Support\Random">
+      <UniqueIdentifier>{3824ef06-3648-4292-b40c-6d5bc8e074fb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\PhatAC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\crc.cpp">
+      <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\crcwheel.cpp">
+      <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TurbineCell.cpp">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TurbineData.cpp">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TurbineFile.cpp">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TurbineObject.cpp">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TurbinePortal.cpp">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Client.cpp">
+      <Filter>Source Files\Client</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ClientCommands.cpp">
+      <Filter>Source Files\Client</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ClientEvents.cpp">
+      <Filter>Source Files\Client</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Database.cpp">
+      <Filter>Source Files\Database</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\FragStack.cpp">
+      <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Network.cpp">
+      <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PacketController.cpp">
+      <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ObjectMsgs.cpp">
+      <Filter>Source Files\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Animate.cpp">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Moves.cpp">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\World.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Globals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Precompiled.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Server.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Logging.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GameMode.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SHA512.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\WeenieObject.cpp">
+      <Filter>Source Files\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\WorldLandBlock.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhysicsObjCustom.cpp">
+      <Filter>Source Files\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ObjectIDGen.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ServerObjectMaint.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ServerCellManager.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Animation.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\AnimHooks.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\BSPData.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ChildList.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ClothingTable.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\EnvCell.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Environment.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ExperienceTable.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Frame.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\GameTime.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\GfxObj.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\LandBlock.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\LandBlockInfo.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\LandBlockStruct.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\LandCell.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\LandDefs.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\LandScape.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\LegacyPackObj.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\LegacyStubs.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\MathLib.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\MotionTable.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Movement.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\MovementManager.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ObjCache.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ObjCell.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ObjDesc.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ObjectMaint.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Palette.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PalSet.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PartArray.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PartCell.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Physics.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PhysicsObj.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PhysicsPart.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Polygon.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PString.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Qualities.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\RegionDesc.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Scripts.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Setup.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\SkillTable.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\SkyDesc.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\SortCell.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\SoundDesc.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Surface.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Texture.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Transition.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Vertex.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\BinaryReader.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\BinaryWriter.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\DATDisk.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PhatSDK.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDKImpl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\GameSky.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Particles.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Material.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PositionManager.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\SmartBox.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\TargetManager.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Scene.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SpellcastingManager.cpp">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MonsterAI.cpp">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ChatMsgs.cpp">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\SpellTable.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\MagicSystem.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\WeenieDefaults.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\SpellComponentTable.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\BuildingObj.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Appraisal.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Door.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Lifestone.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SpellProjectile.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Portal.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Player.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Monster.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TownCrier.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vendor.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\OldPublicWeenieDesc.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PublicWeenieDesc.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\VendorProfile.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\WeenieFactory.cpp">
+      <Filter>Source Files\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\WeenieLandCoverage.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\DatabaseIO.cpp">
+      <Filter>Source Files\Database</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Database2.cpp">
+      <Filter>Source Files\Database</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\WeenieSave.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ObjectInventory.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\ClothingCache.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ACCharGenResult.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\ACCharGenData.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\LandBlockExtendedData.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Switch.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\HotSpot.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PressurePlate.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\RegionDescExtendedData.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\WClassID.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Book.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Food.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\CombatSystem.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\FellowshipManager.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AllegianceManager.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\AllegianceProfile.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\InferredCellData.cpp">
+      <Filter>Source Files\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\InferredPortalData.cpp">
+      <Filter>Source Files\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\SpellTableExtendedData.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\QualityFilter.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\TreasureTable.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\EmoteManager.cpp">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Container.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Caster.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Clothing.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\QuestDefDB.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Corpse.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\CraftTable.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Healer.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\SkillChecks.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Missile.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\PlayerModule.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ServerAPI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UseManager.cpp">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\House.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Housing.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AttackManager.cpp">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\StatTracker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scroll.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MeleeWeapon.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Chest.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\PhatDataBin.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\QuestTable.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Key.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Lockpick.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Gem.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PKModifier.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MissileLauncher.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Ammunition.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\VitaeSystem.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\MutationFilter.cpp">
+      <Filter>PhatSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AttributeTransferDevice.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SkillAlterationDevice.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GameEventManager.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\GameEventDefDB.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\CombatFormulas.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\Random.cpp">
+      <Filter>PhatSDK\Support\Random</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\RandomRange.cpp">
+      <Filter>PhatSDK\Support\Random</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TreasureFactory.cpp">
+      <Filter>Source Files\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\BindStone.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\crcwheel.h">
+      <Filter>Source Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TurbineCell.h">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TurbineData.h">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TurbineFile.h">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TurbineFormats.h">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TurbineObject.h">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TurbinePortal.h">
+      <Filter>Source Files\Old Turbine Data Code %28To be replaced%29</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\StdAfx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\crc.h">
+      <Filter>Source Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Killable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Client.h">
+      <Filter>Source Files\Client</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ClientCommands.h">
+      <Filter>Source Files\Client</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ClientEvents.h">
+      <Filter>Source Files\Client</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Database.h">
+      <Filter>Source Files\Database</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\FragStack.h">
+      <Filter>Source Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Network.h">
+      <Filter>Source Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PacketController.h">
+      <Filter>Source Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ObjectMsgs.h">
+      <Filter>Source Files\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Animate.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\AnimationPackage.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Moves.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\World.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Globals.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Server.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Util.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhysicsDesc.h">
+      <Filter>Source Files\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Logging.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GameMode.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\NetworkDefs.h">
+      <Filter>Source Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SHA512.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\WeenieObject.h">
+      <Filter>Source Files\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PacketCaptureCredits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\WorldLandBlock.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Config.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhysicsObjCustom.h">
+      <Filter>Source Files\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ObjectIDGen.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ServerObjectMaint.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ServerCellManager.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Animation.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\AnimHooks.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\BSPData.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ChildList.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ClothingTable.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\DArray.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\DLListBase.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\EnvCell.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Environment.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ExperienceTable.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Frame.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\GameSky.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\GameTime.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\GfxObj.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\HashData.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\LandBlock.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\LandBlockInfo.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\LandBlockStruct.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\LandCell.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\LandDefs.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\LandScape.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\LegacyPackObj.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\LegacyStubs.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Material.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\MathLib.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\MotionTable.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Movement.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\MovementManager.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ObjCache.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ObjCell.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ObjDesc.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ObjectMaint.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Palette.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PalSet.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PartArray.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PartCell.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Particles.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Physics.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PhysicsDesc.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PhysicsObj.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PhysicsPart.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Polygon.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PString.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PublicWeenieDesc.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Qualities.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\RegionDesc.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SArray.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Scripts.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Setup.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SkillTable.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SkyDesc.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SmartArray.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SmartBox.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SortCell.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SoundDesc.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Surface.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Texture.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Transition.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Vertex.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\BinaryReader.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\BinaryWriter.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\DATDisk.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\GameEnums.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\GameStatEnums.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\Packable.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PhatSDK.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\WeenieObjectStub.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PhatSDKSettings.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PositionManager.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\TargetManager.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Scene.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SpellcastingManager.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\MonsterAI.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ChatMsgs.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SpellTable.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SpellEnums.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\MagicSystem.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\WeenieDefaults.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SpellComponentTable.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\BuildingObj.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Appraisal.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\ISAAC.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Door.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Lifestone.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SpellProjectile.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Portal.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Player.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Monster.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TownCrier.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vendor.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\OldPublicWeenieDesc.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\VendorProfile.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\WeenieFactory.h">
+      <Filter>Source Files\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\WeenieLandCoverage.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\DatabaseIO.h">
+      <Filter>Source Files\Database</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Database2.h">
+      <Filter>Source Files\Database</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\WeenieSave.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ObjectInventory.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\ClothingCache.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ACCharGenResult.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\ACCharGenData.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\LandBlockExtendedData.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Switch.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\HotSpot.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PressurePlate.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\RegionDescExtendedData.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\WClassID.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Book.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Food.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\CombatSystem.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\FellowshipManager.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\AllegianceManager.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\AllegianceProfile.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\InferredCellData.h">
+      <Filter>Source Files\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\InferredPortalData.h">
+      <Filter>Source Files\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\SpellTableExtendedData.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\QualityFilter.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\TreasureTable.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EmoteManager.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Container.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Caster.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Clothing.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\QuestDefDB.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Corpse.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\CraftTable.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Healer.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\SkillChecks.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Missile.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\PlayerModule.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ServerAPI.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UseManager.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\House.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Housing.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\AttackManager.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\StatTracker.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scroll.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\MeleeWeapon.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Chest.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\PhatDataBin.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\QuestTable.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Key.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Lockpick.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Gem.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PKModifier.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\MissileLauncher.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Ammunition.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\VitaeSystem.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\MutationFilter.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\AttributeTransferDevice.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SkillAlterationDevice.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\PackableJson.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\Json.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GameEventManager.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\GameEventDefDB.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource\resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\Random.h">
+      <Filter>PhatSDK\Support\Random</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\CombatFormulas.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\RandomRange.h">
+      <Filter>PhatSDK\Support\Random</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TreasureFactory.h">
+      <Filter>Source Files\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\BindStone.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\zlib\zconf.h">
+      <Filter>Source Files\ZLib</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\zlib\zlib.h">
+      <Filter>Source Files\ZLib</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Resource\client.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resource\logo.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource\PhatAC.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>
