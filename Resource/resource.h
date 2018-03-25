@@ -37,6 +37,7 @@
 #define IDC_VERSION                     1026
 #define IDC_WEBSITE                     1027
 #define IDC_BANNER                      1028
+#define IDC_WEBSITE2                    1028
 #define IDC_CREDITS                     1029
 #define IDC_SERVERCONFIG                1031
 #define IDC_EDIT2                       1032
