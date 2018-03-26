@@ -1545,7 +1545,7 @@ void CMonsterWeenie::OnMotionDone(DWORD motion, BOOL success)
 	}
 }
 
-CCorpseWeenie *CMonsterWeenie::CreateCorpse()
+CCorpseWeenie *CMonsterWeenie::CreateCorpse(bool visible)
 {
 	if (!InValidCell())
 		return NULL;
@@ -1583,6 +1583,9 @@ CCorpseWeenie *CMonsterWeenie::CreateCorpse()
 	pCorpse->last_move_was_autonomous = false;
 	pCorpse->DoMotion(GetCommandID(17), &params, 0);
 
+	if (!visible)
+		pCorpse->m_Qualities.SetBool(VISIBILITY_BOOL, false);
+
 	if (!g_pWorld->CreateEntity(pCorpse))
 		pCorpse = NULL;
 
@@ -1604,11 +1607,16 @@ void CMonsterWeenie::GenerateDeathLoot(CCorpseWeenie *pCorpse)
 	if (DWORD deathTreasureType = InqDIDQuality(DEATH_TREASURE_TYPE_DID, 0))
 		g_pWeenieFactory->GenerateFromTypeOrWcid(pCorpse, DestinationType::ContainTreasure_DestinationType, deathTreasureType);
 
+	std::list<CWeenieObject *> removeList;
+
 	for each(auto item in pCorpse->m_Items)
 	{
 		if (item->IsDestroyedOnDeath())
-			item->Remove();
+			removeList.push_back(item);
 	}
+
+	for (auto item : removeList)
+		item->Remove();
 }
 
 void CMonsterWeenie::OnDeathAnimComplete()
@@ -1624,14 +1632,21 @@ void CMonsterWeenie::OnDeathAnimComplete()
 	}
 
 	// create corpse
-	CCorpseWeenie *pCorpse = CreateCorpse();
-
-	if (pCorpse)
+	CPlayerWeenie *player = AsPlayer();
+	if (!player)
 	{
-		if (!_IsPlayer())
+		CCorpseWeenie *pCorpse = CreateCorpse();
+
+		if (pCorpse)
 			GenerateDeathLoot(pCorpse);
-		else
-			AsPlayer()->CalculateAndDropDeathItems(pCorpse);
+	}
+	else if(player->_pendingCorpse)
+	{
+		//make the player corpse visible.
+		player->_pendingCorpse->m_Qualities.RemoveBool(VISIBILITY_BOOL);
+		player->_pendingCorpse->NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
+		player->_pendingCorpse->NotifyObjectCreated(false);
+		player->_pendingCorpse = NULL;
 	}
 }
 

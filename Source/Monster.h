@@ -75,7 +75,7 @@ public:
 
 	virtual BOOL DoCollision(const class ObjCollisionProfile &prof);
 
-	CCorpseWeenie *CreateCorpse();
+	CCorpseWeenie *CreateCorpse(bool visible = true);
 
 	bool IsAttackMotion(DWORD motion);
 

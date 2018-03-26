@@ -484,6 +484,7 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse)
 	pCorpse->SpawnInContainer(W_COINSTACK_CLASS, coinConsumed);
 
 	std::vector<CWeenieObject *> alwaysDropList;
+	std::vector<CWeenieObject *> removeList;
 
 	std::vector<CWeenieObject *> allValidItems;
 	for (auto wielded : m_Wielded)
@@ -491,7 +492,7 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse)
 		if (wielded->m_Qualities.id == W_COINSTACK_CLASS)
 			continue;
 		else if (wielded->IsDestroyedOnDeath())
-			wielded->Remove();
+			removeList.push_back(wielded);
 		else if (wielded->IsDroppedOnDeath())
 			alwaysDropList.push_back(wielded);
 		else if(!wielded->IsBonded())
@@ -503,7 +504,7 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse)
 		if(item->m_Qualities.id == W_COINSTACK_CLASS)
 			continue;
 		else if (item->IsDestroyedOnDeath())
-			item->Remove();
+			removeList.push_back(item);
 		else if (item->IsDroppedOnDeath())
 			alwaysDropList.push_back(item);
 		else if (!item->IsBonded())
@@ -520,7 +521,7 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse)
 				if (item->m_Qualities.id == W_COINSTACK_CLASS)
 					continue;
 				else if (item->IsDestroyedOnDeath())
-					item->Remove();
+					removeList.push_back(item);
 				else if (item->IsDroppedOnDeath())
 					alwaysDropList.push_back(item);
 				else if (!item->IsBonded())
@@ -529,10 +530,11 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse)
 		}
 	}
 
+	for (auto item : removeList)
+		item->Remove();
+
 	for (auto item : alwaysDropList)
-	{
 		FinishMoveItemToContainer(item, pCorpse, 0, true, true);
-	}
 
 	std::map <ITEM_TYPE, std::multimap<int, CWeenieObject *>> itemValueByTypeMap;
 
@@ -649,6 +651,12 @@ void CPlayerWeenie::OnDeath(DWORD killer_id)
 			}
 		}
 	}
+
+	// create corpse but make it invisible.
+	_pendingCorpse = CreateCorpse(false);
+
+	if (_pendingCorpse)
+		CalculateAndDropDeathItems(_pendingCorpse);
 
 	if (g_pConfig->HardcoreMode())
 	{

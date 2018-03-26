@@ -163,6 +163,8 @@ public:
 	virtual bool IsBusy() override;
 	virtual void OnTeleported() override;
 
+	CCorpseWeenie *_pendingCorpse = NULL;
+
 protected:
 	CClient *m_pClient;
 
