@@ -174,7 +174,10 @@ int CVendor::TryBuyItemsFromPlayer(CPlayerWeenie *seller, const std::list<ItemPr
 		if (desiredItem->amount <= 0)
 			continue;
 
-		totalValue += (DWORD)round(sellerItem->InqIntQuality(VALUE_INT, 0) * profile.buy_price);
+		if(sellerItem->InqIntQuality(ITEM_TYPE_INT, TYPE_UNDEF) == TYPE_PROMISSORY_NOTE)
+			totalValue += (DWORD)round(sellerItem->InqIntQuality(VALUE_INT, 0));
+		else
+			totalValue += (DWORD)round(sellerItem->InqIntQuality(VALUE_INT, 0) * profile.buy_price);
 	}
 
 	if (totalValue >= MAX_COIN_PURCHASE)
