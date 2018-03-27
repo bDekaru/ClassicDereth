@@ -1238,25 +1238,29 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 				DWORD dwFileID = in.ReadDWORD();
 				if (in.GetLastError()) break;
 
-				switch (dwFileClass)
-				{
-				default:
-					LOG(Client, Warning, "Unknown download request: %08X %d\n", dwFileID, dwFileClass);
-					break;
+				//disabled downloading files.
+				m_pEvents->SendText("Your client is requesting map data from the server. This feature is disabled to preserve bandwidth", LTT_DEFAULT);
+				m_pEvents->SendText("If you are stuck in portal mode, type /render radius 5 to escape. Make sure you are using the approppriate cell.dat file!", LTT_DEFAULT);
 
-				case 1:
-				{
-					SendLandblock(dwFileID); // 1 is landblock 0xFFFF
-					break;
-				}
-				case 2:
-					SendLandblockInfo(dwFileID); // 2 is landblock environemnt 0xFFFE
-					break;
+				//switch (dwFileClass)
+				//{
+				//default:
+				//	LOG(Client, Warning, "Unknown download request: %08X %d\n", dwFileID, dwFileClass);
+				//	break;
 
-				case 3:
-					SendLandcell(dwFileID); // 0x100+
-					break;
-				}
+				//case 1:
+				//{
+				//	SendLandblock(dwFileID); // 1 is landblock 0xFFFF
+				//	break;
+				//}
+				//case 2:
+				//	SendLandblockInfo(dwFileID); // 2 is landblock environemnt 0xFFFE
+				//	break;
+
+				//case 3:
+				//	SendLandcell(dwFileID); // 0x100+
+				//	break;
+				//}
 			}
 
 			break;

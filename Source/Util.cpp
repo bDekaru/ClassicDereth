@@ -411,7 +411,7 @@ void MsgBox(UINT type, const char *format, ...)
 
 	HWND hWnd = g_pGlobals ? g_pGlobals->GetWindowHandle() : NULL;
 
-	MessageBox(hWnd, szWriteBuffer, "PhatAC", MB_OK | type);
+	MessageBox(hWnd, szWriteBuffer, "GDL", MB_OK | type);
 }
 
 void MsgBox(const char *format, ...)
@@ -423,7 +423,7 @@ void MsgBox(const char *format, ...)
 	_vsnprintf(szWriteBuffer, 1024, format, args);
 	va_end(args);
 
-	MessageBox(NULL, szWriteBuffer, "PhatAC", MB_OK);
+	MessageBox(NULL, szWriteBuffer, "GDL", MB_OK);
 }
 
 void MsgBoxError(DWORD dwError, const char* event)
@@ -446,7 +446,7 @@ void MsgBoxError(DWORD dwError, const char* event)
 	LocalFree(lpMsgBuf);
 }
 
-#define REGLOC HKEY_LOCAL_MACHINE, "Software\\PhatAC"
+#define REGLOC HKEY_LOCAL_MACHINE, "Software\\GDL"
 
 BOOL SaveConfigKey(const char* Key, DWORD value)
 {

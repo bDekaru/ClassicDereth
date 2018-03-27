@@ -22,7 +22,7 @@ LRESULT CALLBACK AboutProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 	switch (message)
 	{
 	case WM_INITDIALOG:
-		SetWindowText(GetDlgItem(hDlg, IDC_CREDITS), "PhatAC - Classic Dereth " SERVER_VERSION_NUMBER_STRING "\n" SERVER_VERSION_STRING "\n\nClassic Dereth created by Dekaru (dekaru@protonmail.com)\nhttps://github.com/bDekaru/ClassicDereth\n\nBased on the GamesDeadLol Server project.\nhttps://github.com/GamesDeadLol/GDL\n\nPhatAC originally created by Pea and halted in September 2017.\n\nPhatAC was created in C++ and compiled with Visual Studio. Third-party libraries used include zlib, SHA512 and ISAAC algorithms.");
+		SetWindowText(GetDlgItem(hDlg, IDC_CREDITS), "GDL - Classic Dereth " SERVER_VERSION_NUMBER_STRING "\n" SERVER_VERSION_STRING "\n\nClassic Dereth created by Dekaru (dekaru@protonmail.com)\nhttps://github.com/bDekaru/ClassicDereth\n\nBased on the GamesDeadLol Server project.\nhttps://github.com/GamesDeadLol/GDL\n\nPhatAC originally created by Pea and halted in September 2017.\n\nPhatAC was created in C++ and compiled with Visual Studio. Third-party libraries used include zlib, SHA512 and ISAAC algorithms.");
 		// SetWindowText(GetDlgItem(hDlg, IDC_PACKETCREDITS), PACKET_CAPTURE_CREDITS);
 		return TRUE;
 
@@ -207,7 +207,7 @@ LRESULT CALLBACK LauncherProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 
 						if (!FileExists(((std::string)szLaunchDir + "\\acclient.exe").c_str()))
 						{
-							MsgBox("Please copy your Asheron's Call client to the Client folder of PhatAC.\r\n");
+							MsgBox("Please copy your Asheron's Call client to the Client folder.\r\n");
 						}
 						else
 						{
@@ -306,7 +306,7 @@ INT_PTR CALLBACK MainProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			g_Logger.AddLogCallback(OutputConsole);
 
 			HWND hVersion = GetDlgItem(hDlg, IDC_VERSION);
-			SetWindowText(hVersion, "PhatAC - Classic Dereth " SERVER_VERSION_NUMBER_STRING " " SERVER_VERSION_STRING); // "PhatAC compiled " __TIMESTAMP__);
+			SetWindowText(hVersion, "GDL - Classic Dereth " SERVER_VERSION_NUMBER_STRING " " SERVER_VERSION_STRING); // "PhatAC compiled " __TIMESTAMP__);
 
 			HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_PHATAC));
 			SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
@@ -423,7 +423,7 @@ INT_PTR CALLBACK MainProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 					if (!FileExists(((std::string)szLaunchDir + "\\acclient.exe").c_str()))
 					{
-						MsgBox("Please copy your Asheron's Call client to the Client folder of PhatAC.\r\n");
+						MsgBox("Please copy your Asheron's Call client to the Client folder.\r\n");
 					}
 					else
 					{
@@ -550,7 +550,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 	extern DWORD64 g_RandomAdminPassword;
 	g_RandomAdminPassword = ((DWORD64)Random::GenUInt(0, 0xFFFFFFF0) << 32) | Random::GenUInt(0, 0xFFFFFFF0) + GetTickCount64();
 
-	LOG(UserInterface, Normal, "Welcome to PhatAC - Classic Dereth!\n");
+	LOG(UserInterface, Normal, "Welcome to GDL - Classic Dereth!\n");
 
 	ShowWindow(g_hWndMain, nCmdShow);
 

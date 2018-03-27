@@ -32,7 +32,7 @@ DWORD WINAPI MainServerThread(LPVOID)
 	extern DWORD64 g_RandomAdminPassword;
 	g_RandomAdminPassword = ((DWORD64)Random::GenUInt(0, 0xFFFFFFF0) << 32) | Random::GenUInt(0, 0xFFFFFFF0);
 
-	LOG(UserInterface, Normal, "Welcome to PhatAC - Classic Dereth!\n");
+	LOG(UserInterface, Normal, "Welcome to GDL - Classic Dereth!\n");
 
 	unsigned long serverIP = GetLocalIP();
 	int serverPort = 9050;

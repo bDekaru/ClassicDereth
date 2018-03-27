@@ -53,7 +53,7 @@ END
 IDD_MAIN DIALOGEX 0, 0, 431, 292
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_STATICEDGE
-CAPTION "PhatAC - Classic Dereth"
+CAPTION "GDL - Classic Dereth"
 MENU IDR_MENU
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -115,7 +115,7 @@ END
 
 IDD_ABOUT DIALOGEX 0, 0, 255, 152
 STYLE DS_SETFONT | DS_MODALFRAME | DS_NOIDLEMSG | DS_3DLOOK | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION
-CAPTION "About PhatAC - Classic Dereth"
+CAPTION "About GDL - Classic Dereth"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "Close",IDOK,198,130,50,14
@@ -257,7 +257,7 @@ BEGIN
         BLOCK "040004b0"
         BEGIN
             VALUE "FileVersion", "1.0.0.0"
-            VALUE "ProductName", "PhatAC - Classic Dereth"
+            VALUE "ProductName", "GDL - Classic Dereth"
             VALUE "ProductVersion", "1.0.0.0"
         END
     END
