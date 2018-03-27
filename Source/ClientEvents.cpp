@@ -946,45 +946,38 @@ void CClientEvents::HouseRent(DWORD slumlord, const PackableList<DWORD> &items)
 
 void CClientEvents::HouseAbandon()
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData && houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (CSlumLordWeenie *slumlord = house->GetSlumLord())
-			{
-				if (house->GetHouseOwner() == m_pPlayer->GetID())
-				{
-					slumlord->AbandonHouse();
-					m_pPlayer->SendText("You've abandoned your house.", LTT_DEFAULT); //todo: made up message.
-				}
-				else
-					m_pPlayer->SendText("That house does not belong to you.", LTT_DEFAULT); //todo: made up message.
-			}
+			houseData->AbandonHouse();
+			m_pPlayer->SendText("You've abandoned your house.", LTT_DEFAULT); //todo: made up message.
 		}
+		else
+			m_pPlayer->SendText("That house does not belong to you.", LTT_DEFAULT); //todo: made up message.
 	}
+	else
+		m_pClient->SendNetMessage(ServerText("You do not have a house!", 7), PRIVATE_MSG);
 }
 
 void CClientEvents::HouseRecall()
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->GetAccountHouseId();
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerAccount == m_pPlayer->GetClient()->GetAccountInfo().id)
 		{
-			if (CSlumLordWeenie *slumlord = house->GetSlumLord())
-			{
-				if (house->GetHouseOwner() == m_pPlayer->GetID())
-				{
-					if (!m_pPlayer->IsBusyOrInAction())
-						m_pPlayer->ExecuteUseEvent(new CHouseRecallUseEvent());
-					return;
-				}
-			}
+			if (!m_pPlayer->IsBusyOrInAction())
+				m_pPlayer->ExecuteUseEvent(new CHouseRecallUseEvent());
 		}
+		else
+			m_pPlayer->SendText("That house does not belong to you.", LTT_DEFAULT); //todo: made up message.
 	}
-
-	m_pClient->SendNetMessage(ServerText("You do not have a house!", 7), PRIVATE_MSG);
+	else
+		m_pClient->SendNetMessage(ServerText("You do not have a house!", 7), PRIVATE_MSG);
 }
 
 void CClientEvents::HouseMansionRecall()
@@ -1005,25 +998,20 @@ void CClientEvents::HouseMansionRecall()
 		monarch = CWeenieObject::Load(allegianceNode->_monarchID);
 		if (!monarch)
 			return;
-		allegianceHouseId = monarch->InqIIDQuality(HOUSE_IID, 0);
+		allegianceHouseId = monarch->InqDIDQuality(HOUSEID_DID, 0);
 		delete monarch;
 	}
 	else
-		allegianceHouseId = monarch->InqIIDQuality(HOUSE_IID, 0);
+		allegianceHouseId = monarch->InqDIDQuality(HOUSEID_DID, 0);
 
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(allegianceHouseId, true)) //we may have to activate the landblock the house is in
+	if (allegianceHouseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(allegianceHouseId);
+		if (houseData && houseData->_ownerId == allegianceNode->_monarchID && (houseData->_houseType == 2 || houseData->_houseType == 3)) //2 = villa, 3 = mansion
 		{
-			if (CSlumLordWeenie *slumlord = house->GetSlumLord())
-			{
-				if (house->GetHouseOwner() == allegianceNode->_monarchID && (house->GetHouseType() == 2 || house->GetHouseType() == 3)) //2 = villa, 3 = mansion
-				{
-					if (!m_pPlayer->IsBusyOrInAction())
-						m_pPlayer->ExecuteUseEvent(new CMansionRecallUseEvent());
-					return;
-				}
-			}
+			if (!m_pPlayer->IsBusyOrInAction())
+				m_pPlayer->ExecuteUseEvent(new CMansionRecallUseEvent());
+			return;
 		}
 	}
 
@@ -1035,47 +1023,35 @@ void CClientEvents::HouseMansionRecall()
 
 void CClientEvents::HouseRequestData()
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
+		g_pHouseManager->SendHouseData(m_pPlayer, houseId);
+	else
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
-		{
-			if (CSlumLordWeenie *slumlord = house->GetSlumLord())
-			{
-				if (house->GetHouseOwner() == m_pPlayer->GetID())
-				{
-					slumlord->SendHouseData(m_pPlayer);
-					return;
-				}
-			}
-		}
+		//if we can't get the data send the "no house" packet
+		BinaryWriter noHouseData;
+		noHouseData.Write<DWORD>(0x0226);
+		noHouseData.Write<DWORD>(0);
+		m_pPlayer->SendNetMessage(&noHouseData, PRIVATE_MSG, TRUE, FALSE);
 	}
-
-	//if we can't get the data send the "no house" packet
-	BinaryWriter noHouseData;
-	noHouseData.Write<DWORD>(0x0226);
-	noHouseData.Write<DWORD>(0);
-	m_pPlayer->SendNetMessage(&noHouseData, PRIVATE_MSG, TRUE, FALSE);
 }
 
 void CClientEvents::HouseToggleHooks(bool newSetting)
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
-			{
-				house->SetHookVisibility(newSetting);
-				if (newSetting)
-					m_pPlayer->SendText("Your dwelling's hooks are now visible.", LTT_DEFAULT); //todo: made up message.
-				else
-					m_pPlayer->SendText("Your dwelling's hooks are now hidden.", LTT_DEFAULT); //todo: made up message.
-			}
+			houseData->SetHookVisibility(newSetting);
+			if (newSetting)
+				m_pPlayer->SendText("Your dwelling's hooks are now visible.", LTT_DEFAULT); //todo: made up message.
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+				m_pPlayer->SendText("Your dwelling's hooks are now hidden.", LTT_DEFAULT); //todo: made up message.
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1083,63 +1059,60 @@ void CClientEvents::HouseToggleHooks(bool newSetting)
 
 void CClientEvents::HouseRequestAccessList()
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
+			m_pPlayer->SendText("Access:", LTT_DEFAULT);
+			m_pPlayer->SendText(csprintf("   Public: %s", houseData->_everyoneAccess ? "Allow" : "Deny"), LTT_DEFAULT);
+			m_pPlayer->SendText(csprintf("   Allegiance: %s", houseData->_allegianceAccess ? "Allow" : "Deny"), LTT_DEFAULT);
+
+			m_pPlayer->SendText("Storage:", LTT_DEFAULT);
+			m_pPlayer->SendText(csprintf("   Public: %s", houseData->_everyoneStorageAccess ? "Allow" : "Deny"), LTT_DEFAULT);
+			m_pPlayer->SendText(csprintf("   Allegiance: %s", houseData->_allegianceStorageAccess ? "Allow" : "Deny"), LTT_DEFAULT);
+
+			if (houseData->_accessList.empty())
+				m_pPlayer->SendText("Your dwelling's acess list is empty.", LTT_DEFAULT);
+			else
 			{
-				//todo: this is all made up.
-				m_pPlayer->SendText("Access:", LTT_DEFAULT);
-				m_pPlayer->SendText(csprintf("   Public: %s", house->_everyoneAccess ? "Allow" : "Deny"), LTT_DEFAULT);
-				m_pPlayer->SendText(csprintf("   Allegiance: %s", house->_allegianceAccess ? "Allow" : "Deny"), LTT_DEFAULT);
-
-				m_pPlayer->SendText("Storage:", LTT_DEFAULT);
-				m_pPlayer->SendText(csprintf("   Public: %s", house->_everyoneStorageAccess ? "Allow" : "Deny"), LTT_DEFAULT);
-				m_pPlayer->SendText(csprintf("   Allegiance: %s", house->_allegianceStorageAccess ? "Allow" : "Deny"), LTT_DEFAULT);
-
-				if (house->_accessList.empty())
-					m_pPlayer->SendText("Your dwelling's acess list is empty.", LTT_DEFAULT);
-				else
+				m_pPlayer->SendText("Access List:", LTT_DEFAULT);
+				std::list<DWORD>::iterator i = houseData->_accessList.begin();
+				while (i != houseData->_accessList.end())
 				{
-					m_pPlayer->SendText("Access List:", LTT_DEFAULT);
-					std::list<DWORD>::iterator i = house->_accessList.begin();
-					while (i != house->_accessList.end())
+					std::string name = g_pWorld->GetPlayerName(*(i), true);
+					if (!name.empty())
 					{
-						std::string name = g_pWorld->GetPlayerName(*(i), true);
-						if (!name.empty())
-						{
-							m_pPlayer->SendText(csprintf("   %s", name.c_str()), LTT_DEFAULT);
-							i++;
-						}
-						else
-							i = house->_accessList.erase(i); //no longer exists.
+						m_pPlayer->SendText(csprintf("   %s", name.c_str()), LTT_DEFAULT);
+						i++;
 					}
-				}
-
-				if (house->_storageAccessList.empty())
-					m_pPlayer->SendText("Your dwelling's storage access list is empty.", LTT_DEFAULT);
-				else
-				{
-					m_pPlayer->SendText("Storage Access list:", LTT_DEFAULT);
-					std::list<DWORD>::iterator i = house->_storageAccessList.begin();
-					while (i != house->_storageAccessList.end())
-					{
-						std::string name = g_pWorld->GetPlayerName(*(i), true);
-						if (!name.empty())
-						{
-							m_pPlayer->SendText(csprintf("   %s", name.c_str()), LTT_DEFAULT);
-							i++;
-						}
-						else
-							i = house->_storageAccessList.erase(i); //no longer exists.
-					}
+					else
+						i = houseData->_accessList.erase(i); //no longer exists.
 				}
 			}
+
+			if (houseData->_storageAccessList.empty())
+				m_pPlayer->SendText("Your dwelling's storage access list is empty.", LTT_DEFAULT);
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+			{
+				m_pPlayer->SendText("Storage Access list:", LTT_DEFAULT);
+				std::list<DWORD>::iterator i = houseData->_storageAccessList.begin();
+				while (i != houseData->_storageAccessList.end())
+				{
+					std::string name = g_pWorld->GetPlayerName(*(i), true);
+					if (!name.empty())
+					{
+						m_pPlayer->SendText(csprintf("   %s", name.c_str()), LTT_DEFAULT);
+						i++;
+					}
+					else
+						i = houseData->_storageAccessList.erase(i); //no longer exists.
+				}
+			}
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1154,31 +1127,29 @@ void CClientEvents::HouseAddPersonToAccessList(std::string name)
 		return;
 	}
 
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
+			if (houseData->_accessList.size() > 128)
 			{
-				if (house->_accessList.size() > 128)
-				{
-					m_pPlayer->SendText("The access list is full", LTT_DEFAULT); //todo: made up message.
-					return;
-				}
-				if (std::find(house->_accessList.begin(), house->_accessList.end(), targetId) != house->_accessList.end())
-				{
-					m_pPlayer->SendText(csprintf("%s is already in the access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
-				}
-				else
-				{
-					m_pPlayer->SendText(csprintf("You add %s to your dwelling's access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
-					house->_accessList.push_back(targetId);
-				}
+				m_pPlayer->SendText("The access list is full", LTT_DEFAULT); //todo: made up message.
+				return;
+			}
+			if (std::find(houseData->_accessList.begin(), houseData->_accessList.end(), targetId) != houseData->_accessList.end())
+			{
+				m_pPlayer->SendText(csprintf("%s is already in the access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
 			}
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+			{
+				m_pPlayer->SendText(csprintf("You add %s to your dwelling's access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
+				houseData->_accessList.push_back(targetId);
+			}
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1193,27 +1164,25 @@ void CClientEvents::HouseRemovePersonFromAccessList(std::string name)
 		return;
 	}
 
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
+			auto iter = std::find(houseData->_accessList.begin(), houseData->_accessList.end(), targetId);
+			if (iter != houseData->_accessList.end())
 			{
-				auto iter = std::find(house->_accessList.begin(), house->_accessList.end(), targetId);
-				if (iter != house->_accessList.end())
-				{
-					m_pPlayer->SendText(csprintf("You remove %s from your dwelling's access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
-					house->_accessList.erase(iter);
-				}
-				else
-				{
-					m_pPlayer->SendText(csprintf("%s is not in the access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
-				}
+				m_pPlayer->SendText(csprintf("You remove %s from your dwelling's access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
+				houseData->_accessList.erase(iter);
 			}
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+			{
+				m_pPlayer->SendText(csprintf("%s is not in the access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
+			}
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1221,32 +1190,30 @@ void CClientEvents::HouseRemovePersonFromAccessList(std::string name)
 
 void CClientEvents::HouseToggleOpenAccess(bool newSetting)
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
+			if (houseData->_everyoneAccess != newSetting)
 			{
-				if (house->_everyoneAccess != newSetting)
-				{
-					house->_everyoneAccess = newSetting;
-					if (newSetting)
-						m_pPlayer->SendText("Your dwelling is now open to the public.", LTT_DEFAULT); //todo: made up message.
-					else
-						m_pPlayer->SendText("Your dwelling is now private.", LTT_DEFAULT); //todo: made up message.
-				}
+				houseData->_everyoneAccess = newSetting;
+				if (newSetting)
+					m_pPlayer->SendText("Your dwelling is now open to the public.", LTT_DEFAULT); //todo: made up message.
 				else
-				{
-					if (newSetting)
-						m_pPlayer->SendText("Your dwelling is already open to the public.", LTT_DEFAULT); //todo: made up message.
-					else
-						m_pPlayer->SendText("Your dwelling is already private.", LTT_DEFAULT); //todo: made up message.
-				}
+					m_pPlayer->SendText("Your dwelling is now private.", LTT_DEFAULT); //todo: made up message.
 			}
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+			{
+				if (newSetting)
+					m_pPlayer->SendText("Your dwelling is already open to the public.", LTT_DEFAULT); //todo: made up message.
+				else
+					m_pPlayer->SendText("Your dwelling is already private.", LTT_DEFAULT); //todo: made up message.
+			}
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1255,27 +1222,25 @@ void CClientEvents::HouseToggleOpenAccess(bool newSetting)
 void CClientEvents::HouseToggleOpenStorageAccess()
 {
 	//not sure how this worked? Is this a toggle? If not which command was used to disable it?
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
+			if (!houseData->_everyoneStorageAccess)
 			{
-				if (!house->_everyoneStorageAccess)
-				{
-					m_pPlayer->SendText("Your dwelling's storage is now open to the public.", LTT_DEFAULT); //todo: made up message.
-					house->_everyoneStorageAccess = true;
-				}
-				else
-				{
-					m_pPlayer->SendText("Your dwelling's storage is now private.", LTT_DEFAULT); //todo: made up message.
-					house->_everyoneStorageAccess = false;
-				}
+				m_pPlayer->SendText("Your dwelling's storage is now open to the public.", LTT_DEFAULT); //todo: made up message.
+				houseData->_everyoneStorageAccess = true;
 			}
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+			{
+				m_pPlayer->SendText("Your dwelling's storage is now private.", LTT_DEFAULT); //todo: made up message.
+				houseData->_everyoneStorageAccess = false;
+			}
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1290,47 +1255,45 @@ void CClientEvents::HouseAddOrRemovePersonToStorageList(std::string name, bool i
 		return;
 	}
 
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
 			if (isAdd)
 			{
-				if (house->_accessList.size() > 128)
+				if (houseData->_accessList.size() > 128)
 				{
 					m_pPlayer->SendText("The storage access list is full", LTT_DEFAULT); //todo: made up message.
 					return;
 				}
-				if (std::find(house->_storageAccessList.begin(), house->_storageAccessList.end(), targetId) != house->_storageAccessList.end())
+				if (std::find(houseData->_storageAccessList.begin(), houseData->_storageAccessList.end(), targetId) != houseData->_storageAccessList.end())
 				{
 					m_pPlayer->SendText(csprintf("%s is already in the storage access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
 				}
 				else
 				{
 					m_pPlayer->SendText(csprintf("You add %s to your dwelling's storage access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
-					house->_storageAccessList.push_back(targetId);
+					houseData->_storageAccessList.push_back(targetId);
 				}
 			}
 			else
 			{
-				if (house->GetHouseOwner() == m_pPlayer->GetID())
+				auto iter = std::find(houseData->_storageAccessList.begin(), houseData->_storageAccessList.end(), targetId);
+				if (iter != houseData->_storageAccessList.end())
 				{
-					auto iter = std::find(house->_storageAccessList.begin(), house->_storageAccessList.end(), targetId);
-					if (iter != house->_storageAccessList.end())
-					{
-						m_pPlayer->SendText(csprintf("You remove %s from your dwelling's storage access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
-						house->_storageAccessList.erase(iter);
-					}
-					else
-					{
-						m_pPlayer->SendText(csprintf("%s is not in the storage access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
-					}
+					m_pPlayer->SendText(csprintf("You remove %s from your dwelling's storage access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
+					houseData->_storageAccessList.erase(iter);
 				}
 				else
-					m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+				{
+					m_pPlayer->SendText(csprintf("%s is not in the storage access list", name.c_str()), LTT_DEFAULT); //todo: made up message.
+				}
 			}
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1338,32 +1301,30 @@ void CClientEvents::HouseAddOrRemovePersonToStorageList(std::string name, bool i
 
 void CClientEvents::HouseAddOrRemoveAllegianceToAccessList(bool isAdd)
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
+			if (houseData->_allegianceAccess != isAdd)
 			{
-				if (house->_allegianceAccess != isAdd)
-				{
-					house->_allegianceAccess = isAdd;
-					if (isAdd)
-						m_pPlayer->SendText("You have granted your monarchy access to your dwelling.", LTT_DEFAULT);
-					else
-						m_pPlayer->SendText("You have revoked access to your dwelling to your monarchy.", LTT_DEFAULT);
-				}
+				houseData->_allegianceAccess = isAdd;
+				if (isAdd)
+					m_pPlayer->SendText("You have granted your monarchy access to your dwelling.", LTT_DEFAULT);
 				else
-				{
-					if (isAdd)
-						m_pPlayer->SendText("The monarchy already has access to your dwelling.", LTT_DEFAULT);
-					else
-						m_pPlayer->SendText("The monarchy did not have access to your dwelling.", LTT_DEFAULT);
-				}
+					m_pPlayer->SendText("You have revoked access to your dwelling to your monarchy.", LTT_DEFAULT);
 			}
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+			{
+				if (isAdd)
+					m_pPlayer->SendText("The monarchy already has access to your dwelling.", LTT_DEFAULT);
+				else
+					m_pPlayer->SendText("The monarchy did not have access to your dwelling.", LTT_DEFAULT);
+			}
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1371,32 +1332,30 @@ void CClientEvents::HouseAddOrRemoveAllegianceToAccessList(bool isAdd)
 
 void CClientEvents::HouseAddOrRemoveAllegianceToStorageList(bool isAdd)
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
+			if (houseData->_allegianceStorageAccess != isAdd)
 			{
-				if (house->_allegianceStorageAccess != isAdd)
-				{
-					house->_allegianceStorageAccess = isAdd;
-					if (isAdd)
-						m_pPlayer->SendText("You have granted your monarchy access to your storage.", LTT_DEFAULT);
-					else
-						m_pPlayer->SendText("You have revoked storage access to your monarchy.", LTT_DEFAULT);
-				}
+				houseData->_allegianceStorageAccess = isAdd;
+				if (isAdd)
+					m_pPlayer->SendText("You have granted your monarchy access to your storage.", LTT_DEFAULT);
 				else
-				{
-					if (isAdd)
-						m_pPlayer->SendText("The monarchy already has storage access in your dwelling.", LTT_DEFAULT);
-					else
-						m_pPlayer->SendText("The monarchy did not have storage access in your dwelling.", LTT_DEFAULT);
-				}
+					m_pPlayer->SendText("You have revoked storage access to your monarchy.", LTT_DEFAULT);
 			}
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+			{
+				if (isAdd)
+					m_pPlayer->SendText("The monarchy already has storage access in your dwelling.", LTT_DEFAULT);
+				else
+					m_pPlayer->SendText("The monarchy did not have storage access in your dwelling.", LTT_DEFAULT);
+			}
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1404,26 +1363,24 @@ void CClientEvents::HouseAddOrRemoveAllegianceToStorageList(bool isAdd)
 
 void CClientEvents::HouseClearAccessList()
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
+			houseData->_everyoneAccess = false;
+			houseData->_allegianceAccess = false;
+			if (houseData->_accessList.empty())
 			{
-				house->_everyoneAccess = false;
-				house->_allegianceAccess = false;
-				if (house->_accessList.empty())
-				{
-					house->_accessList.clear();
-					m_pPlayer->SendText("Your clear the dwelling's access list.", LTT_DEFAULT); //todo: made up message.
-				}
-				else
-					m_pPlayer->SendText("There's no one in the dwelling's access list.", LTT_DEFAULT); //todo: made up message.
+				houseData->_accessList.clear();
+				m_pPlayer->SendText("Your clear the dwelling's access list.", LTT_DEFAULT); //todo: made up message.
 			}
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+				m_pPlayer->SendText("There's no one in the dwelling's access list.", LTT_DEFAULT); //todo: made up message.
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);
@@ -1431,26 +1388,24 @@ void CClientEvents::HouseClearAccessList()
 
 void CClientEvents::HouseClearStorageAccess()
 {
-	DWORD houseId = m_pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = m_pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId == m_pPlayer->GetID())
 		{
-			if (house->GetHouseOwner() == m_pPlayer->GetID())
+			houseData->_everyoneStorageAccess = false;
+			houseData->_allegianceStorageAccess = false;
+			if (houseData->_storageAccessList.empty())
 			{
-				house->_everyoneStorageAccess = false;
-				house->_allegianceStorageAccess = false;
-				if (house->_storageAccessList.empty())
-				{
-					house->_storageAccessList.clear();
-					m_pPlayer->SendText("Your clear the dwelling's storage list.", LTT_DEFAULT); //todo: made up message.
-				}
-				else
-					m_pPlayer->SendText("There's no one in the dwelling's storage list.", LTT_DEFAULT); //todo: made up message.
+				houseData->_storageAccessList.clear();
+				m_pPlayer->SendText("Your clear the dwelling's storage list.", LTT_DEFAULT); //todo: made up message.
 			}
 			else
-				m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
+				m_pPlayer->SendText("There's no one in the dwelling's storage list.", LTT_DEFAULT); //todo: made up message.
 		}
+		else
+			m_pPlayer->SendText("Only the character who owns the house may use this command.", LTT_DEFAULT);
 	}
 	else
 		m_pPlayer->SendText("You do not own a house.", LTT_DEFAULT);

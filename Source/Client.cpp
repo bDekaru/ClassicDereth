@@ -119,31 +119,6 @@ bool CClient::HasCharacter(DWORD character_weenie_id)
 	return false;
 }
 
-bool CClient::ClientHasHouse(CWeenieObject *currentCharacter)
-{
-	DWORD currentCharacterId = currentCharacter->GetID();
-	for (auto &character : m_Characters)
-	{
-		if (character.weenie_id == currentCharacterId)
-		{
-			if (currentCharacter->InqIIDQuality(HOUSE_IID, 0))
-				return true;
-		}
-		else
-		{
-			CWeenieObject *otherCharacter = CWeenieObject::Load(character.weenie_id);
-			if (currentCharacter->InqIIDQuality(HOUSE_IID, 0))
-			{
-				delete otherCharacter;
-				return true;
-			}
-			delete otherCharacter;
-		}
-	}
-
-	return false;
-}
-
 DWORD CClient::IncCharacterInstanceTS(DWORD character_weenie_id)
 {
 	WORD newInstanceTS = 0;

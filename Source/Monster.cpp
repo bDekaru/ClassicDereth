@@ -1271,7 +1271,7 @@ void CMonsterWeenie::FinishGiveItem(CContainerWeenie *targetContainer, CWeenieOb
 		{
 			if (newStackItem == sourceItem)
 			{
-				SendNetMessage(InventoryMove(sourceItem->GetID(), targetContainer->GetID(), 0, 0), PRIVATE_MSG, TRUE);
+				SendNetMessage(InventoryMove(sourceItem->GetID(), targetContainer->GetID(), 0, sourceItem->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
 			}
 
 			if (!InqBoolQuality(NPC_INTERACTS_SILENTLY_BOOL, FALSE) && !topLevelOwner->InqBoolQuality(NPC_INTERACTS_SILENTLY_BOOL, FALSE))

@@ -164,6 +164,7 @@ public:
 	virtual void OnTeleported() override;
 
 	CCorpseWeenie *_pendingCorpse = NULL;
+	DWORD GetAccountHouseId();
 
 protected:
 	CClient *m_pClient;

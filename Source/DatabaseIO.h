@@ -67,6 +67,7 @@ public:
 	bool IsPlayerCharacter(unsigned int weenie_id);
 	DWORD GetPlayerCharacterId(const char *name);
 	std::string GetPlayerCharacterName(DWORD weenie_id);
+	DWORD GeAccountHouseId(unsigned int accountid);
 
 	bool CreateOrUpdateWeenie(unsigned int weenie_id, unsigned int top_level_object_id, unsigned int block_id, void *data, unsigned int data_length);
 	bool GetWeenie(unsigned int weenie_id, unsigned int *top_level_object_id, unsigned int *block_id, void **data, unsigned long *data_length);
@@ -75,6 +76,9 @@ public:
 
 	bool GetGlobalData(DBIOGlobalDataID id, void **data, unsigned long *data_length);
 	bool CreateOrUpdateGlobalData(DBIOGlobalDataID id, void *data, unsigned long data_length);
+
+	bool CreateOrUpdateHouseData(unsigned int house_id, void *data, unsigned int data_length);
+	bool GetHouseData(unsigned int house_id, void **data, unsigned long *data_length);
 
 	CLockable _pendingSavesLock;
 	std::unordered_map<DWORD, DWORD> _pendingSaves;

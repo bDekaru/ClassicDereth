@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 17, 2018 at 12:33 AM
+-- Generation Time: Mar 27, 2018 at 01:47 PM
 -- Server version: 5.7.14
 -- PHP Version: 5.6.25
 
@@ -72,6 +72,17 @@ CREATE TABLE `characters` (
 
 CREATE TABLE `globals` (
   `id` int(11) NOT NULL,
+  `data` longblob NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `houses`
+--
+
+CREATE TABLE `houses` (
+  `house_id` int(11) NOT NULL,
   `data` longblob NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -197,6 +208,12 @@ ALTER TABLE `globals`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `houses`
+--
+ALTER TABLE `houses`
+  ADD PRIMARY KEY (`house_id`);
+
+--
 -- Indexes for table `teletowns`
 --
 ALTER TABLE `teletowns`
@@ -224,6 +241,11 @@ ALTER TABLE `accounts`
 --
 ALTER TABLE `globals`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+--
+-- AUTO_INCREMENT for table `houses`
+--
+ALTER TABLE `houses`
+  MODIFY `house_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `teletowns`
 --

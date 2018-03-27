@@ -13,6 +13,7 @@
 #include "GameMode.h"
 #include "Config.h"
 #include "Server.h"
+#include "House.h"
 
 CWorld::CWorld()
 {
@@ -24,7 +25,8 @@ CWorld::CWorld()
 	LoadMOTD();
 	EnumerateDungeonsFromCellData();
 
-	LoadHousingData();
+	if (g_pHouseManager)
+		g_pHouseManager->Load();
 
 	m_mAllObjects.reserve(10000000);
 	m_mAllPlayers.reserve(5000);
@@ -35,7 +37,8 @@ void CWorld::SaveWorld()
 {
 	SaveDungeonsFile();
 
-	SaveHousingData();
+	if(g_pHouseManager)
+		g_pHouseManager->Save();
 }
 
 CWorld::~CWorld()
@@ -142,34 +145,6 @@ void CWorld::LoadMOTD()
 	}
 	else
 		m_strMOTD = "No MOTD set.";
-}
-
-void CWorld::LoadHousingData()
-{
-	void *data = NULL;
-	DWORD length = 0;
-	if (g_pDBIO->GetGlobalData(DBIO_GLOBAL_HOUSING_DATA, &data, &length))
-	{
-		BinaryReader reader(data, length);
-		g_CurrentHouseMaintenancePeriod = reader.Read<DWORD>();
-		g_NextHouseMaintenancePeriod = reader.Read<DWORD>();
-		g_FreeHouseMaintenancePeriod = reader.Read<bool>();
-	}
-	else
-	{
-		g_CurrentHouseMaintenancePeriod = g_pPhatSDK->GetCurrTimeStamp();
-		g_NextHouseMaintenancePeriod = g_CurrentHouseMaintenancePeriod + (30 * 24 * 60 * 60); //in 30 days.
-		g_FreeHouseMaintenancePeriod = false;
-	}
-}
-
-void CWorld::SaveHousingData()
-{
-	BinaryWriter data;
-	data.Write<DWORD>(g_CurrentHouseMaintenancePeriod);
-	data.Write<DWORD>(g_NextHouseMaintenancePeriod);
-	data.Write<bool>(g_FreeHouseMaintenancePeriod);
-	g_pDBIO->CreateOrUpdateGlobalData(DBIO_GLOBAL_HOUSING_DATA, data.GetData(), data.GetSize());
 }
 
 void CWorld::LoadDungeonsFile()

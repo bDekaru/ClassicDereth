@@ -484,6 +484,82 @@ bool CMYSQLSaveWeenieQuery::PerformQuery(MYSQL *c)
 	return true;
 }
 
+CMYSQLSaveHouseQuery::CMYSQLSaveHouseQuery(unsigned int house_id, void *data, unsigned int data_length)
+{
+	_house_id = house_id;
+
+	if (data_length > 0)
+	{
+		_data = new BYTE[data_length];
+		memcpy(_data, data, data_length);
+	}
+	else
+	{
+		_data = NULL;
+	}
+
+	_data_length = data_length;
+}
+
+CMYSQLSaveHouseQuery::~CMYSQLSaveHouseQuery()
+{
+	SafeDeleteArray(_data);
+}
+
+bool CMYSQLSaveHouseQuery::PerformQuery(MYSQL *c)
+{
+	if (!c)
+	{
+		LOG(Database, Error, "Cannot perform save query; no connection.\n");
+		return false;
+	}
+
+	MYSQL_STMT *statement = mysql_stmt_init(c);
+
+	if (!statement)
+	{
+		LOG(Database, Error, "mysql_stmt_init() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
+		return false;
+	}
+
+	char query_string[512];
+	sprintf(query_string, "REPLACE INTO houses (house_id, data) VALUES (%u, ?)", _house_id);
+
+	if (mysql_stmt_prepare(statement, query_string, (unsigned long)strlen(query_string)))
+	{
+		mysql_stmt_close(statement);
+
+		LOG(Database, Error, "mysql_stmt_prepare() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
+		return false;
+	}
+
+	MYSQL_BIND data_param;
+	memset(&data_param, 0, sizeof(data_param));
+	data_param.buffer = _data;
+	data_param.buffer_length = _data_length;
+	data_param.buffer_type = MYSQL_TYPE_BLOB;
+	if (mysql_stmt_bind_param(statement, &data_param))
+	{
+		mysql_stmt_close(statement);
+
+		LOG(Database, Error, "mysql_stmt_bind_param() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
+		return false;
+	}
+
+	if (mysql_stmt_execute(statement))
+	{
+		LOG(Database, Error, "mysql_stmt_execute() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
+		mysql_stmt_close(statement);
+
+		return false;
+	}
+
+	mysql_stmt_close(statement);
+	g_pDBIO->DecrementPendingSave(_house_id);
+
+	return true;
+}
+
 CMYSQLDatabase::CMYSQLDatabase(const char *host, unsigned int port, const char *user, const char *password, const char *defaultdatabasename)
 {
 	m_DatabaseHost = host;

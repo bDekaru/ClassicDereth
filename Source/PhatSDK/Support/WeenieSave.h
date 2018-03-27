@@ -25,15 +25,6 @@ public:
 	PackableList<DWORD> _equipment;
 	PackableList<DWORD> _inventory;
 	PackableList<DWORD> _packs;
-
-	DWORD _currentMaintenancePeriod = 0;
-	HousePaymentList _rent;
-	PackableList<DWORD> _accessList;
-	PackableList<DWORD> _storageAccessList;
-	bool _allegianceAccess = false;
-	bool _allegianceStorageAccess = false;
-	bool _everyoneAccess = false;
-	bool _everyoneStorageAccess = false;
 };
 
 

@@ -2357,20 +2357,18 @@ bool CWeenieObject::TeleportToLifestone()
 
 bool CWeenieObject::TeleportToHouse()
 {
-	DWORD houseId = InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	if (CPlayerWeenie *player = AsPlayer())
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		DWORD houseId = player->GetAccountHouseId();
+		if (houseId)
 		{
-			if (house->GetHouseOwner() == GetID())
+			CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+			if (houseData->_ownerAccount == player->GetClient()->GetAccountInfo().id)
 			{
-				if (CSlumLordWeenie *slumlord = house->GetSlumLord())
+				if (houseData->_position.objcell_id)
 				{
-					if (slumlord->m_Position.objcell_id)
-					{
-						Movement_Teleport(slumlord->m_Position, false);
-						return true;
-					}
+					Movement_Teleport(houseData->_position, false);
+					return true;
 				}
 			}
 		}
@@ -2393,26 +2391,21 @@ bool CWeenieObject::TeleportToMansion()
 		monarch = CWeenieObject::Load(allegianceNode->_monarchID);
 		if (!monarch)
 			return false;
-		allegianceHouseId = monarch->InqIIDQuality(HOUSE_IID, 0);
+		allegianceHouseId = monarch->InqDIDQuality(HOUSEID_DID, 0);
 		delete monarch;
 	}
 	else
-		allegianceHouseId = monarch->InqIIDQuality(HOUSE_IID, 0);
+		allegianceHouseId = monarch->InqDIDQuality(HOUSEID_DID, 0);
 
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(allegianceHouseId, true)) //we may have to activate the landblock the house is in
+	if (allegianceHouseId)
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
+		CHouseData *houseData = g_pHouseManager->GetHouseData(allegianceHouseId);
+		if (houseData && houseData->_ownerId == allegianceNode->_monarchID && (houseData->_houseType == 2 || houseData->_houseType == 3)) //2 = villa, 3 = mansion
 		{
-			if (house->GetHouseOwner() == allegianceNode->_monarchID && (house->GetHouseType() == 2 || house->GetHouseType() == 3)) //2 = villa, 3 = mansion
+			if (houseData->_position.objcell_id)
 			{
-				if (CSlumLordWeenie *slumlord = house->GetSlumLord())
-				{
-					if (slumlord->m_Position.objcell_id)
-					{
-						Movement_Teleport(slumlord->m_Position, false);
-						return true;
-					}
-				}
+				Movement_Teleport(houseData->_position, false);
+				return true;
 			}
 		}
 	}
@@ -5333,7 +5326,7 @@ int CWeenieObject::SimulateGiveObject(CContainerWeenie *target_container, CWeeni
 	object_weenie->m_Qualities.SetInstanceID(CONTAINER_IID, target_container->GetID());
 	object_weenie->_cachedHasOwner = true;
 
-	SendNetMessage(InventoryMove(object_weenie->GetID(), target_container->GetID(), 0, 0), PRIVATE_MSG, TRUE);
+	SendNetMessage(InventoryMove(object_weenie->GetID(), target_container->GetID(), 0, object_weenie->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
 
 	target_container->MakeAware(object_weenie, true);
 	target_container->OnReceiveInventoryItem(this, object_weenie, 0);
@@ -5419,7 +5412,7 @@ void CWeenieObject::SimulateGiveObject(class CContainerWeenie *target_container,
 	object_weenie->m_Qualities.SetInstanceID(CONTAINER_IID, target_container->GetID());
 	object_weenie->_cachedHasOwner = true;
 
-	SendNetMessage(InventoryMove(object_weenie->GetID(), target_container->GetID(), 0, 0), PRIVATE_MSG, TRUE);
+	SendNetMessage(InventoryMove(object_weenie->GetID(), target_container->GetID(), 0, object_weenie->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
 
 	target_container->MakeAware(object_weenie, true);
 	target_container->OnReceiveInventoryItem(this, object_weenie, 0);
@@ -5507,7 +5500,7 @@ int CWeenieObject::CraftObject(CContainerWeenie *target_container, CWeenieObject
 	object_weenie->m_Qualities.SetInstanceID(CONTAINER_IID, target_container->GetID());
 	object_weenie->_cachedHasOwner = true;
 
-	SendNetMessage(InventoryMove(object_weenie->GetID(), target_container->GetID(), 0, 0), PRIVATE_MSG, TRUE);
+	SendNetMessage(InventoryMove(object_weenie->GetID(), target_container->GetID(), 0, object_weenie->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
 
 	target_container->MakeAware(object_weenie, true);
 	target_container->OnReceiveInventoryItem(this, object_weenie, 0);

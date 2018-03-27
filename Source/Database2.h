@@ -113,6 +113,20 @@ public:
 	virtual bool PerformQuery(MYSQL *c) = 0;
 };
 
+class CMYSQLSaveHouseQuery : public CMYSQLQuery
+{
+public:
+	CMYSQLSaveHouseQuery(unsigned int house_id, void *data, unsigned int data_length);
+	virtual ~CMYSQLSaveHouseQuery() override;
+
+	virtual bool PerformQuery(MYSQL *c) override;
+
+protected:
+	unsigned int _house_id;
+	void *_data;
+	unsigned int _data_length;
+};
+
 class CMYSQLSaveWeenieQuery : public CMYSQLQuery
 {
 public:

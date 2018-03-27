@@ -277,7 +277,8 @@ void CWorldLandBlock::SpawnDynamics()
 			CWeenieObject *weenie;
 
 			CWeenieDefaults *weenieDefs = g_pWeenieFactory->GetWeenieDefaults(wcid);
-			if ((weenieDefs->m_Qualities.m_WeenieType == WeenieType::House_WeenieType ||
+			if (weenieDefs != NULL &&
+				(weenieDefs->m_Qualities.m_WeenieType == WeenieType::House_WeenieType ||
 				weenieDefs->m_Qualities.m_WeenieType == WeenieType::Hook_WeenieType ||
 				weenieDefs->m_Qualities.m_WeenieType == WeenieType::Storage_WeenieType)
 				&& g_pDBIO->IsWeenieInDatabase(iid))

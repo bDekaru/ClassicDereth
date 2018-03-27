@@ -743,15 +743,20 @@ bool CContainerWeenie::SpawnInContainer(CWeenieObject *item, bool sendEnvent, bo
 
 	if (sendEnvent)
 	{
-		SendNetMessage(InventoryMove(item->GetID(), GetID(), 0, 0), PRIVATE_MSG, TRUE);
+		SendNetMessage(InventoryMove(item->GetID(), GetID(), 0, item->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
+		if (item->AsContainer())
+			item->AsContainer()->MakeAwareViewContent(this);
 		MakeAware(item, true);
+
 		if (_openedById != 0)
 		{
 			CWeenieObject *openedBy = g_pWorld->FindObject(_openedById);
 
 			if (openedBy)
 			{
-				openedBy->SendNetMessage(InventoryMove(item->GetID(), GetID(), 0, 0), PRIVATE_MSG, TRUE);
+				openedBy->SendNetMessage(InventoryMove(item->GetID(), GetID(), 0, item->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
+				if (item->AsContainer())
+					item->AsContainer()->MakeAwareViewContent(this);
 				openedBy->MakeAware(item, true);
 			}
 		}

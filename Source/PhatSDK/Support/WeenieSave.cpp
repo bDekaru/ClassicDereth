@@ -2,7 +2,7 @@
 #include "StdAfx.h"
 #include "PhatSDK.h"
 
-#define WEENIE_SAVE_FILE_VERSION 6
+#define WEENIE_SAVE_FILE_VERSION 7
 
 CWeenieSave::CWeenieSave()
 {
@@ -38,8 +38,6 @@ DEFINE_PACK(CWeenieSave)
 		header |= 2;
 	if (_questTable)
 		header |= 4;
-	if (!_rent.empty() || !_accessList.empty() || !_storageAccessList.empty() || _allegianceAccess || _allegianceStorageAccess || _everyoneAccess || _everyoneStorageAccess || _currentMaintenancePeriod > 0)
-		header |= 8; //housing data
 
 	pWriter->Write<DWORD>(header);
 	if (header & 1)
@@ -55,17 +53,6 @@ DEFINE_PACK(CWeenieSave)
 	if (header & 4)
 	{
 		_questTable->Pack(pWriter);
-	}
-	if (header & 8)
-	{
-		pWriter->Write<DWORD>(_currentMaintenancePeriod);
-		_rent.Pack(pWriter);
-		_accessList.Pack(pWriter);
-		_storageAccessList.Pack(pWriter);
-		pWriter->Write<bool>(_allegianceAccess);
-		pWriter->Write<bool>(_allegianceStorageAccess);
-		pWriter->Write<bool>(_everyoneAccess);
-		pWriter->Write<bool>(_everyoneStorageAccess);		
 	}
 }
 
@@ -107,17 +94,6 @@ DEFINE_UNPACK(CWeenieSave)
 	{
 		_questTable = new QuestTable;
 		_questTable->UnPack(pReader);
-	}
-	if (fields & 8)
-	{
-		_currentMaintenancePeriod = pReader->Read<DWORD>();
-		_rent.UnPack(pReader);
-		_accessList.UnPack(pReader);
-		_storageAccessList.UnPack(pReader);
-		_allegianceAccess = pReader->Read<bool>();
-		_allegianceStorageAccess = pReader->Read<bool>();
-		_everyoneAccess = pReader->Read<bool>();
-		_everyoneStorageAccess = pReader->Read<bool>();		
 	}
 
 	if (m_SaveVersion < 4)

@@ -22,6 +22,7 @@
 #include "AllegianceManager.h"
 #include "Player.h"
 #include "GameEventManager.h"
+#include "House.h"
 
 // should all be encapsulated realistically, but we aren't going to multi-instance the server...
 CDatabase *g_pDB = NULL;
@@ -43,9 +44,7 @@ CInferredPortalData *g_pPortalDataEx = NULL;
 CInferredCellData *g_pCellDataEx = NULL;
 TURBINEPORTAL *g_pPortal = NULL;
 TURBINECELL *g_pCell = NULL;
-DWORD g_CurrentHouseMaintenancePeriod = 0;
-DWORD g_NextHouseMaintenancePeriod = 0;
-bool g_FreeHouseMaintenancePeriod = false;
+CHouseManager *g_pHouseManager = NULL;
 
 CPhatServer::CPhatServer(const char *configFilePath)
 {
@@ -154,6 +153,8 @@ bool CPhatServer::Init()
 		m_Config.DatabaseUsername(),
 		m_Config.DatabasePassword(),
 		m_Config.DatabaseName()); // Newer, shiny, makes pancakes in the morning
+
+	g_pHouseManager = new CHouseManager();
 
 	g_pObjectIDGen = new CObjectIDGenerator();
 
@@ -305,6 +306,7 @@ void CPhatServer::Shutdown()
 	SafeDelete(g_pAllegianceManager);
 	SafeDelete(g_pCellManager);
 	SafeDelete(g_pGameDatabase);
+	SafeDelete(g_pHouseManager);
 	SafeDelete(g_pDB2);
 	SafeDelete(g_pDBIO);
 	SafeDelete(g_pDB);

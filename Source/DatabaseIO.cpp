@@ -506,6 +506,59 @@ bool CDatabaseIO::GetGlobalData(DBIOGlobalDataID id, void **data, unsigned long 
 	return true;
 }
 
+bool CDatabaseIO::CreateOrUpdateHouseData(unsigned int house_id, void *data, unsigned int data_length)
+{
+	IncrementPendingSave(house_id);
+	g_pDB2->QueueAsyncQuery(new CMYSQLSaveHouseQuery(house_id, data, data_length));
+	return true;
+}
+
+bool CDatabaseIO::GetHouseData(unsigned int house_id, void **data, unsigned long *data_length)
+{
+	// this is so bad...
+	while (GetNumPendingSaves(house_id))
+		Sleep(0);
+
+	MYSQL *sql = (MYSQL *)g_pDB2->GetInternalConnection();
+	if (!sql)
+		return false;
+
+	MYSQL_STMT *statement = mysql_stmt_init(sql);
+
+	const char *query_string = csprintf("SELECT data FROM houses WHERE house_id = %u", house_id);
+	mysql_stmt_prepare(statement, query_string, (unsigned long)strlen(query_string));
+
+	MYSQL_BIND binding[1];
+	memset(binding, 0, sizeof(binding));
+
+	binding[0].buffer = blob_query_buffer;
+	binding[0].buffer_length = BLOB_QUERY_BUFFER_LENGTH;
+	binding[0].buffer_type = MYSQL_TYPE_BLOB;
+	binding[0].length = data_length;
+
+	mysql_stmt_bind_result(statement, binding);
+
+	if (mysql_stmt_execute(statement) || mysql_stmt_store_result(statement))
+	{
+		LOG(Database, Error, "Error on GetHouseData: %s\n", mysql_error(sql));
+		mysql_stmt_close(statement);
+		return false;
+	}
+
+	if (mysql_stmt_fetch(statement))
+	{
+		mysql_stmt_free_result(statement);
+		mysql_stmt_close(statement);
+		return false;
+	}
+
+	*data = blob_query_buffer;
+
+	mysql_stmt_free_result(statement);
+	mysql_stmt_close(statement);
+	return true;
+}
+
 // CLockable _pendingSavesLock;
 // std::unordered_map<DWORD, DWORD> _pendingSaves;
 

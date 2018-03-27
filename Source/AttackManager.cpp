@@ -407,13 +407,6 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 
 	bool isBodyPart = false;
 	CWeenieObject *weapon = _weenie->GetWieldedCombat(COMBAT_USE_MELEE);
-	if (!weapon) //if we don't have a weapon equipped we can use our gloves/boots for damage info
-	{
-		if (_attack_power >= 0.75f) //this is a kick
-			weapon = _weenie->GetWielded(FOOT_WEAR_LOC);
-		else //this is a punch
-			weapon = _weenie->GetWielded(HAND_WEAR_LOC);
-	}
 
 	if (!weapon) //if we still don't have a weapon use our body parts
 	{
@@ -428,6 +421,19 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 				preVarianceDamage = part->_dval;
 				variance = part->_dvar;
 			}
+		}
+
+		CWeenieObject *gloverOrBoots;
+		if (_attack_power >= 0.75f) //this is a kick
+			gloverOrBoots = _weenie->GetWielded(FOOT_WEAR_LOC);
+		else //this is a punch
+			gloverOrBoots = _weenie->GetWielded(HAND_WEAR_LOC);
+
+		if (gloverOrBoots)
+		{
+			damageType = (DAMAGE_TYPE)gloverOrBoots->InqIntQuality(DAMAGE_TYPE_INT, damageType);
+			preVarianceDamage += gloverOrBoots->GetAttackDamage();
+			variance = gloverOrBoots->InqFloatQuality(DAMAGE_VARIANCE_FLOAT, variance);
 		}
 	}
 
@@ -461,7 +467,7 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 	CWeenieObject *shield = _weenie->GetWieldedCombat(COMBAT_USE::COMBAT_USE_SHIELD);
 
 	int burden = 0;
-	if (weapon != NULL)
+	if (weapon != NULL && weapon != _weenie)
 		burden += weapon->InqIntQuality(ENCUMB_VAL_INT, 0);
 
 	if (shield != NULL)

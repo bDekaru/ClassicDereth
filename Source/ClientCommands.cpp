@@ -1523,27 +1523,17 @@ CLIENT_COMMAND(resethousepurchasetimestamp, "", "Resets the house purchase times
 	pPlayer->NotifyIntStatUpdated(HOUSE_PURCHASE_TIMESTAMP_INT);
 	pPlayer->SendText("Your house purchase timestamp has been reset.", LTT_DEFAULT);
 
-	DWORD houseId = pPlayer->InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+	DWORD houseId = pPlayer->InqDIDQuality(HOUSEID_DID, 0);
+	if (houseId)
+		g_pHouseManager->SendHouseData(pPlayer, houseId);
+	else
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
-		{
-			if (CSlumLordWeenie *slumlord = house->GetSlumLord())
-			{
-				if (house->GetHouseOwner() == pPlayer->GetID())
-				{
-					slumlord->SendHouseData(pPlayer);
-					return false;
-				}
-			}
-		}
+		//if we can't get the data send the "no house" packet
+		BinaryWriter noHouseData;
+		noHouseData.Write<DWORD>(0x0226);
+		noHouseData.Write<DWORD>(0);
+		pPlayer->SendNetMessage(&noHouseData, PRIVATE_MSG, TRUE, FALSE);
 	}
-
-	//if we can't get the data send the "no house" packet
-	BinaryWriter noHouseData;
-	noHouseData.Write<DWORD>(0x0226);
-	noHouseData.Write<DWORD>(0);
-	pPlayer->SendNetMessage(&noHouseData, PRIVATE_MSG, TRUE, FALSE);
 
 	return false;
 }
@@ -1556,12 +1546,12 @@ CLIENT_COMMAND(waivenextrent, "<on/off>", "Toggles this rent period rent.", ADMI
 	if (!_stricmp(argv[0], "on") || !_stricmp(argv[0], "1"))
 	{
 		g_pWorld->BroadcastGlobal(ServerBroadcast("System", "This rent period has been waived, rents do not need to be paid for this period.", LTT_DEFAULT), PRIVATE_MSG);
-		g_FreeHouseMaintenancePeriod = true;
+		g_pHouseManager->_freeHouseMaintenancePeriod = true;
 	}
 	else if (!_stricmp(argv[0], "off") || !_stricmp(argv[0], "0"))
 	{
 		g_pWorld->BroadcastGlobal(ServerBroadcast("System", "Rent is back in effect for this rent period.", LTT_DEFAULT), PRIVATE_MSG);
-		g_FreeHouseMaintenancePeriod = false;
+		g_pHouseManager->_freeHouseMaintenancePeriod = false;
 	}
 	else
 		return true;
@@ -1571,19 +1561,16 @@ CLIENT_COMMAND(waivenextrent, "<on/off>", "Toggles this rent period rent.", ADMI
 	for (PlayerWeenieMap::iterator i = pPlayers->begin(); i != pPlayers->end(); i++)
 	{
 		CPlayerWeenie *player = i->second;
-		DWORD houseId = player->InqIIDQuality(HOUSE_IID, 0);
-		if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true)) //we may have to activate the landblock the house is in
+		DWORD houseId = player->InqDIDQuality(HOUSEID_DID, 0);
+		if (houseId)
+			g_pHouseManager->SendHouseData(player, houseId);
+		else
 		{
-			if (CHouseWeenie *house = houseWeenie->AsHouse())
-			{
-				if (CSlumLordWeenie *slumlord = house->GetSlumLord())
-				{
-					if (house->GetHouseOwner() == player->GetID())
-					{
-						slumlord->SendHouseData(player);
-					}
-				}
-			}
+			//if we can't get the data send the "no house" packet
+			BinaryWriter noHouseData;
+			noHouseData.Write<DWORD>(0x0226);
+			noHouseData.Write<DWORD>(0);
+			player->SendNetMessage(&noHouseData, PRIVATE_MSG, TRUE, FALSE);
 		}
 	}
 

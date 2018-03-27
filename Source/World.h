@@ -130,9 +130,6 @@ private:
 
 	void LoadMOTD();
 
-	void LoadHousingData();
-	void SaveHousingData();
-
 	void EnumerateDungeonsFromCellData();
 
 	void CheckDormantLandblocks();

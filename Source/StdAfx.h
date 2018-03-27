@@ -75,7 +75,7 @@
 #define PUBLIC_STRING ""
 #endif
 
-#define SERVER_VERSION_NUMBER_STRING "1.09"
+#define SERVER_VERSION_NUMBER_STRING "1.10"
 #define SERVER_VERSION_STRING __DATE__ " @ " __TIME__ " (" CONFIGURATION_STRING " " PLATFORM_STRING PUBLIC_STRING ")"
 
 //#define SERVER_VERSION_NUMBER_STRING "1.0.0.9" // "1.0.0.11"
@@ -107,6 +107,7 @@ extern class WeenieLandCoverage *g_pWeenieLandCoverage;
 extern class CInferredPortalData *g_pPortalDataEx;
 extern class CInferredCellData *g_pCellDataEx;
 extern class CPhatDataBin *g_pPhatDataBin;
+extern class CHouseManager *g_pHouseManager;
 
 #include "DATDisk.h"
 #include "TurbineData.h"
@@ -117,7 +118,3 @@ extern TURBINEPORTAL* g_pPortal;
 extern TURBINECELL* g_pCell;
 
 extern bool g_bDebugToggle;
-
-extern DWORD g_CurrentHouseMaintenancePeriod;
-extern DWORD g_NextHouseMaintenancePeriod;
-extern bool g_FreeHouseMaintenancePeriod;

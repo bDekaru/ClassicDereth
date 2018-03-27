@@ -11,6 +11,222 @@
 
 #define HOUSE_SAVE_INTERVAL 300.0
 
+CHouseManager::CHouseManager()
+{
+}
+
+CHouseManager::~CHouseManager()
+{
+}
+
+void CHouseManager::Load()
+{
+	void *data = NULL;
+	DWORD length = 0;
+	if (g_pDBIO->GetGlobalData(DBIO_GLOBAL_HOUSING_DATA, &data, &length))
+	{
+		BinaryReader reader(data, length);
+		_currentHouseMaintenancePeriod = reader.Read<DWORD>();
+		_nextHouseMaintenancePeriod = reader.Read<DWORD>();
+		_freeHouseMaintenancePeriod = (reader.Read<int>() > 0);
+	}
+	else
+	{
+		_currentHouseMaintenancePeriod = g_pPhatSDK->GetCurrTimeStamp();
+		_nextHouseMaintenancePeriod = _currentHouseMaintenancePeriod + (30 * 24 * 60 * 60); //in 30 days.
+		_freeHouseMaintenancePeriod = false;
+	}
+}
+
+void CHouseManager::Save()
+{
+	BinaryWriter writer;
+	writer.Write<DWORD>(_currentHouseMaintenancePeriod);
+	writer.Write<DWORD>(_nextHouseMaintenancePeriod);
+	writer.Write<int>((int)_freeHouseMaintenancePeriod);
+	g_pDBIO->CreateOrUpdateGlobalData(DBIO_GLOBAL_HOUSING_DATA, writer.GetData(), writer.GetSize());
+
+	for (auto houseData : _houseDataMap)
+		houseData.second.Save();
+}
+
+CHouseData *CHouseManager::GetHouseData(DWORD houseId)
+{
+	if (!houseId)
+		return NULL;
+
+	CHouseData *houseData = _houseDataMap.lookup(houseId);
+	if (!houseData)
+	{
+		//let's try the database
+		void *data = NULL;
+		DWORD length = 0;
+		if (g_pDBIO->GetHouseData(houseId, &data, &length))
+		{
+			BinaryReader reader(data, length);
+			houseData = new CHouseData();
+			houseData->UnPack(&reader);
+			houseData->_houseId = houseId;
+
+			_houseDataMap.add(houseId, houseData);
+		}
+	}
+
+	if (!houseData)
+	{
+		houseData = new CHouseData(); //just make a new one.
+		houseData->_houseId = houseId;
+
+		_houseDataMap.add(houseId, houseData);
+	}
+
+	return houseData;
+}
+
+void CHouseManager::SaveHouseData(DWORD houseId)
+{
+	if (!houseId)
+		return;
+
+	CHouseData *houseData = _houseDataMap.lookup(houseId);
+	if (!houseData)
+		return;
+
+	houseData->Save();
+}
+
+void CHouseManager::SendHouseData(CPlayerWeenie *player, DWORD houseId)
+{
+	if (!player)
+		return;
+
+	CHouseData *houseData = GetHouseData(houseId);
+
+	BinaryWriter houseDataPacket;
+
+	if (!houseData || houseData->_ownerId != player->GetID())
+	{
+		houseDataPacket.Write<DWORD>(0x0226);
+		houseDataPacket.Write<DWORD>(0);
+		player->SendNetMessage(&houseDataPacket, PRIVATE_MSG, TRUE, FALSE);
+	}
+	else
+	{
+		houseDataPacket.Write<DWORD>(0x0225);
+		houseDataPacket.Write<DWORD>(houseData->_purchaseTimestamp);
+		houseDataPacket.Write<DWORD>(g_pHouseManager->_currentHouseMaintenancePeriod);
+		houseDataPacket.Write<DWORD>(houseData->_houseType);
+		houseDataPacket.Write<int>((int)g_pHouseManager->_freeHouseMaintenancePeriod);
+		houseData->_buy.Pack(&houseDataPacket);
+		houseData->_rent.Pack(&houseDataPacket);
+		houseData->_position.Pack(&houseDataPacket);
+		player->SendNetMessage(&houseDataPacket, PRIVATE_MSG, TRUE, FALSE);
+	}
+}
+
+DEFINE_PACK(CHouseData)
+{
+	pWriter->Write<DWORD>(_slumLordId);
+	pWriter->Write<DWORD>(_ownerId);
+	pWriter->Write<DWORD>(_ownerAccount);
+	pWriter->Write<DWORD>(_purchaseTimestamp);
+	pWriter->Write<DWORD>(_currentMaintenancePeriod);
+	pWriter->Write<DWORD>(_houseType);
+	_position.Pack(pWriter);
+	_buy.Pack(pWriter);
+	_rent.Pack(pWriter);
+	_accessList.Pack(pWriter);
+	_storageAccessList.Pack(pWriter);
+	pWriter->Write<bool>(_allegianceAccess);
+	pWriter->Write<bool>(_allegianceStorageAccess);
+	pWriter->Write<bool>(_everyoneAccess);
+	pWriter->Write<bool>(_everyoneStorageAccess);
+	pWriter->Write<bool>(_hooksVisible);
+}
+
+DEFINE_UNPACK(CHouseData)
+{
+	_slumLordId = pReader->Read<DWORD>();
+	_ownerId = pReader->Read<DWORD>();
+	_ownerAccount = pReader->Read<DWORD>();
+	_purchaseTimestamp = pReader->Read<DWORD>();
+	_currentMaintenancePeriod = pReader->Read<DWORD>();
+	_houseType = pReader->Read<DWORD>();
+	_position.UnPack(pReader);
+	_buy.UnPack(pReader);
+	_rent.UnPack(pReader);
+	_accessList.UnPack(pReader);
+	_storageAccessList.UnPack(pReader);
+	_allegianceAccess = pReader->Read<bool>();
+	_allegianceStorageAccess = pReader->Read<bool>();
+	_everyoneAccess = pReader->Read<bool>();
+	_everyoneStorageAccess = pReader->Read<bool>();
+	_hooksVisible = pReader->Read<bool>();
+
+	return true;
+}
+
+void CHouseData::ClearOwnershipData()
+{
+	_ownerId = 0;
+	_ownerAccount = 0;
+	_purchaseTimestamp = 0;
+	_currentMaintenancePeriod = 0;
+	_allegianceAccess = false;
+	_allegianceStorageAccess = false;
+	_everyoneAccess = false;
+	_everyoneStorageAccess = false;
+	_hooksVisible = true;
+	_rent.clear();
+	_buy.clear();
+}
+
+void CHouseData::SetHookVisibility(bool newSetting)
+{
+	for (auto hook_id : _hookList)
+	{
+		CWeenieObject *hookWeenie = g_pWorld->FindObject(hook_id, true);
+
+		if (!hookWeenie)
+			continue;
+
+		CHookWeenie *hook = hookWeenie->AsHook();
+
+		if (!hook)
+			continue;
+
+		hook->SetHookVisibility(newSetting);
+	}
+}
+
+void CHouseData::AbandonHouse()
+{
+		CWeenieObject *owner = g_pWorld->FindObject(_ownerId);
+		if (owner)
+		{
+			//if the player is offline we won't find him but that's okay, we will just update his housing data when he logins in UpdateHouseData()
+			owner->m_Qualities.RemoveDataID(HOUSEID_DID);
+			owner->NotifyDIDStatUpdated(HOUSEID_DID);
+		}
+
+		ClearOwnershipData();
+		SetHookVisibility(_hooksVisible);
+
+		if(CWeenieObject *slumLord = g_pWorld->FindObject(_slumLordId))
+			slumLord->DoForcedMotion(Motion_Off);
+
+		if (owner)
+			g_pHouseManager->SendHouseData(owner->AsPlayer(), _houseId);
+}
+
+void CHouseData::Save()
+{
+	BinaryWriter writer;
+	Pack(&writer);
+	g_pDBIO->CreateOrUpdateHouseData(_houseId, writer.GetData(), writer.GetSize());
+}
+
+
 CHouseWeenie::CHouseWeenie()
 {
 	m_bDontClear = true;
@@ -27,7 +243,9 @@ void CHouseWeenie::EnsureLink(CWeenieObject *source)
 
 	if (source->AsHook())
 	{
-		_hook_list.insert(source->GetID());
+		CHouseData *houseData = source->AsHook()->GetHouseData();
+		if(houseData)
+			houseData->_hookList.insert(source->GetID());
 	}
 
 	if (source->AsBootSpot())
@@ -43,14 +261,26 @@ void CHouseWeenie::EnsureLink(CWeenieObject *source)
 	// Storage_WeenieType
 }
 
+CHouseData *CHouseWeenie::GetHouseData()
+{
+	return g_pHouseManager->GetHouseData(GetHouseDID());
+}
+
 std::string CHouseWeenie::GetHouseOwnerName()
 {
-	return InqStringQuality(HOUSE_OWNER_NAME_STRING, "");
+	DWORD owner = GetHouseOwner();
+
+	if (!owner)
+		return "";
+
+	return g_pWorld->GetPlayerName(owner, true);
+	//return InqStringQuality(HOUSE_OWNER_NAME_STRING, "");
 }
 
 DWORD CHouseWeenie::GetHouseOwner()
 {
-	return InqIIDQuality(HOUSE_OWNER_IID, 0);
+	return GetHouseData()->_ownerId;
+	//return InqIIDQuality(HOUSE_OWNER_IID, 0);
 }
 
 DWORD CHouseWeenie::GetHouseDID()
@@ -65,7 +295,7 @@ int CHouseWeenie::GetHouseType()
 
 CSlumLordWeenie *CHouseWeenie::GetSlumLord()
 {
-	if (CWeenieObject *slumlord = g_pWorld->FindObject(InqIIDQuality(SLUMLORD_IID, 0)))
+	if (CWeenieObject *slumlord = g_pWorld->FindObject(InqIIDQuality(SLUMLORD_IID, 0), true))
 	{
 		return slumlord->AsSlumLord();
 	}
@@ -73,73 +303,29 @@ CSlumLordWeenie *CHouseWeenie::GetSlumLord()
 	return NULL;
 }
 
-void CHouseWeenie::SetHookVisibility(bool newSetting)
-{
-	for (auto hook_id : _hook_list)
-	{
-		CWeenieObject *hookWeenie = g_pWorld->FindObject(hook_id);
-
-		if (!hookWeenie)
-			continue;
-
-		CHookWeenie *hook = hookWeenie->AsHook();
-
-		if (!hook)
-			continue;
-
-		hook->SetHookVisibility(newSetting);
-	}
-}
-
-void CHouseWeenie::SaveEx(class CWeenieSave &save)
-{
-	CWeenieObject::SaveEx(save);
-
-	save._currentMaintenancePeriod = _currentMaintenancePeriod;
-	save._rent = _rent;
-	save._accessList = _accessList;
-	save._storageAccessList = _storageAccessList;
-	save._allegianceAccess = _allegianceAccess;
-	save._allegianceStorageAccess = _allegianceStorageAccess;
-	save._everyoneAccess = _everyoneAccess;
-	save._everyoneStorageAccess = _everyoneStorageAccess;
-}
-
-void CHouseWeenie::LoadEx(class CWeenieSave &save)
-{
-	CWeenieObject::LoadEx(save);
-
-	_currentMaintenancePeriod = save._currentMaintenancePeriod;
-	_rent = save._rent;
-	_accessList = save._accessList;
-	_storageAccessList = save._storageAccessList;
-	_allegianceAccess = save._allegianceAccess;
-	_allegianceStorageAccess = save._allegianceStorageAccess;
-	_everyoneAccess = save._everyoneAccess;
-	_everyoneStorageAccess = save._everyoneStorageAccess;
-}
-
 bool CHouseWeenie::HasAccess(CPlayerWeenie *requester)
 {
 	if (!requester)
 		return false;
 
+	CHouseData *houseData = GetHouseData();
+
 	DWORD requesterId = requester->GetID();
 	DWORD houseOwnerId = GetHouseOwner();
 
-	if (requesterId == houseOwnerId)
+	if (requesterId == houseData->_ownerId)
 		return true;
 
-	if (_everyoneAccess)
+	if (houseData->_everyoneAccess)
 		return true;
 
-	if (requester->GetClient()->GetAccount() == InqStringQuality(HOUSE_OWNER_ACCOUNT_STRING, ""))
+	if (requester->GetClient()->GetAccountInfo().id == houseData->_ownerAccount)
 		return true;
 
-	if (std::find(_accessList.begin(), _accessList.end(), requesterId) != _accessList.end())
+	if (std::find(houseData->_accessList.begin(), houseData->_accessList.end(), requesterId) != houseData->_accessList.end())
 		return true;
 
-	if (_allegianceAccess)
+	if (houseData->_allegianceAccess)
 	{
 		AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
 		AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
@@ -156,22 +342,24 @@ bool CHouseWeenie::HasStorageAccess(CPlayerWeenie *requester)
 	if (!requester)
 		return false;
 
+	CHouseData *houseData = GetHouseData();
+
 	DWORD requesterId = requester->GetID();
 	DWORD houseOwnerId = GetHouseOwner();
 
-	if (requesterId == houseOwnerId)
+	if (requesterId == houseData->_ownerId)
 		return true;
 
-	if (_everyoneStorageAccess)
+	if (houseData->_everyoneStorageAccess)
 		return true;
 
-	if (requester->GetClient()->GetAccount() == InqStringQuality(HOUSE_OWNER_ACCOUNT_STRING, ""))
+	if (requester->GetClient()->GetAccountInfo().id == houseData->_ownerAccount)
 		return true;
 
-	if (std::find(_storageAccessList.begin(), _storageAccessList.end(), requesterId) != _storageAccessList.end())
+	if (std::find(houseData->_storageAccessList.begin(), houseData->_storageAccessList.end(), requesterId) != houseData->_storageAccessList.end())
 		return true;
 
-	if (_allegianceStorageAccess)
+	if (houseData->_allegianceStorageAccess)
 	{
 		AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
 		AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
@@ -200,15 +388,22 @@ void CSlumLordWeenie::Tick()
 		if(house->ShouldSave())
 			house->Save();
 
-		for (auto hook_id : house->_hook_list)
+		CHouseData *houseData = house->GetHouseData();
+
+		if (houseData)
 		{
-			CWeenieObject *hook = g_pWorld->FindObject(hook_id);
+			houseData->Save();
 
-			if (!hook)
-				continue;
+			for (auto hook_id : houseData->_hookList)
+			{
+				CWeenieObject *hook = g_pWorld->FindObject(hook_id);
 
-			if (hook->ShouldSave())
-				hook->Save();
+				if (!hook)
+					continue;
+
+				if (hook->ShouldSave())
+					hook->Save();
+			}
 		}
 
 		_nextSave = Timer::cur_time + HOUSE_SAVE_INTERVAL;
@@ -224,12 +419,16 @@ void CSlumLordWeenie::Tick()
 			if (!house)
 				return;
 
-			if (house->GetHouseOwner())
+			CHouseData *houseData = house->GetHouseData();
+			houseData->_slumLordId = GetID();
+			houseData->_position = m_Position;
+
+			if (houseData->_ownerId)
 				DoForcedMotion(Motion_On);
 
-			for (auto hook_id : house->_hook_list)
+			for (auto hook_id : houseData->_hookList)
 			{
-				CWeenieObject *hook = g_pWorld->FindObject(hook_id);
+				CWeenieObject *hook = g_pWorld->FindObject(hook_id, true);
 
 				if (!hook)
 					continue;
@@ -246,12 +445,12 @@ void CSlumLordWeenie::Tick()
 		{
 			//check global data and update if necessary
 			DWORD now = g_pPhatSDK->GetCurrTimeStamp();
-			if (g_NextHouseMaintenancePeriod < now)
+			if (g_pHouseManager->_nextHouseMaintenancePeriod < now)
 			{
-				if (!g_FreeHouseMaintenancePeriod)
-					g_CurrentHouseMaintenancePeriod = now;
-				g_FreeHouseMaintenancePeriod = false;
-				g_NextHouseMaintenancePeriod = now + (30 * 24 * 60 * 60); //in 30 days.
+				if (!g_pHouseManager->_freeHouseMaintenancePeriod)
+					g_pHouseManager->_currentHouseMaintenancePeriod = now;
+				g_pHouseManager->_freeHouseMaintenancePeriod = false;
+				g_pHouseManager->_nextHouseMaintenancePeriod = now + (30 * 24 * 60 * 60); //in 30 days.
 			}
 
 			CheckRentPeriod();
@@ -263,7 +462,7 @@ void CSlumLordWeenie::Tick()
 
 CHouseWeenie *CSlumLordWeenie::GetHouse()
 {
-	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0)))
+	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0), true))
 	{
 		return house->AsHouse();
 	}
@@ -334,8 +533,9 @@ int CSlumLordWeenie::DoUseResponse(CWeenieObject *other)
 
 	if (CHouseWeenie *house = GetHouse())
 	{
-		if(house->GetHouseOwner())
-			prof._rent = house->_rent; //get the real house rent information that may contain payments
+		CHouseData *houseData = house->GetHouseData();
+		if (houseData && houseData->_ownerId)
+			prof._rent = houseData->_rent; //get the real house rent information that may contain payments
 	}
 	
 	BinaryWriter profMsg;
@@ -346,109 +546,11 @@ int CSlumLordWeenie::DoUseResponse(CWeenieObject *other)
 	return WERROR_NONE;
 }
 
-void CSlumLordWeenie::UpdateHouseData(CPlayerWeenie *player)
-{
-	CHouseWeenie *house = GetHouse();
-
-	if (!house)
-	{
-		//can't update data if we can't find the house.
-		return;
-	}
-	else if (house->GetHouseOwner() != player->GetID())
-	{
-		//this house no longer belongs to this player. Clear ownership information.
-		player->m_Qualities.RemoveInstanceID(HOUSE_IID);
-		player->NotifyIIDStatUpdated(HOUSE_IID);
-	}
-}
-
-void CSlumLordWeenie::SendHouseData(CPlayerWeenie *player)
-{
-	if (!player)
-		return;
-
-	BinaryWriter houseData;
-
-	CHouseWeenie *house = GetHouse();
-
-	if (!house || house->GetHouseOwner() != player->GetID())
-	{
-		houseData.Write<DWORD>(0x0226);
-		houseData.Write<DWORD>(0);
-		player->SendNetMessage(&houseData, PRIVATE_MSG, TRUE, FALSE);
-	}
-	else
-	{
-		HouseProfile prof;
-		GetHouseProfile(prof);
-
-		houseData.Write<DWORD>(0x0225);
-		houseData.Write<DWORD>(house->InqIntQuality(HOUSE_PURCHASE_TIMESTAMP_INT, 0));
-		houseData.Write<DWORD>(g_CurrentHouseMaintenancePeriod);
-		houseData.Write<DWORD>(house->InqIntQuality(HOUSE_TYPE_INT, 0));
-		houseData.Write<int>((int)g_FreeHouseMaintenancePeriod);
-		prof._buy.Pack(&houseData);
-		house->_rent.Pack(&houseData);
-		m_Position.Pack(&houseData);
-		player->SendNetMessage(&houseData, PRIVATE_MSG, TRUE, FALSE);
-	}
-}
-
-void CSlumLordWeenie::AbandonHouse()
-{
-	if (CHouseWeenie *house = GetHouse())
-	{
-		DWORD houseOwnerId = house->GetHouseOwner();
-		CWeenieObject *houseOwner = g_pWorld->FindObject(houseOwnerId);
-		if (houseOwner)
-		{
-			//if the player is offline we won't find him but that's okay, we will just update his housing data when he logins in UpdateHouseData()
-			houseOwner->m_Qualities.RemoveInstanceID(HOUSE_IID);
-			houseOwner->NotifyIIDStatUpdated(HOUSE_IID);
-		}
-
-		house->m_Qualities.RemoveInstanceID(HOUSE_OWNER_IID);
-		house->NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
-
-		house->m_Qualities.RemoveString(HOUSE_OWNER_NAME_STRING);
-		house->NotifyStringStatUpdated(HOUSE_OWNER_NAME_STRING, false);
-
-		house->_rent.clear();
-		house->_accessList.clear();
-		house->_storageAccessList.clear();
-		house->_allegianceAccess = false;
-		house->_allegianceStorageAccess = false;
-		house->_everyoneAccess = false;
-		house->_everyoneStorageAccess = false;
-
-		for (auto hook_id : house->_hook_list)
-		{
-			CWeenieObject *hook = g_pWorld->FindObject(hook_id);
-
-			if (!hook)
-				continue;
-
-			hook->m_Qualities.RemoveInstanceID(HOUSE_OWNER_IID);
-			hook->NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
-
-			if (hook->AsHook())
-				hook->AsHook()->UpdateHookedObject();
-		}
-		house->SetHookVisibility(true);
-
-		DoForcedMotion(Motion_Off);
-
-		if (houseOwner)
-			SendHouseData(houseOwner->AsPlayer());
-	}
-}
-
 void CSlumLordWeenie::BuyHouse(CPlayerWeenie *player, const PackableList<DWORD> &items)
 {
 	if (CHouseWeenie *house = GetHouse())
 	{
-		if(player->GetClient()->ClientHasHouse(player))
+		if(player->GetAccountHouseId())
 		{
 			player->SendText("You may only own one dwelling at a time.", LTT_DEFAULT); //made up message.
 			return;
@@ -647,38 +749,31 @@ void CSlumLordWeenie::BuyHouse(CPlayerWeenie *player, const PackableList<DWORD> 
 
 		int timeStamp = g_pPhatSDK->GetCurrTimeStamp();
 		player->SendText("Congratulations!  You now own this dwelling.", LTT_DEFAULT);
-		if (house->GetHouseType() != 4)//apartments are not affected nor do the affect the house purchase frequency limitation
+
+		//Disabled the cooldown on purchasing houses
+		//if (house->GetHouseType() != 4)//apartments are not affected nor do the affect the house purchase frequency limitation
+		//{
+		//	player->m_Qualities.SetInt(HOUSE_PURCHASE_TIMESTAMP_INT, timeStamp);
+		//	player->NotifyIntStatUpdated(HOUSE_PURCHASE_TIMESTAMP_INT);
+		//}
+
+		player->m_Qualities.SetDataID(HOUSEID_DID, house->GetHouseDID());
+		player->NotifyDIDStatUpdated(HOUSEID_DID);
+
+		CHouseData *houseData = house->GetHouseData();
+		houseData->ClearOwnershipData();
+		houseData->_ownerId = player->GetID();
+		houseData->_ownerAccount = player->GetClient()->GetAccountInfo().id;
+		houseData->_purchaseTimestamp = timeStamp;
+		houseData->_currentMaintenancePeriod = g_pHouseManager->_currentHouseMaintenancePeriod;
+		houseData->_rent = prof._rent;
+		houseData->_buy = prof._buy;
+		houseData->_houseType = house->GetHouseType();
+		houseData->_position = GetPosition();
+
+		for (auto hook_id : houseData->_hookList)
 		{
-			player->m_Qualities.SetInt(HOUSE_PURCHASE_TIMESTAMP_INT, timeStamp);
-			player->NotifyIntStatUpdated(HOUSE_PURCHASE_TIMESTAMP_INT);
-		}
-		player->m_Qualities.SetInstanceID(HOUSE_IID, house->GetID());
-		player->NotifyIIDStatUpdated(HOUSE_IID);
-
-		player->m_Qualities.SetString(HOUSE_OWNER_ACCOUNT_STRING, player->GetClient()->GetAccount());
-		player->NotifyStringStatUpdated(HOUSE_OWNER_ACCOUNT_STRING);
-
-		house->m_Qualities.SetInt(HOUSE_PURCHASE_TIMESTAMP_INT, timeStamp);
-		house->NotifyIntStatUpdated(HOUSE_PURCHASE_TIMESTAMP_INT);
-		house->m_Qualities.SetInstanceID(HOUSE_OWNER_IID, player->GetID());
-		house->NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
-
-		house->m_Qualities.SetString(HOUSE_OWNER_NAME_STRING, player->GetName());
-		house->NotifyStringStatUpdated(HOUSE_OWNER_NAME_STRING, false);
-
-		house->_rent = prof._rent; //update house rent information
-		house->_currentMaintenancePeriod = g_CurrentHouseMaintenancePeriod;
-
-		house->_accessList.clear();
-		house->_storageAccessList.clear();
-		house->_allegianceAccess = false;
-		house->_allegianceStorageAccess = false;
-		house->_everyoneAccess = false;
-		house->_everyoneStorageAccess = false;
-
-		for (auto hook_id : house->_hook_list)
-		{
-			CWeenieObject *hook = g_pWorld->FindObject(hook_id);
+			CWeenieObject *hook = g_pWorld->FindObject(hook_id, true);
 
 			if (!hook)
 				continue;
@@ -686,21 +781,19 @@ void CSlumLordWeenie::BuyHouse(CPlayerWeenie *player, const PackableList<DWORD> 
 			hook->m_Qualities.SetInstanceID(HOUSE_OWNER_IID, player->GetID());
 			hook->NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
 
-			if (hook->AsHook())
-				hook->AsHook()->UpdateHookedObject();
-
 			if (hook->ShouldSave())
 				hook->Save();
 		}
-		house->SetHookVisibility(true);
+		houseData->SetHookVisibility(true);
 
 		DoForcedMotion(Motion_On);
-		SendHouseData(player);
+		g_pHouseManager->SendHouseData(player, house->GetHouseDID());
 		DoUseResponse(player);
 		player->RecalculateCoinAmount();
 		player->Save();
 		if(house->ShouldSave())
 			house->Save();
+		houseData->Save();
 	}
 }
 
@@ -708,20 +801,22 @@ void CSlumLordWeenie::CheckRentPeriod()
 {
 	if (CHouseWeenie *house = GetHouse())
 	{
-		if (!house->GetHouseOwner())
+		CHouseData *houseData = house->GetHouseData();
+
+		if (!houseData->_ownerId)
 			return; //no owner no rent
 
-		if (house->_currentMaintenancePeriod < g_CurrentHouseMaintenancePeriod)
+		if (houseData->_currentMaintenancePeriod < g_pHouseManager->_currentHouseMaintenancePeriod)
 		{
 			//check if we still meet the allegiance requirements to own this house.
-			AllegianceTreeNode *allegianceNode = g_pAllegianceManager->GetTreeNode(house->GetHouseOwner());
+			AllegianceTreeNode *allegianceNode = g_pAllegianceManager->GetTreeNode(houseData->_ownerId);
 			if (InqBoolQuality(HOUSE_REQUIRES_MONARCH_BOOL, false))
 			{
 				if (!allegianceNode || allegianceNode->_patronID)
 				{
-					if (CWeenieObject *player = g_pWorld->FindObject(house->GetHouseOwner())) //todo: a way to inform the allegiance and the player if he is offline.
+					if (CWeenieObject *player = g_pWorld->FindObject(houseData->_ownerId)) //todo: a way to inform the allegiance and the player if he is offline.
 						player->SendText("You no longer meet the monarch requirement for your dwelling so it has been abandoned.", LTT_DEFAULT); //made up message.
-					AbandonHouse();
+					houseData->AbandonHouse();
 					return;
 				}
 			}
@@ -730,15 +825,15 @@ void CSlumLordWeenie::CheckRentPeriod()
 			{
 				if (!allegianceNode || allegianceNode->_rank < minAllegianceRank)
 				{
-					if (CWeenieObject *player = g_pWorld->FindObject(house->GetHouseOwner())) //todo: a way to inform the allegiance and the player if he is offline.
+					if (CWeenieObject *player = g_pWorld->FindObject(houseData->_ownerId)) //todo: a way to inform the allegiance and the player if he is offline.
 						player->SendText(csprintf("You no longer meet the allegiance rank requirement for your dwelling so it has been abandoned.", minAllegianceRank), LTT_DEFAULT); //made up message.
-					AbandonHouse();
+					houseData->AbandonHouse();
 					return;
 				}
 			}
 
 			bool fullyPaid = true;
-			for (HousePayment &payment : house->_rent)
+			for (HousePayment &payment : houseData->_rent)
 			{
 				if (payment.paid < payment.num)
 				{
@@ -752,14 +847,16 @@ void CSlumLordWeenie::CheckRentPeriod()
 				HouseProfile prof;
 				GetHouseProfile(prof);
 
-				house->_rent = prof._rent; //update rent value from house profile, maybe the prices have changed!
+				//update rent and buy values from house profile, maybe the prices have changed!
+				houseData->_rent = prof._rent;
+				houseData->_buy = prof._buy;
 
-				if (CWeenieObject *owner = g_pWorld->FindObject(house->GetHouseOwner()))
-					SendHouseData(owner->AsPlayer()); //update house's owner panel if the owner is online.
+				if (CWeenieObject *owner = g_pWorld->FindObject(houseData->_ownerId))
+					g_pHouseManager->SendHouseData(owner->AsPlayer(), house->GetHouseDID()); //update house's owner panel if the owner is online.
 			}
 			else
 			{
-				AbandonHouse();
+				houseData->AbandonHouse();
 			}
 		}
 	}
@@ -769,14 +866,16 @@ void CSlumLordWeenie::RentHouse(CPlayerWeenie *player, const PackableList<DWORD>
 {
 	if (CHouseWeenie *house = GetHouse())
 	{
-		if (!house->GetHouseOwner())
+		CHouseData *houseData = house->GetHouseData();
+
+		if (!houseData->_ownerId)
 		{
 			player->SendText("That dwelling has no owner.", LTT_DEFAULT); //made up message.
 			return;
 		}
 
 		bool requiresRent = false;
-		for (HousePayment &payment : house->_rent)
+		for (HousePayment &payment : houseData->_rent)
 		{
 			if (payment.paid < payment.num)
 			{
@@ -793,7 +892,7 @@ void CSlumLordWeenie::RentHouse(CPlayerWeenie *player, const PackableList<DWORD>
 
 		std::map<CWeenieObject *, int> consumeList;
 
-		for (HousePayment &payment : house->_rent)
+		for (HousePayment &payment : houseData->_rent)
 		{
 			for (auto &itemID : items)
 			{
@@ -839,7 +938,7 @@ void CSlumLordWeenie::RentHouse(CPlayerWeenie *player, const PackableList<DWORD>
 			}
 		}
 
-		for (HousePayment &payment : house->_rent)
+		for (HousePayment &payment : houseData->_rent)
 		{
 			if (payment.wcid == W_COINSTACK_CLASS)
 			{
@@ -932,8 +1031,8 @@ void CSlumLordWeenie::RentHouse(CPlayerWeenie *player, const PackableList<DWORD>
 		DoUseResponse(player);
 		player->RecalculateCoinAmount();
 
-		if (CWeenieObject *owner = g_pWorld->FindObject(house->GetHouseOwner()))
-			SendHouseData(owner->AsPlayer()); //update house's owner panel if the owner is online.
+		if (CWeenieObject *owner = g_pWorld->FindObject(houseData->_ownerId))
+			g_pHouseManager->SendHouseData(owner->AsPlayer(), house->GetHouseDID()); //update house's owner panel if the owner is online.
 	}
 }
 
@@ -941,6 +1040,40 @@ void CSlumLordWeenie::RentHouse(CPlayerWeenie *player, const PackableList<DWORD>
 CHookWeenie::CHookWeenie()
 {
 	m_bDontClear = true;
+	_nextInitCheck = Timer::cur_time;
+}
+
+void CHookWeenie::Tick()
+{
+	if (!_initialized && _nextInitCheck != -1.0 && _nextInitCheck <= Timer::cur_time)
+	{
+		_nextInitCheck = Timer::cur_time + Random::GenUInt(1, 10);
+
+		CHouseData *houseData = GetHouseData();
+
+		if (!houseData)
+			return;
+
+		if (houseData->_ownerId)
+		{
+			SetHookVisibility(houseData->_hooksVisible);
+			m_Qualities.SetInstanceID(HOUSE_OWNER_IID, houseData->_ownerId);
+			NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
+		}
+		else
+		{
+			m_Qualities.RemoveInstanceID(HOUSE_OWNER_IID);
+			NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
+		}
+
+		UpdateHookedObject(NULL);
+		SetHookVisibility(houseData->_hooksVisible);
+
+		_nextInitCheck = -1.0;
+		_initialized = true;
+	}
+
+	CContainerWeenie::Tick();
 }
 
 void CHookWeenie::SaveEx(CWeenieSave & save)
@@ -956,6 +1089,8 @@ void CHookWeenie::SaveEx(CWeenieSave & save)
 void CHookWeenie::LoadEx(CWeenieSave & save)
 {
 	CContainerWeenie::LoadEx(save);
+
+	_nextInitCheck = Timer::cur_time;
 }
 
 int CHookWeenie::DoUseResponse(CWeenieObject *other)
@@ -964,7 +1099,11 @@ int CHookWeenie::DoUseResponse(CWeenieObject *other)
 	if (!house)
 		return WERROR_NO_HOUSE;
 
-	if (InqBoolQuality(HOUSE_HOOKS_VISIBLE_BOOL, false))
+	CHouseData *houseData = house->GetHouseData();
+	if (!houseData)
+		return WERROR_NO_HOUSE;
+
+	if (houseData->_hooksVisible)
 	{
 		if (house->HasStorageAccess(other->AsPlayer()))
 			return CContainerWeenie::DoUseResponse(other);
@@ -988,10 +1127,6 @@ int CHookWeenie::DoUseResponse(CWeenieObject *other)
 			if (!hookedItem)
 				return WERROR_OBJECT_GONE;
 
-			CHouseWeenie *house = GetHouse();
-			if (!house)
-				return WERROR_OBJECT_GONE;
-
 			if (hookedItem->InqIntQuality(HOOK_GROUP_INT, 0) >= 4 && house->GetHouseType() != 3) //todo: figure out what each value of this flag means, known values are 1, 2, 4, 8, 16, 32.
 			{
 				other->SendText("That can only be activated when hooked in a mansion.", LTT_DEFAULT); //made up message.
@@ -1010,7 +1145,9 @@ int CHookWeenie::DoUseResponse(CWeenieObject *other)
 
 void CHookWeenie::Identify(CWeenieObject *other, DWORD overrideId)
 {
-	if (InqBoolQuality(HOUSE_HOOKS_VISIBLE_BOOL, false))
+	CHouseData *houseData = GetHouseData();
+
+	if (!houseData || houseData->_hooksVisible)
 		CContainerWeenie::Identify(other, overrideId);
 	else
 	{
@@ -1245,10 +1382,10 @@ void CHookWeenie::ClearHookedObject(bool sendUpdate)
 
 void CHookWeenie::SetHookVisibility(bool newSetting)
 {
-	m_Qualities.SetBool(HOUSE_HOOKS_VISIBLE_BOOL, newSetting);
+	CHouseData *houseData = GetHouseData();
 
-	int vis;
-	bool currentSetting = m_Qualities.InqBool(VISIBILITY_BOOL, vis); //it appears just having the bool is enough, no matter if it's true or false
+	if(houseData)
+		houseData->_hooksVisible = newSetting;
 
 	if (!m_Items.empty())
 	{
@@ -1256,6 +1393,9 @@ void CHookWeenie::SetHookVisibility(bool newSetting)
 
 		if (!hookedItem)
 			return;
+
+		m_Qualities.RemoveBool(VISIBILITY_BOOL); //if it's visible we remove the bool altogether.
+		NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
 
 		if (newSetting)
 		{
@@ -1268,8 +1408,9 @@ void CHookWeenie::SetHookVisibility(bool newSetting)
 
 				m_Qualities.SetString(NAME_STRING, weenieDef->m_Qualities.GetString(NAME_STRING, ""));
 				m_Qualities.SetInt(ITEMS_CAPACITY_INT, weenieDef->m_Qualities.GetInt(ITEMS_CAPACITY_INT, 0));
-				NotifyObjectUpdated(false);
 			}
+
+			NotifyObjectUpdated(false);
 		}
 		else
 		{
@@ -1290,8 +1431,9 @@ void CHookWeenie::SetHookVisibility(bool newSetting)
 			{
 				m_Qualities.SetString(NAME_STRING, hookedItem->GetName());
 				m_Qualities.SetInt(ITEMS_CAPACITY_INT, hookedItem->m_Qualities.GetInt(ITEMS_CAPACITY_INT, 0));
-				NotifyObjectUpdated(false);
 			}
+
+			NotifyObjectUpdated(false);
 		}
 	}
 	else
@@ -1314,12 +1456,21 @@ void CHookWeenie::SetHookVisibility(bool newSetting)
 
 CHouseWeenie *CHookWeenie::GetHouse()
 {
-	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0)))
+	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0), true))
 	{
 		return house->AsHouse();
 	}
 
 	return NULL;
+}
+
+CHouseData *CHookWeenie::GetHouseData()
+{
+	CHouseWeenie *house = GetHouse();
+	if (house)
+		return house->GetHouseData();
+	else
+		return NULL;
 }
 
 CDeedWeenie::CDeedWeenie()
@@ -1328,7 +1479,7 @@ CDeedWeenie::CDeedWeenie()
 
 CHouseWeenie *CDeedWeenie::GetHouse()
 {
-	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0)))
+	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0), true))
 	{
 		return house->AsHouse();
 	}
@@ -1343,7 +1494,7 @@ CBootSpotWeenie::CBootSpotWeenie()
 
 CHouseWeenie *CBootSpotWeenie::GetHouse()
 {
-	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0)))
+	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0), true))
 	{
 		return house->AsHouse();
 	}
@@ -1363,7 +1514,7 @@ void CHousePortalWeenie::ApplyQualityOverrides()
 
 CHouseWeenie *CHousePortalWeenie::GetHouse()
 {
-	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0)))
+	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0), true))
 	{
 		return house->AsHouse();
 	}
@@ -1427,11 +1578,10 @@ int CStorageWeenie::DoUseResponse(CWeenieObject *other)
 
 CHouseWeenie *CStorageWeenie::GetHouse()
 {
-	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0)))
+	if (CWeenieObject *house = g_pWorld->FindObject(InqIIDQuality(HOUSE_IID, 0), true))
 	{
 		return house->AsHouse();
 	}
 
 	return NULL;
 }
-

@@ -2840,14 +2840,12 @@ void CPlayerWeenie::SetLoginPlayerQualities()
 		m_Qualities.SetBool(FIRST_ENTER_WORLD_DONE_BOOL, TRUE);
 	}
 
-	DWORD houseId = InqIIDQuality(HOUSE_IID, 0);
-	if (CWeenieObject *houseWeenie = g_pWorld->FindObject(houseId, true))
+	//check if we still own our house.	
+	if (DWORD houseId = InqDIDQuality(HOUSEID_DID, 0))
 	{
-		if (CHouseWeenie *house = houseWeenie->AsHouse())
-		{			
-			if (CSlumLordWeenie *slumlord = house->GetSlumLord())
-				slumlord->UpdateHouseData(this);
-		}
+		CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
+		if (houseData->_ownerId != GetID())
+			m_Qualities.SetDataID(HOUSEID_DID, 0);
 	}
 }
 
@@ -3130,4 +3128,29 @@ void CPlayerWeenie::OnTeleported()
 {
 	CWeenieObject::OnTeleported();
 	_recallTime = -1.0; // cancel any teleport
+}
+
+DWORD CPlayerWeenie::GetAccountHouseId()
+{
+	DWORD currentCharacterId = GetID();
+	for (auto &character : GetClient()->GetCharacters())
+	{
+		if (character.weenie_id == currentCharacterId)
+		{
+			if (DWORD houseID = InqDIDQuality(HOUSEID_DID, 0))
+				return houseID;
+		}
+		else
+		{
+			CWeenieObject *otherCharacter = CWeenieObject::Load(character.weenie_id);
+			if (DWORD houseID = otherCharacter->InqDIDQuality(HOUSEID_DID, 0))
+			{
+				delete otherCharacter;
+				return houseID;
+			}
+			delete otherCharacter;
+		}
+	}
+
+	return 0;
 }

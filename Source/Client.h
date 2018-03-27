@@ -52,8 +52,6 @@ public:
 	bool HasCharacter(DWORD character_weenie_id);
 	DWORD IncCharacterInstanceTS(DWORD character_weenie_id);
 
-	bool ClientHasHouse(CWeenieObject *currentCharacter);
-
 private:
 	void UpdateLoginScreen();
 
