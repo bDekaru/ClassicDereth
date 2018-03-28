@@ -18,6 +18,11 @@ void CalculateDamage(DamageEventData *dmgEvent, SpellCastData *spellData)
 	if (!dmgEvent)
 		return;
 
+	dmgEvent->damageBeforeMitigation = dmgEvent->damageAfterMitigation = dmgEvent->baseDamage;
+
+	if (!dmgEvent->source)
+		return;
+
 	CalculateAttributeDamageBonus(dmgEvent);
 	CalculateSkillDamageBonus(dmgEvent, spellData);
 	CalculateCriticalHitData(dmgEvent, spellData);
@@ -72,6 +77,8 @@ void CalculateAttributeDamageBonus(DamageEventData *dmgEvent)
 void CalculateSkillDamageBonus(DamageEventData *dmgEvent, SpellCastData *spellData)
 {
 	if (!dmgEvent)
+		return;
+	if (!dmgEvent->source)
 		return;
 
 	switch (dmgEvent->damage_form)
