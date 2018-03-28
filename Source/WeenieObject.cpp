@@ -4215,9 +4215,13 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 	if (damageData.damage_form & DF_MAGIC && damageData.isProjectileSpell)
 	{
 		// check for magic absorption
-		if (CWeenieObject *shield = GetWieldedCombat(COMBAT_USE::COMBAT_USE_SHIELD))
+		CWeenieObject *shieldOrMissileWeapon = GetWieldedCombat(COMBAT_USE::COMBAT_USE_SHIELD);
+		if (!shieldOrMissileWeapon)
+			shieldOrMissileWeapon = GetWieldedCombat(COMBAT_USE::COMBAT_USE_MISSILE);
+
+		if (shieldOrMissileWeapon)
 		{
-			if (shield->GetImbueEffects() & ImbuedEffectType::IgnoreSomeMagicProjectileDamage_ImbuedEffectType)
+			if (shieldOrMissileWeapon->GetImbueEffects() & ImbuedEffectType::IgnoreSomeMagicProjectileDamage_ImbuedEffectType)
 			{
 				// not worrying about if trained or specailized or using shield skill vs magic defense skill for now
 				// RED = 100 % * ((CAP * ST * SKILL * 0.0030) - (CAP * ST *.3))
