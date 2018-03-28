@@ -2087,6 +2087,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 	{
 		for each (TYPEMod<STypeInt, int> intMod in op->_mods[index]._intMod)
 		{
+			bool applyToCreatedItem = false;
 			CWeenieObject *modificationSource = NULL;
 			switch (intMod._unk) //this is a guess
 			{
@@ -2117,6 +2118,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 					value = modificationSource->InqIntQuality(intMod._stat, 0);
 				break;
 			case 4: //copy value from modificationSource to created item
+				applyToCreatedItem = true;
 				if (modificationSource)
 					value = modificationSource->InqIntQuality(intMod._stat, 0);
 				break;
@@ -2135,8 +2137,16 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break;
 			}
 
-			pTarget->m_Qualities.SetInt(intMod._stat, value);
-			pTarget->NotifyIntStatUpdated(intMod._stat, false);
+			if (pCreatedItem && applyToCreatedItem)
+			{
+				pCreatedItem->m_Qualities.SetInt(intMod._stat, value);
+				pCreatedItem->NotifyIntStatUpdated(intMod._stat, false);
+			}
+			else
+			{
+				pTarget->m_Qualities.SetInt(intMod._stat, value);
+				pTarget->NotifyIntStatUpdated(intMod._stat, false);
+			}
 		}
 	}
 
@@ -2144,6 +2154,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 	{
 		for each (TYPEMod<STypeBool, BOOL> boolMod in op->_mods[index]._boolMod)
 		{
+			bool applyToCreatedItem = false;
 			CWeenieObject *modificationSource = NULL;
 			switch (boolMod._unk) //this is a guess
 			{
@@ -2174,6 +2185,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 					value = modificationSource->InqBoolQuality(boolMod._stat, 0);
 				break;
 			case 4: //copy value from modificationSource to created item
+				applyToCreatedItem = true;
 				if (modificationSource)
 					value = modificationSource->InqBoolQuality(boolMod._stat, 0);
 				break;
@@ -2189,8 +2201,16 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break;
 			}
 
-			pTarget->m_Qualities.SetBool(boolMod._stat, value);
-			pTarget->NotifyBoolStatUpdated(boolMod._stat, false);
+			if (pCreatedItem && applyToCreatedItem)
+			{
+				pCreatedItem->m_Qualities.SetBool(boolMod._stat, value);
+				pCreatedItem->NotifyBoolStatUpdated(boolMod._stat, false);
+			}
+			else
+			{
+				pTarget->m_Qualities.SetBool(boolMod._stat, value);
+				pTarget->NotifyBoolStatUpdated(boolMod._stat, false);
+			}
 		}
 	}
 
@@ -2198,6 +2218,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 	{
 		for each (TYPEMod<STypeFloat, double> floatMod in op->_mods[index]._floatMod)
 		{
+			bool applyToCreatedItem = false;
 			CWeenieObject *modificationSource = NULL;
 			switch (floatMod._unk) //this is a guess
 			{
@@ -2228,6 +2249,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 					value = modificationSource->InqFloatQuality(floatMod._stat, 0);
 				break;
 			case 4: //copy value from modificationSource to created item
+				applyToCreatedItem = true;
 				if (modificationSource)
 					value = modificationSource->InqFloatQuality(floatMod._stat, 0);
 				break;
@@ -2243,8 +2265,16 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break;
 			}
 
-			pTarget->m_Qualities.SetFloat(floatMod._stat, value);
-			pTarget->NotifyFloatStatUpdated(floatMod._stat, false);
+			if (pCreatedItem && applyToCreatedItem)
+			{
+				pCreatedItem->m_Qualities.SetFloat(floatMod._stat, value);
+				pCreatedItem->NotifyFloatStatUpdated(floatMod._stat, false);
+			}
+			else
+			{
+				pTarget->m_Qualities.SetFloat(floatMod._stat, value);
+				pTarget->NotifyFloatStatUpdated(floatMod._stat, false);
+			}
 		}
 	}
 
@@ -2252,6 +2282,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 	{
 		for each (TYPEMod<STypeString, std::string> stringMod in op->_mods[index]._stringMod)
 		{
+			bool applyToCreatedItem = false;
 			CWeenieObject *modificationSource = NULL;
 			switch (stringMod._unk) //this is a guess
 			{
@@ -2294,8 +2325,21 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				}
 				break;
 			case 4: //copy value from modificationSource to created item
+				applyToCreatedItem = true;
 				if (modificationSource)
-					value = modificationSource->InqStringQuality(stringMod._stat, "");
+				{
+					switch (stringMod._stat)
+					{
+					case TINKER_NAME_STRING:
+					case IMBUER_NAME_STRING:
+					case CRAFTSMAN_NAME_STRING:
+						value = modificationSource->InqStringQuality(NAME_STRING, "");
+						break;
+					default:
+						value = modificationSource->InqStringQuality(stringMod._stat, "");
+						break;
+					}
+				}
 				break;
 			case 7: //add spell
 #ifdef _DEBUG
@@ -2309,8 +2353,16 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break;
 			}
 
-			pTarget->m_Qualities.SetString(stringMod._stat, value);
-			pTarget->NotifyStringStatUpdated(stringMod._stat, false);
+			if (pCreatedItem && applyToCreatedItem)
+			{
+				pCreatedItem->m_Qualities.SetString(stringMod._stat, value);
+				pCreatedItem->NotifyStringStatUpdated(stringMod._stat, false);
+			}
+			else
+			{
+				pTarget->m_Qualities.SetString(stringMod._stat, value);
+				pTarget->NotifyStringStatUpdated(stringMod._stat, false);
+			}
 		}
 	}
 
@@ -2318,6 +2370,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 	{
 		for each (TYPEMod<STypeDID, DWORD> didMod in op->_mods[index]._didMod)
 		{
+			bool applyToCreatedItem = false;
 			CWeenieObject *modificationSource = NULL;
 			switch (didMod._unk) //this is a guess
 			{
@@ -2348,6 +2401,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 					value = modificationSource->InqDIDQuality(didMod._stat, 0);
 				break;
 			case 4: //copy value from modificationSource to created item
+				applyToCreatedItem = true;
 				if (modificationSource)
 					value = modificationSource->InqDIDQuality(didMod._stat, 0);
 				break;
@@ -2363,8 +2417,16 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break;
 			}
 
-			pTarget->m_Qualities.SetDataID(didMod._stat, value);
-			pTarget->NotifyDIDStatUpdated(didMod._stat, false);
+			if (pCreatedItem && applyToCreatedItem)
+			{
+				pCreatedItem->m_Qualities.SetDataID(didMod._stat, value);
+				pCreatedItem->NotifyDIDStatUpdated(didMod._stat, false);
+			}
+			else
+			{
+				pTarget->m_Qualities.SetDataID(didMod._stat, value);
+				pTarget->NotifyDIDStatUpdated(didMod._stat, false);
+			}
 		}
 	}
 
@@ -2372,6 +2434,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 	{
 		for each (TYPEMod<STypeIID, DWORD> iidMod in op->_mods[index]._iidMod)
 		{
+			bool applyToCreatedItem = false;
 			CWeenieObject *modificationSource = NULL;
 			switch (iidMod._unk) //this is a guess
 			{
@@ -2413,8 +2476,20 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				}
 				break;
 			case 4: //copy value from modificationSource to created item
+				applyToCreatedItem = true;
 				if (modificationSource)
-					value = modificationSource->InqIIDQuality(iidMod._stat, 0);
+				{
+					switch (iidMod._stat)
+					{
+					case ALLOWED_WIELDER_IID:
+					case ALLOWED_ACTIVATOR_IID:
+						value = modificationSource->GetID();
+						break;
+					default:
+						value = modificationSource->InqIIDQuality(iidMod._stat, 0);
+						break;
+					}
+				}
 				break;
 			case 7: //add spell
 #ifdef _DEBUG
@@ -2428,8 +2503,16 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break;
 			}
 
-			pTarget->m_Qualities.SetInstanceID(iidMod._stat, value);
-			pTarget->NotifyIIDStatUpdated(iidMod._stat, false);
+			if (pCreatedItem && applyToCreatedItem)
+			{
+				pCreatedItem->m_Qualities.SetInstanceID(iidMod._stat, value);
+				pCreatedItem->NotifyIIDStatUpdated(iidMod._stat, false);
+			}
+			else
+			{
+				pTarget->m_Qualities.SetInstanceID(iidMod._stat, value);
+				pTarget->NotifyIIDStatUpdated(iidMod._stat, false);
+			}
 		}
 	}
 
