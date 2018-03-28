@@ -156,7 +156,6 @@ void CClientEvents::LoginCharacter(DWORD char_weenie_id, const char *szAccount)
 	m_pPlayer->SetLoginPlayerQualities(); // overrides
 	m_pPlayer->RecalculateEncumbrance();
 	m_pPlayer->LoginCharacter();
-	m_pPlayer->TryToUnloadAllegianceXP(true);
 	
 	/*
 	if (*g_pConfig->WelcomePopup() != 0)
@@ -180,6 +179,8 @@ void CClientEvents::LoginCharacter(DWORD char_weenie_id, const char *szAccount)
 
 	g_pWorld->CreateEntity(m_pPlayer);
 	m_pPlayer->DebugValidate();
+
+	m_pPlayer->TryToUnloadAllegianceXP(true);
 
 	return;
 }
