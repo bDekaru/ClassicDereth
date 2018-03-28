@@ -463,7 +463,7 @@ void CMonsterWeenie::FinishMoveItemToContainer(CWeenieObject *sourceItem, CConta
 	// 4. Item being stored is in an external container (chest) or being moved to an external container (chest)
 
 	bool wasWielded = sourceItem->IsWielded();
-	bool wasInWorld = (GetBlock() != NULL);
+	bool isPickup = sourceItem->GetWorldTopLevelOwner() != this;
 
 	DWORD dwCell = GetLandcell();
 
@@ -490,7 +490,7 @@ void CMonsterWeenie::FinishMoveItemToContainer(CWeenieObject *sourceItem, CConta
 			EmitSound(Sound_PickUpItem, 1.0f);
 	}
 
-	if (wasInWorld)
+	if (isPickup)
 		sourceItem->OnPickedUp(this);
 
 	if (bSendEvent)
@@ -601,6 +601,8 @@ void CMonsterWeenie::FinishMoveItemTo3D(CWeenieObject *sourceItem)
 	if (bWasWielded && get_minterp()->InqStyle() != Motion_NonCombat)
 		AdjustToNewCombatMode();
 
+	if(bWasWielded)
+		sourceItem->OnUnwield(this);
 	sourceItem->OnDropped(this);
 }
 

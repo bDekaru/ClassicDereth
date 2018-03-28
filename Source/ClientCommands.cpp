@@ -1641,6 +1641,8 @@ CLIENT_COMMAND(fixbusy, "", "Makes you unbusy if you are stuck.", BASIC_ACCESS)
 	pPlayer->NotifyUseDone(0);
 	pPlayer->NotifyWeenieError(0);
 
+	pPlayer->ChangeCombatMode(NONCOMBAT_COMBAT_MODE, false);
+
 	return false;
 }
 

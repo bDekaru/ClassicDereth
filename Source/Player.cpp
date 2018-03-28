@@ -2097,6 +2097,11 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 			case 1:
 				modificationSource = pTool;
 				break;
+			case 60:
+				//dying armor entries have a second entry to armor reduction that has -30 armor and _unk value of 60
+				//not sure what to do with that so we skip it.
+				continue;
+				break;
 			default:
 #ifdef _DEBUG
 				assert(false);
@@ -2104,7 +2109,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break; //should never happen
 			}
 
-			int value = pTarget->InqIntQuality(intMod._stat, 0);
+			int value = pTarget->InqIntQuality(intMod._stat, 0, true);
 			switch (intMod._operationType)
 			{
 			case 1: //=
@@ -2112,6 +2117,8 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break;
 			case 2: //+
 				value += intMod._value;
+				if (value < 0)
+					value = 0;
 				break;
 			case 3: //copy value from modificationSource to target
 				if(modificationSource)
@@ -2235,7 +2242,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break; //should never happen
 			}
 
-			double value = pTarget->InqFloatQuality(floatMod._stat, 0);
+			double value = pTarget->InqFloatQuality(floatMod._stat, 0, true);
 			switch (floatMod._operationType)
 			{
 			case 1: //=
@@ -2243,6 +2250,8 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 				break;
 			case 2: //+
 				value += floatMod._value;
+				if (value < 0.0)
+					value = 0.0;
 				break;
 			case 3: //copy value from modificationSource to target
 				if (modificationSource)
