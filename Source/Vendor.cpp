@@ -111,7 +111,11 @@ int CVendor::TrySellItemsToPlayer(CPlayerWeenie *buyer, const std::list<ItemProf
 			maxStackSize = 1;
 		totalSlotsRequired += (desiredItem->amount / maxStackSize);
 
-		totalCost += (DWORD)(vendorItem->weenie->GetValue() * profile.sell_price) * desiredItem->amount;
+		if (vendorItem->weenie->InqIntQuality(ITEM_TYPE_INT, TYPE_UNDEF) == TYPE_PROMISSORY_NOTE)
+			totalCost += (DWORD)round((vendorItem->weenie->GetValue() * 1.15) * desiredItem->amount);
+		else
+			totalCost += (DWORD)round((vendorItem->weenie->GetValue() * profile.sell_price) * desiredItem->amount);
+
 	}
 
 	if (totalCost >= MAX_COIN_PURCHASE)
