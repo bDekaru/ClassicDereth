@@ -1403,7 +1403,9 @@ int CSpellcastingManager::LaunchSpellEffect()
 				}
 
 				CWeenieDefaults *portalDefaults = NULL;
+				CWeenieObject *weenie = NULL;
 
+				bool copyStats = true;
 				if (portalDID)
 				{
 					portalDefaults = g_pWeenieFactory->GetWeenieDefaults(portalDID);
@@ -1413,9 +1415,15 @@ int CSpellcastingManager::LaunchSpellEffect()
 						m_pWeenie->SendText("That portal may not be summoned.", LTT_MAGIC);
 						break;
 					}
+					else if (!m_pWeenie->AsPlayer())
+					{
+						weenie = g_pWeenieFactory->CreateWeenieByClassID(portalDID, &spawnPos, false);
+						copyStats = false;
+					}
 				}
-
-				CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(W_PORTALGATEWAY_CLASS, &spawnPos, false);
+				
+				if(!weenie)
+					weenie = g_pWeenieFactory->CreateWeenieByClassID(W_PORTALGATEWAY_CLASS, &spawnPos, false);
 
 				if (weenie)
 				{
@@ -1425,24 +1433,27 @@ int CSpellcastingManager::LaunchSpellEffect()
 
 					bool bHasDestination = false;
 
-					if (portalDefaults)
+					if (copyStats)
 					{
-						weenie->CopyPositionStat(DESTINATION_POSITION, &portalDefaults->m_Qualities);
-						weenie->CopyIntStat(MIN_LEVEL_INT, &portalDefaults->m_Qualities);
-						weenie->CopyIntStat(MAX_LEVEL_INT, &portalDefaults->m_Qualities);
-						weenie->CopyIntStat(PORTAL_BITMASK_INT, &portalDefaults->m_Qualities);
-					}
-					else
-					{
-						switch (meta->_link)
+						if (portalDefaults)
 						{
-						case 1:
-							weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_ONE_POSITION, Position()));
-							break;
+							weenie->CopyPositionStat(DESTINATION_POSITION, &portalDefaults->m_Qualities);
+							weenie->CopyIntStat(MIN_LEVEL_INT, &portalDefaults->m_Qualities);
+							weenie->CopyIntStat(MAX_LEVEL_INT, &portalDefaults->m_Qualities);
+							weenie->CopyIntStat(PORTAL_BITMASK_INT, &portalDefaults->m_Qualities);
+						}
+						else
+						{
+							switch (meta->_link)
+							{
+							case 1:
+								weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_ONE_POSITION, Position()));
+								break;
 
-						case 2:
-							weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_TWO_POSITION, Position()));
-							break;
+							case 2:
+								weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_TWO_POSITION, Position()));
+								break;
+							}
 						}
 					}
 
