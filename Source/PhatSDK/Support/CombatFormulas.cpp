@@ -62,7 +62,8 @@ void CalculateAttributeDamageBonus(DamageEventData *dmgEvent)
 		else
 			dmgEvent->source->m_Qualities.InqAttribute(STRENGTH_ATTRIBUTE, attrib, FALSE);
 
-		double attribDamageMod = ((int)attrib - 55.0) / 33.0;
+		//double attribDamageMod = ((int)attrib - 55.0) / 33.0;
+		double attribDamageMod = 6.75*(1.0 - exp(-0.005*((int)attrib - 55)));
 		if (attribDamageMod < 0)
 			dmgEvent->attributeDamageBonus = dmgEvent->baseDamage * (attribDamageMod / 2.0);
 		else
