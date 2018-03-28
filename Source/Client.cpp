@@ -457,6 +457,9 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 				// WCID "1" is always a player weenie
 				CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(1, &startPos, false);
 
+				if(!weenie)
+					goto BadData;
+
 				weenie->SetID(newCharacterGUID);
 
 				// alter parameters for character creation here

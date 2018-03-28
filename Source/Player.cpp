@@ -2288,14 +2288,14 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 						value = modificationSource->InqStringQuality(NAME_STRING, "");
 						break;
 					default:
-						value = modificationSource->InqStringQuality(stringMod._stat, 0);
+						value = modificationSource->InqStringQuality(stringMod._stat, "");
 						break;
 					}
 				}
 				break;
 			case 4: //copy value from modificationSource to created item
 				if (modificationSource)
-					value = modificationSource->InqStringQuality(stringMod._stat, 0);
+					value = modificationSource->InqStringQuality(stringMod._stat, "");
 				break;
 			case 7: //add spell
 #ifdef _DEBUG

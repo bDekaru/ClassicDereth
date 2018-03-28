@@ -4200,8 +4200,6 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 
 	if (!damageData.ignoreArmorEntirely && (damageData.damage_form & DF_PHYSICAL))
 	{
-		GetIntEnchantmentDetails(ARMOR_LEVEL_INT, 0, &buffDetails);
-
 		// calculate armor level
 		double armorLevel = GetEffectiveArmorLevel(damageData, damageData.ignoreMagicArmor);
 
