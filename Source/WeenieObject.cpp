@@ -3522,9 +3522,6 @@ void CWeenieObject::TryCancelAttack()
 {
 	if (m_AttackManager)
 		m_AttackManager->Cancel();
-
-	if (m_SpellcastingManager)
-		m_SpellcastingManager->Cancel();
 }
 
 void CWeenieObject::HandleAttackHook(const AttackCone &cone)
