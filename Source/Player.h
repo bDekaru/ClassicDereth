@@ -177,6 +177,7 @@ protected:
 	double _logoutTime = -1.0;
 	double _recallTime = -1.0;
 	Position _recallPos;
+	bool _isFirstPortalInSession = true;
 };
 
 class CWandSpellUseEvent : public CUseEventData

@@ -310,6 +310,12 @@ void CPlayerWeenie::LoginCharacter(void)
 
 void CPlayerWeenie::ExitPortal()
 {
+	if (_isFirstPortalInSession)
+	{
+		TryToUnloadAllegianceXP(true);
+		_isFirstPortalInSession = false;
+	}
+
 	if (_phys_obj)
 		_phys_obj->ExitPortal();
 }
