@@ -249,7 +249,8 @@
       <WarningLevel>Level2</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zm250 /std:c++17</AdditionalOptions>
+      <AdditionalOptions>/Zm250</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlibstatDebug.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -274,7 +275,8 @@
       <WarningLevel>Level2</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zm250 /std:c++17</AdditionalOptions>
+      <AdditionalOptions>/Zm250</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlibstatDebug.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -327,7 +329,7 @@
       <WarningLevel>Level2</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zm250 /std:c++17</AdditionalOptions>
+      <AdditionalOptions>/Zm250</AdditionalOptions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -409,7 +411,8 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <AdditionalOptions>/Zm250 /std:c++17</AdditionalOptions>
+      <AdditionalOptions>/Zm250</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlibstat.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -438,7 +441,8 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalIncludeDirectories>./Source;./Source/PhatSDK;./Source/PhatSDK/Support;./Lib;./Resource</AdditionalIncludeDirectories>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <AdditionalOptions>/Zm250 /std:c++17</AdditionalOptions>
+      <AdditionalOptions>/Zm250</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;comctl32.lib;Lib\zlib\zlibstat.lib;Lib\mysql\libmysql.lib;%(AdditionalDependencies)</AdditionalDependencies>

@@ -85,15 +85,6 @@ void CPortal::CheckedTeleport(CWeenieObject *pOther)
 		else
 		{
 			Teleport(pOther);
-
-			std::string questString;
-			if (m_Qualities.InqString(QUEST_STRING, restriction))
-			{
-				if (CPlayerWeenie *player = pOther->AsPlayer())
-					player->StampQuest(questString.c_str());
-			}
-
-			ChanceExecuteEmoteSet(pOther->GetID(), Portal_EmoteCategory);
 		}
 	}
 }
@@ -134,6 +125,8 @@ void CPortal::Teleport(CWeenieObject *pTarget)
 				player->StampQuest(questName.c_str());
 			}
 		}
+
+		ChanceExecuteEmoteSet(pTarget->GetID(), Portal_EmoteCategory);
 	}
 	else
 	{
