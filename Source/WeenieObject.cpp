@@ -4164,7 +4164,7 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 
 	if (damageData.damageAfterMitigation > 0 || damageData.damage_type == HEALTH_DAMAGE_TYPE || damageData.damage_type == STAMINA_DAMAGE_TYPE || damageData.damage_type == MANA_DAMAGE_TYPE)
 	{
-		if (!AsPlayer())
+		if (!AsPlayer() || damageData.ignoreMagicResist)
 			damageData.damageAfterMitigation *= resistanceRegular;
 		else //only players have natural resistances.
 		{
@@ -4189,7 +4189,12 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 
 			//natural resistances only work if they beat the buffed value before any debuffs are applied.
 			if (resistanceNatural < buffDetails.enchantedValue_DecreasingOnly)
-				damageData.damageAfterMitigation *= resistanceNatural;
+			{
+				//replace our buffed value with natural resistances and recalculate.
+				buffDetails.valueDecreasingMultiplier = resistanceNatural;
+				buffDetails.CalculateEnchantedValue();
+				damageData.damageAfterMitigation *= buffDetails.enchantedValue;
+			}
 			else
 				damageData.damageAfterMitigation *= resistanceRegular;
 		}
@@ -5547,6 +5552,7 @@ DWORD CWeenieObject::GetMagicDefense()
 
 bool CWeenieObject::TryMagicResist(DWORD magicSkill)
 {
+	return false;
 	DWORD defenseSkill = GetMagicDefense();
 
 	double defenseMod = GetMagicDefenseModUsingWielded();

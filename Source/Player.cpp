@@ -2912,11 +2912,17 @@ void CPlayerWeenie::SetLoginPlayerQualities()
 	{
 		m_Qualities.SetBool(IS_ADMIN_BOOL, TRUE);
 		m_Qualities.SetBool(IS_ARCH_BOOL, TRUE);
+
+		m_Qualities.SetBool(SPELL_COMPONENTS_REQUIRED_BOOL, FALSE);
+		m_Qualities.SetInt(BONDED_INT, 1); //do not drop items on death
 	}
 	else
 	{
 		m_Qualities.RemoveBool(IS_ADMIN_BOOL);
 		m_Qualities.RemoveBool(IS_ARCH_BOOL);
+
+		m_Qualities.SetBool(SPELL_COMPONENTS_REQUIRED_BOOL, TRUE);
+		m_Qualities.SetInt(BONDED_INT, 0); //drop items on death
 	}
 
 	for (auto wielded : m_Wielded)
