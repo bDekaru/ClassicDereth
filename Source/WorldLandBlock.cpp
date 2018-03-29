@@ -335,17 +335,9 @@ void CWorldLandBlock::SpawnDynamics()
 						GeneratorProfile prof;
 
 						if (target_weenie->m_Qualities._generator_table->_profile_list.size() >= 1)
-						{
 							prof = *target_weenie->m_Qualities._generator_table->_profile_list.begin();
-							prof.delay *= g_pConfig->RespawnTimeMultiplier();
-							//prof.delay = target_weenie->InqFloatQuality(REGENERATION_INTERVAL_FLOAT, prof.delay, TRUE);
-						}
 						else
-						{
 							prof.whereCreate = Specific_RegenLocationType;
-							prof.delay *= g_pConfig->RespawnTimeMultiplier();
-							//prof.delay = 600.0f;
-						}
 
 						prof.type = source_weenie->m_Qualities.id;
 						prof.initCreate = false;

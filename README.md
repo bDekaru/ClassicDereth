@@ -7,6 +7,6 @@ Necessary dat files: https://mega.nz/#!c6RgjDxa!7ng3Gm_eh7JY2nBvHY7KMxMPP0_QJUH-
 
 Portal.dat file modified entries and patcher: https://mega.nz/#!xnJ01I5R!Sdo8lZaKS4lLzXsLa2J2SP5bL3DFDieISouMrmXM65Y
 
-1.13 Binaries: https://mega.nz/#!xuwg0aDQ!6RCn-ywP2qegCnIjTBYlBew8HTVn4fbHvDWEbcsEjv8
+1.14 Binaries: https://mega.nz/#!EyZRETLL!uVXqGph9viNubVQ8BnqmG165YRW2fBByQdrUiafWHW8
 
 License: https://raw.githubusercontent.com/bDekaru/ClassicDereth/master/LICENSE
