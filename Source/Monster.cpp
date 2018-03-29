@@ -657,7 +657,7 @@ bool CMonsterWeenie::FinishMoveItemToWield(CWeenieObject *sourceItem, DWORD targ
 	// 2. Item being equipped from different equip slot.
 	// 3. Item being equipped from the player's inventory.
 
-	bool wasInWorld = (GetBlock() != NULL);
+	bool isPickup = sourceItem->GetWorldTopLevelOwner() != this;
 
 	int error = CheckWieldRequirements(sourceItem, this, WIELD_REQUIREMENTS_INT, WIELD_SKILLTYPE_INT, WIELD_DIFFICULTY_INT);
 	if (error != WERROR_NONE)
@@ -736,6 +736,17 @@ bool CMonsterWeenie::FinishMoveItemToWield(CWeenieObject *sourceItem, DWORD targ
 	{
 		bool bShouldCast = true;
 
+		std::string name;
+		if (sourceItem->m_Qualities.InqString(CRAFTSMAN_NAME_STRING, name))
+		{
+			if (!name.empty() && name != InqStringQuality(NAME_STRING, ""))
+			{
+				bShouldCast = false;
+
+				NotifyWeenieErrorWithString(WERROR_ACTIVATION_NOT_CRAFTSMAN, name.c_str());
+			}
+		}
+
 		int difficulty;
 		difficulty = 0;
 		if (sourceItem->m_Qualities.InqInt(ITEM_DIFFICULTY_INT, difficulty, TRUE, FALSE))
@@ -810,7 +821,7 @@ bool CMonsterWeenie::FinishMoveItemToWield(CWeenieObject *sourceItem, DWORD targ
 		}
 	}
 
-	if(wasInWorld)
+	if(isPickup)
 		sourceItem->OnPickedUp(this);
 	sourceItem->OnWield(this);
 	return true;

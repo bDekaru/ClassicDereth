@@ -1479,9 +1479,8 @@ int CSpellcastingManager::LaunchSpellEffect()
 				}
 
 				CWeenieDefaults *portalDefaults = NULL;
-				CWeenieObject *weenie = NULL;
 
-				bool copyStats = true;
+				bool canFlagForQuest = false;
 				if (portalDID)
 				{
 					portalDefaults = g_pWeenieFactory->GetWeenieDefaults(portalDID);
@@ -1510,14 +1509,10 @@ int CSpellcastingManager::LaunchSpellEffect()
 						break;
 					}
 					else if (!m_pWeenie->AsPlayer())
-					{
-						weenie = g_pWeenieFactory->CreateWeenieByClassID(portalDID, &spawnPos, false);
-						copyStats = false;
-					}
+						canFlagForQuest = true;
 				}
 				
-				if(!weenie)
-					weenie = g_pWeenieFactory->CreateWeenieByClassID(W_PORTALGATEWAY_CLASS, &spawnPos, false);
+				CWeenieObject *weenie =  g_pWeenieFactory->CreateWeenieByClassID(W_PORTALGATEWAY_CLASS, &spawnPos, false);
 
 				if (weenie)
 				{
@@ -1527,28 +1522,27 @@ int CSpellcastingManager::LaunchSpellEffect()
 
 					bool bHasDestination = false;
 
-					if (copyStats)
+					if (portalDefaults)
 					{
-						if (portalDefaults)
+						weenie->CopyPositionStat(DESTINATION_POSITION, &portalDefaults->m_Qualities);
+						weenie->CopyIntStat(MIN_LEVEL_INT, &portalDefaults->m_Qualities);
+						weenie->CopyIntStat(MAX_LEVEL_INT, &portalDefaults->m_Qualities);
+						weenie->CopyIntStat(PORTAL_BITMASK_INT, &portalDefaults->m_Qualities);
+						weenie->CopyStringStat(QUEST_RESTRICTION_STRING, &portalDefaults->m_Qualities);
+						if(canFlagForQuest)
+							weenie->CopyStringStat(QUEST_STRING, &portalDefaults->m_Qualities);
+					}
+					else
+					{
+						switch (meta->_link)
 						{
-							weenie->CopyPositionStat(DESTINATION_POSITION, &portalDefaults->m_Qualities);
-							weenie->CopyIntStat(MIN_LEVEL_INT, &portalDefaults->m_Qualities);
-							weenie->CopyIntStat(MAX_LEVEL_INT, &portalDefaults->m_Qualities);
-							weenie->CopyIntStat(PORTAL_BITMASK_INT, &portalDefaults->m_Qualities);
-							weenie->CopyStringStat(QUEST_RESTRICTION_STRING, &portalDefaults->m_Qualities);
-						}
-						else
-						{
-							switch (meta->_link)
-							{
-							case 1:
-								weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_ONE_POSITION, Position()));
-								break;
+						case 1:
+							weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_ONE_POSITION, Position()));
+							break;
 
-							case 2:
-								weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_TWO_POSITION, Position()));
-								break;
-							}
+						case 2:
+							weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_TWO_POSITION, Position()));
+							break;
 						}
 					}
 

@@ -1478,8 +1478,7 @@ bool CTreasureFactory::MutateItem(CWeenieObject *newItem, sItemCreationInfo &cre
 			material = g_pPortalDataEx->_treasureTableData.RollMaterialFromBaseMaterial(materialCategory, tier->tierId);
 			if (material != MaterialType::Undef_MaterialType)
 			{
-				if (material != Leather_MaterialType) //don't set base leather types as that breaks the automatic item names
-					newItem->m_Qualities.SetInt(MATERIAL_TYPE_INT, material);
+				newItem->m_Qualities.SetInt(MATERIAL_TYPE_INT, material);
 				//materialValueMultiplier = *g_pPortalDataEx->_treasureTableData._materialValueAddedPossibly.lookup(material);
 
 				int ptid = g_pPortalDataEx->_treasureTableData.RollPaletteTemplateIDFromMaterialAndColorCode(material, colorCode);
@@ -1491,22 +1490,6 @@ bool CTreasureFactory::MutateItem(CWeenieObject *newItem, sItemCreationInfo &cre
 					newItem->m_Qualities.SetFloat(SHADE3_FLOAT, getRandomDouble(1.0));
 					newItem->m_Qualities.SetFloat(SHADE4_FLOAT, getRandomDouble(1.0));
 				}
-			}
-		}
-
-		if (material != Undef_MaterialType)
-		{
-			if (material != Leather_MaterialType) //don't set base leather types as it's not necessary and if added it breaks the automatic item names
-				newItem->m_Qualities.SetInt(MATERIAL_TYPE_INT, material);
-
-			int ptid = g_pPortalDataEx->_treasureTableData.RollPaletteTemplateIDFromMaterialAndColorCode(material, colorCode);
-			if (ptid != 0)
-			{
-				newItem->m_Qualities.SetInt(PALETTE_TEMPLATE_INT, ptid);
-				newItem->m_Qualities.SetFloat(SHADE_FLOAT, getRandomDouble(1.0));
-				newItem->m_Qualities.SetFloat(SHADE2_FLOAT, getRandomDouble(1.0));
-				newItem->m_Qualities.SetFloat(SHADE3_FLOAT, getRandomDouble(1.0));
-				newItem->m_Qualities.SetFloat(SHADE4_FLOAT, getRandomDouble(1.0));
 			}
 		}
 	}

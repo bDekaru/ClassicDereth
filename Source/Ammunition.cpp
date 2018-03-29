@@ -70,7 +70,11 @@ void CAmmunitionWeenie::HandleNonTargetCollision()
 
 	if (CWeenieObject *source = g_pWorld->FindObject(_sourceID))
 	{
-		source->SendText("Your missile attack hit the environment.", LTT_DEFAULT);
+		if (source->AsPlayer())
+			source->SendText("Your missile attack hit the environment.", LTT_DEFAULT);
+		else
+			MarkForDestroy();
+
 		EmitSound(Sound_Collision, 1.0f);
 	}
 
