@@ -473,7 +473,7 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse)
 
 	int level = InqIntQuality(LEVEL_INT, 1);
 	int maxItemsToDrop = 12; // Limit the amount of items that can be dropped + random adjustment
-	int amountOfItemsToDrop = std::clamp(level / 10, 1, maxItemsToDrop); // std::clamp requires C++17 standards
+	int amountOfItemsToDrop = min(max(level / 10, 1), maxItemsToDrop);
 	if (level > 10)
 		amountOfItemsToDrop += Random::GenUInt(0, 2);
 
