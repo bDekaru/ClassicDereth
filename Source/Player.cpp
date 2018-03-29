@@ -575,7 +575,16 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse)
 		{
 			CWeenieObject *itemToDrop = highestValueOwner->rbegin()->second;
 			highestValueOwner->erase(--highestValueOwner->end());
-			FinishMoveItemToContainer(itemToDrop, pCorpse, 0, true, true);
+
+			if (itemToDrop->InqIntQuality(STACK_SIZE_INT, 1) > 1)
+			{
+				//stackable items drop only a single unit, 
+				//this replicates retail where stacked items count as the value of the full stack but only a single unit will drop if it is selected.
+				itemToDrop->DecrementStackNum();
+				pCorpse->SpawnCloneInContainer(itemToDrop, 1);
+			}
+			else
+				FinishMoveItemToContainer(itemToDrop, pCorpse, 0, true, true);
 			itemsLost++;
 			itemDropCountByCategory[itemToDrop->InqType()]++;
 
@@ -586,15 +595,15 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse)
 			else
 				itemsLostText.append("your ");
 			int stackSize = itemToDrop->InqIntQuality(STACK_SIZE_INT, 1);
-			if (stackSize > 1)
-			{
-				std::string pluralName = itemToDrop->GetPluralName();
-				if(pluralName.empty())
-					std::string pluralName = csprintf("%ss", itemToDrop->GetName().c_str());
-				itemsLostText.append(csprintf("%s %s", FormatNumberString(stackSize).c_str(), pluralName.c_str()));
-			}
-			else
-				itemsLostText.append(itemToDrop->GetName());
+			//if (stackSize > 1)
+			//{
+			//	std::string pluralName = itemToDrop->GetPluralName();
+			//	if(pluralName.empty())
+			//		std::string pluralName = csprintf("%ss", itemToDrop->GetName().c_str());
+			//	itemsLostText.append(csprintf("%s %s", FormatNumberString(stackSize).c_str(), pluralName.c_str()));
+			//}
+			//else
+			itemsLostText.append(itemToDrop->GetName());
 		}
 		else
 			break; //we're out of items to drop!

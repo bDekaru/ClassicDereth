@@ -691,6 +691,8 @@ bool CContainerWeenie::SpawnCloneInContainer(CWeenieObject *itemToClone, int amo
 			}
 		}
 	}
+	else if(item->InqIntQuality(STACK_SIZE_INT, 1) > 1)
+		item->SetStackSize(1);
 
 	if (!SpawnInContainer(item, sendEnvent, false))
 	{

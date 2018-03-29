@@ -80,7 +80,7 @@ void CPortal::CheckedTeleport(CWeenieObject *pOther)
 		}
 		else if (maxLevel && currentLevel > maxLevel)
 		{
-			pOther->SendText("You too powerful to use this portal.", LTT_MAGIC);
+			pOther->SendText("You are too powerful to use this portal.", LTT_MAGIC);
 		}
 		else
 		{
