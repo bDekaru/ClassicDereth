@@ -1,14 +1,14 @@
 
 #pragma once
 
-enum BONDED_STATUS
+enum BondedStatusEnum
 {
-	DESTROY_BONDED_STATUS = 0XFFFFFFFE,
-	SLIPPERY_BONDEDS_TATUS = 0XFFFFFFFF,
-	NORMAL_BONDED_STATUS = 0X0,
-	BONDED_BONDED_STATUS = 0X1,
-	STICKY_BONDED_STATUS = 0X2,
-	FORCE_BONDED_STATUS_ENUM_32_BIT = 0X7FFFFFFF,
+	Destroy_BondedStatus = 0XFFFFFFFE,
+	Slippery_BondedStatus = 0XFFFFFFFF,
+	Normal_BondedStatus = 0X0,
+	Bonded_BondedStatus = 0X1,
+	Sticky_BondedStatus = 0X2,
+	FORCE_BondedStatusEnum_32_BIT = 0X7FFFFFFF,
 };
 
 enum RadarEnum {

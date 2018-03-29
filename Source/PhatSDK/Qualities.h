@@ -335,7 +335,7 @@ struct EnchantedQualityDetails
 		enchantedValue *= valueIncreasingMultiplier;
 		enchantedValue *= valueDecreasingMultiplier;
 		enchantedValue += valueIncreasingAdditive;
-		enchantedValue -= valueDecreasingAdditive;
+		enchantedValue += valueDecreasingAdditive;
 
 		CalculateIncreasingEnchantedValue();
 		CalculateDecreasingEnchantedValue();
@@ -345,7 +345,7 @@ struct EnchantedQualityDetails
 	{
 		enchantedValue_DecreasingOnly = rawValue;
 		enchantedValue_DecreasingOnly *= valueDecreasingMultiplier;
-		enchantedValue_DecreasingOnly -= valueDecreasingAdditive;
+		enchantedValue_DecreasingOnly += valueDecreasingAdditive;
 	}
 
 	void CalculateIncreasingEnchantedValue()

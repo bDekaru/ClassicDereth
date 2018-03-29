@@ -282,7 +282,7 @@ void EmoteManager::ExecuteEmote(const Emote &emote, DWORD target_id)
 		if (currentLevel <= 10)
 			currentLevel += 5 - (currentLevel * 0.4);
 
-		DWORD64 xp_to_next_level = ExperienceSystem::ExperienceFromSkillLevel(TRAINED_SKILL_ADVANCEMENT_CLASS, currentLevel + 1) - ExperienceSystem::ExperienceFromSkillLevel(TRAINED_SKILL_ADVANCEMENT_CLASS, currentLevel);
+		DWORD64 xp_to_next_level = ExperienceSystem::ExperienceToSkillLevel(TRAINED_SKILL_ADVANCEMENT_CLASS, currentLevel + 1) - ExperienceSystem::ExperienceToSkillLevel(TRAINED_SKILL_ADVANCEMENT_CLASS, currentLevel);
 
 		DWORD64 xp_to_give = (DWORD64)round((long double)xp_to_next_level * emote.percent);
 		if (emote.min > 0)

@@ -6058,7 +6058,7 @@ BOOL Enchantment::Enchant(EnchantedQualityDetails *value)
 		{
 			if (_smod.val <= 1.0)
 			{
-				value->valueDecreasingMultiplier = abs(_smod.val) * value->valueDecreasingMultiplier;
+				value->valueDecreasingMultiplier = _smod.val * value->valueDecreasingMultiplier;
 				bEnchanted = TRUE;
 			}
 			else
@@ -6070,7 +6070,7 @@ BOOL Enchantment::Enchant(EnchantedQualityDetails *value)
 	}
 	else if (_smod.val <= 0.0)
 	{
-		value->valueDecreasingAdditive = abs(_smod.val) + value->valueDecreasingAdditive;
+		value->valueDecreasingAdditive = _smod.val + value->valueDecreasingAdditive;
 		bEnchanted = TRUE;
 	}
 	else

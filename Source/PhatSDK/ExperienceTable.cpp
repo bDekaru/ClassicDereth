@@ -267,7 +267,7 @@ DWORD ExperienceSystem::SkillLevelFromExperience(SKILL_ADVANCEMENT_CLASS sac, DW
 	return 0;
 }
 
-DWORD ExperienceSystem::ExperienceFromSkillLevel(SKILL_ADVANCEMENT_CLASS sac, DWORD level)
+DWORD ExperienceSystem::ExperienceToSkillLevel(SKILL_ADVANCEMENT_CLASS sac, DWORD level)
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{

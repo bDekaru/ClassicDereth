@@ -1811,7 +1811,7 @@ DWORD CWeenieObject::GetCostToRaiseSkill(STypeSkill key)
 
 		if (skill._level_from_pp < maxLevel)
 		{
-			DWORD expRequired = ExperienceSystem::ExperienceFromSkillLevel(skill._sac, skill._level_from_pp + 1);
+			DWORD expRequired = ExperienceSystem::ExperienceToSkillLevel(skill._sac, skill._level_from_pp + 1);
 			expRequired -= skill._pp;
 			return expRequired;
 		}
@@ -2198,7 +2198,7 @@ DWORD CWeenieObject::GiveSkillPoints(STypeSkill key, DWORD amount)
 
 	skill._level_from_pp += amount;
 
-	skill._pp = ExperienceSystem::ExperienceFromSkillLevel(skill._sac, skill._level_from_pp);
+	skill._pp = ExperienceSystem::ExperienceToSkillLevel(skill._sac, skill._level_from_pp);
 
 	m_Qualities.SetSkill(key, skill);
 
@@ -5552,7 +5552,6 @@ DWORD CWeenieObject::GetMagicDefense()
 
 bool CWeenieObject::TryMagicResist(DWORD magicSkill)
 {
-	return false;
 	DWORD defenseSkill = GetMagicDefense();
 
 	double defenseMod = GetMagicDefenseModUsingWielded();
@@ -6298,17 +6297,17 @@ bool CWeenieObject::IsAttunedOrContainsAttuned()
 
 bool CWeenieObject::IsBonded()
 {
-	return InqIntQuality(BONDED_INT, 0) == BONDED_BONDED_STATUS ? true : false;
+	return InqIntQuality(BONDED_INT, 0) == Bonded_BondedStatus ? true : false;
 }
 
 bool CWeenieObject::IsDroppedOnDeath()
 {
-	return InqIntQuality(BONDED_INT, 0) == SLIPPERY_BONDEDS_TATUS ? true : false;
+	return InqIntQuality(BONDED_INT, 0) == Slippery_BondedStatus ? true : false;
 }
 
 bool CWeenieObject::IsDestroyedOnDeath()
 {
-	return InqIntQuality(BONDED_INT, 0) == DESTROY_BONDED_STATUS ? true : false;
+	return InqIntQuality(BONDED_INT, 0) == Destroy_BondedStatus ? true : false;
 }
 
 void CWeenieObject::CheckVitalRanges()

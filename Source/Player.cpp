@@ -643,6 +643,12 @@ void CPlayerWeenie::OnDeath(DWORD killer_id)
 	m_Qualities.SetInt(DEATH_LEVEL_INT, m_Qualities.GetInt(LEVEL_INT, 1));
 	NotifyIntStatUpdated(DEATH_LEVEL_INT, true);
 
+	if ((m_Position.objcell_id & 0xFFFF) < 0x100) //outdoors
+	{
+		m_Qualities.SetPosition(LAST_OUTSIDE_DEATH_POSITION, m_Position);
+		NotifyPositionStatUpdated(LAST_OUTSIDE_DEATH_POSITION, true);
+	}
+
 	UpdateVitaePool(0);
 	ReduceVitae(0.05f);
 	UpdateVitaeEnchantment();
