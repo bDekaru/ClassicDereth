@@ -816,7 +816,7 @@ void AllegianceManager::HandleAllegiancePassup(DWORD source_id, long long amount
 		if (patron_weenie)
 			patron_weenie->TryToUnloadAllegianceXP(false);
 
-		HandleAllegiancePassup(patron->_charID, passup, false);
+		HandleAllegiancePassup(patron->_charID, passupAmount, false);
 	}
 }
 
