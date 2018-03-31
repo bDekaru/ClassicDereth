@@ -2849,6 +2849,7 @@ bool CPlayerWeenie::SpawnSalvageBagInContainer(MaterialType material, int amount
 		return false;
 
 	CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(salvageWcid, NULL, false);
+	weenie->m_Qualities.SetString(NAME_STRING, "Salvage"); //modern client prepends the salvage type automatically so we need to adapt to this.
 
 	if (!weenie)
 		return false;
