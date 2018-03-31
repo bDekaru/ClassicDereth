@@ -2201,37 +2201,26 @@ float CMonsterWeenie::GetEffectiveArmorLevel(DamageEventData &damageData, bool b
 	std::list<CWeenieObject *> wielded;
 	Container_GetWieldedByMask(wielded, ARMOR_LOC|CLOTHING_LOC|SHIELD_LOC);
 
-	//body
-	float armorLevel = CWeenieObject::GetEffectiveArmorLevel(damageData, bIgnoreMagicArmor);
+	EnchantedQualityDetails buffDetails;
 
 	//body part
-	int bodyPartArmor = 0;
-	m_Qualities.InqBodyArmorValue(damageData.hitPart, damageData.damage_type, bodyPartArmor, true);
+	GetBodyArmorEnchantmentDetails(damageData.hitPart, damageData.damage_type, &buffDetails);
 
-	EnchantedQualityDetails buffDetails;
-	GetIntEnchantmentDetails(ARMOR_LEVEL_INT, 0, &buffDetails); //body enchantments also affect body parts.
-	buffDetails.rawValue = bodyPartArmor; //overwrite armor level with the body part armor level for these calculations.
-	buffDetails.CalculateEnchantedValue();
-
-	if (damageData.isArmorRending && damageData.rendingMultiplier < buffDetails.valueDecreasingMultiplier)
-	{
-		//our armor rending is better than the debuffs applied, replace debuffs with rending.
-		buffDetails.valueDecreasingMultiplier = damageData.rendingMultiplier;
-		buffDetails.CalculateEnchantedValue();
-	}
-
-	if (bIgnoreMagicArmor)
-		armorLevel += buffDetails.enchantedValue_DecreasingOnly; //debuffs still count
-	else
-		armorLevel += buffDetails.enchantedValue;
+	//body
+	buffDetails.rawValue += CWeenieObject::GetEffectiveArmorLevel(damageData, bIgnoreMagicArmor);
 
 	//equipment
 	for (auto item : wielded)
-	{
-		armorLevel += item->GetEffectiveArmorLevel(damageData, bIgnoreMagicArmor);
-	}
+		buffDetails.rawValue += item->GetEffectiveArmorLevel(damageData, bIgnoreMagicArmor);
 
-	return armorLevel;
+	if (damageData.isArmorRending)
+		buffDetails.valueDecreasingMultiplier = damageData.armorRendingMultiplier;
+	buffDetails.CalculateEnchantedValue();
+
+	if (bIgnoreMagicArmor)
+		return buffDetails.enchantedValue_DecreasingOnly; //debuffs still count
+	else
+		return buffDetails.enchantedValue;
 }
 
 void CMonsterWeenie::TryMeleeAttack(DWORD target_id, ATTACK_HEIGHT height, float power, DWORD motion)

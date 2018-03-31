@@ -121,6 +121,8 @@ struct DamageEventData
 	bool ignoreArmorEntirely = false;
 
 	bool isArmorRending = false;
+	double armorRendingMultiplier = 0.0;
+
 	bool isElementalRending = false;
 	double rendingMultiplier = 0.0;
 
@@ -436,6 +438,7 @@ public:
 
 	bool GetFloatEnchantmentDetails(STypeFloat stype, double defaultValue, EnchantedQualityDetails *enchantmentDetails);
 	bool GetIntEnchantmentDetails(STypeInt stype, int defaultValue, EnchantedQualityDetails *enchantmentDetails);
+	bool GetBodyArmorEnchantmentDetails(unsigned int bodyPart, DAMAGE_TYPE damageType, EnchantedQualityDetails *enchantmentDetails);
 
 	void TryCancelAttack();
 

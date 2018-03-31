@@ -3518,6 +3518,13 @@ bool CWeenieObject::GetIntEnchantmentDetails(STypeInt stype, int defaultValue, E
 	return returnValue;
 }
 
+bool CWeenieObject::GetBodyArmorEnchantmentDetails(unsigned int bodyPart, DAMAGE_TYPE damageType, EnchantedQualityDetails *enchantmentDetails)
+{
+	bool returnValue = m_Qualities.GetBodyArmorEnchantmentDetails(bodyPart, damageType, enchantmentDetails);
+	enchantmentDetails->CalculateEnchantedValue();
+	return returnValue;
+}
+
 void CWeenieObject::TryCancelAttack()
 {
 	if (m_AttackManager)
@@ -4063,13 +4070,6 @@ float CWeenieObject::GetEffectiveArmorLevel(DamageEventData &damageData, bool bI
 
 	EnchantedQualityDetails buffDetails;
 	GetIntEnchantmentDetails(ARMOR_LEVEL_INT, 0, &buffDetails);
-
-	if (damageData.isArmorRending && damageData.rendingMultiplier < buffDetails.valueDecreasingMultiplier)
-	{
-		//our armor rending is better than the debuffs applied, replace debuffs with rending.
-		buffDetails.valueDecreasingMultiplier = damageData.rendingMultiplier;
-		buffDetails.CalculateEnchantedValue();
-	}
 
 	if (bIgnoreMagicArmor)
 		armorLevel = buffDetails.enchantedValue_DecreasingOnly; //debuffs still count
