@@ -4515,7 +4515,31 @@ void CWeenieObject::OnTookDamage(DamageEventData &data)
 			{				
 				// Killer Phyntos Soldier sears you for 46 points with Incantation of Acid Stream.
 				// You chill Killer Phyntos Swarm for 212 points with Halo of Frost II.
-				SendText(csprintf("%s %s you for %d points with %s.", data.GetSourceName().c_str(), plural_adj.c_str(), max(0, data.outputDamageFinal), data.spell_name.c_str()), LTT_MAGIC);
+				switch (data.damage_type)
+				{
+				default:
+					SendText(csprintf("%s %s you for %d points with %s.", data.GetSourceName().c_str(), plural_adj.c_str(), max(0, data.outputDamageFinal), data.spell_name.c_str()), LTT_MAGIC);
+					break;
+				case DAMAGE_TYPE::HEALTH_DAMAGE_TYPE:
+				case DAMAGE_TYPE::STAMINA_DAMAGE_TYPE:
+				case DAMAGE_TYPE::MANA_DAMAGE_TYPE:
+					std::string vitalName;
+					switch (data.damage_type)
+					{
+					case HEALTH_DAMAGE_TYPE:
+						vitalName = "health";
+						break;
+					case STAMINA_DAMAGE_TYPE:
+						vitalName = "stamina";
+						break;
+					case MANA_DAMAGE_TYPE:
+						vitalName = "mana";
+						break;
+					}
+					bool isRestore = (data.outputDamageFinal < 0);
+					SendText(csprintf("%s casts %s and %s %d points of your %s.", data.GetSourceName().c_str(), data.spell_name.c_str(), isRestore ? "restores" : "drains", abs(data.outputDamageFinal), vitalName.c_str()), LTT_MAGIC);
+					break;
+				}
 			}
 		}
 		else if (data.damage_form & DF_IMPACT)
@@ -4584,7 +4608,34 @@ void CWeenieObject::OnDealtDamage(DamageEventData &data)
 			{
 				// Killer Phyntos Soldier sears you for 46 points with Incantation of Acid Stream.
 				// You chill Killer Phyntos Swarm for 212 points with Halo of Frost II.
-				SendText(csprintf("%sYou %s %s for %d points with %s.", data.wasCrit ? "Critical hit! " : "", single_adj.c_str(), data.GetTargetName().c_str(), data.outputDamageFinal, data.spell_name.c_str()), LTT_MAGIC);
+				switch (data.damage_type)
+				{
+				default:
+					SendText(csprintf("%sYou %s %s for %d points with %s.", data.wasCrit ? "Critical hit! " : "", single_adj.c_str(), data.GetTargetName().c_str(), data.outputDamageFinal, data.spell_name.c_str()), LTT_MAGIC);
+					break;
+				case DAMAGE_TYPE::HEALTH_DAMAGE_TYPE:
+				case DAMAGE_TYPE::STAMINA_DAMAGE_TYPE:
+				case DAMAGE_TYPE::MANA_DAMAGE_TYPE:
+					std::string vitalName;
+					switch (data.damage_type)
+					{
+					case HEALTH_DAMAGE_TYPE:
+						vitalName = "health";
+						break;
+					case STAMINA_DAMAGE_TYPE:
+						vitalName = "stamina";
+						break;
+					case MANA_DAMAGE_TYPE:
+						vitalName = "mana";
+						break;
+					}
+					bool isRestore = (data.outputDamageFinal < 0);
+					if(data.target == data.source)
+						SendText(csprintf("%sYou cast %s and %s %d points of your %s.", data.wasCrit ? "Critical hit! " : "", data.spell_name.c_str(), isRestore ? "restore" : "drain", abs(data.outputDamageFinal), vitalName.c_str()), LTT_MAGIC);
+					else
+						SendText(csprintf("%sWith %s you %s %d points of %s %s %s.", data.wasCrit ? "Critical hit! " : "", data.spell_name.c_str(), isRestore ? "restore" : "drain", abs(data.outputDamageFinal), vitalName.c_str(), isRestore ? "to" : "from", data.GetTargetName().c_str()), LTT_MAGIC);
+					break;
+				}
 			}
 		}
 		else if (data.damage_form & DF_IMPACT)
