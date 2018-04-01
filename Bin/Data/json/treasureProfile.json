@@ -4867,9 +4867,9 @@
   "spellProperties":
   {
     "spellPower": [ 50, 80, 110, 150, 180, 220, 235 ],
-    "spellMana": [ 10, 20, 30, 40, 50, 60, 70 ],
+    "spellMana": [ 100, 200, 300, 400, 500, 600, 700 ],
     "cantripPower": [ 150, 220 ],
-    "cantripMana": [ 40, 60 ]
+    "cantripMana": [ 400, 600 ]
   },
   "meleeWeaponSpells": [
     {

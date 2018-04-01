@@ -2132,7 +2132,7 @@ void CTreasureFactory::AddSpells(CWeenieObject *newItem, sItemCreationInfo &crea
 
 		double averagePower = (double)creationInfo.totalPower / creationInfo.totalSpellsCount;
 
-		double manaRate = min(-1.0 * creationInfo.totalSpellsCount * averagePower / 5000.0, -0.0166);
+		double manaRate = min(-1.0 * creationInfo.totalSpellsCount * averagePower / 10000.0, -0.0166);
 		newItem->m_Qualities.SetFloat(MANA_RATE_FLOAT, manaRate);
 
 		double arcaneLoreModifier = 1.0;
