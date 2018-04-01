@@ -2213,7 +2213,7 @@ float CMonsterWeenie::GetEffectiveArmorLevel(DamageEventData &damageData, bool b
 	for (auto item : wielded)
 		buffDetails.rawValue += item->GetEffectiveArmorLevel(damageData, bIgnoreMagicArmor);
 
-	if (damageData.isArmorRending)
+	if (damageData.isArmorRending && damageData.armorRendingMultiplier < buffDetails.valueDecreasingMultiplier)
 		buffDetails.valueDecreasingMultiplier = damageData.armorRendingMultiplier;
 	buffDetails.CalculateEnchantedValue();
 

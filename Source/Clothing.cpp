@@ -137,8 +137,12 @@ bool CClothingWeenie::CoversBodyPart(BODY_PART_ENUM part, float *factor)
 
 float CClothingWeenie::GetEffectiveArmorLevel(DamageEventData &damageData, bool bIgnoreMagicArmor)
 {
-	float factor;
-	if (!CoversBodyPart(damageData.hitPart, &factor))
+	float factor = 1.0;
+
+	//Shields are being created as clothing but once the server resets they are no longer clothing.
+	//until we figure out why let's have this check here to make sure they pass thru the check.
+	bool isShield = InqIntQuality(COMBAT_USE_INT, 0, TRUE) == COMBAT_USE::COMBAT_USE_SHIELD;
+	if (!isShield && !CoversBodyPart(damageData.hitPart, &factor))
 		return 0.0f;
 
 	return CWeenieObject::GetEffectiveArmorLevel(damageData, bIgnoreMagicArmor) * factor;
