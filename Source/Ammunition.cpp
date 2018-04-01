@@ -169,8 +169,8 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 					int elementalDamageBonus = weapon->InqDamageType() == InqDamageType() ? weapon->InqIntQuality(ELEMENTAL_DAMAGE_BONUS_INT, 0) : 0;
 					double damageMod = weapon->InqFloatQuality(DAMAGE_MOD_FLOAT, 1.0);
 
-					preVarianceDamage += weaponDamage + elementalDamageBonus;
 					preVarianceDamage *= damageMod;
+					preVarianceDamage += weaponDamage + elementalDamageBonus;
 
 					DamageEventData dmgEvent;
 					dmgEvent.source = pSource;
