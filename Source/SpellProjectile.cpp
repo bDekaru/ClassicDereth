@@ -154,6 +154,8 @@ BOOL CSpellProjectile::DoCollision(const class AtkCollisionProfile &prof)
 
 			if (!bResisted)
 			{
+				CWeenieObject *wand = g_pWorld->FindObject(m_CachedSpellCastData.wand_id);
+
 				int preVarianceDamage;
 				double baseDamage;
 				if (isLifeProjectile)
@@ -169,12 +171,20 @@ BOOL CSpellProjectile::DoCollision(const class AtkCollisionProfile &prof)
 
 					preVarianceDamage = maxDamage;
 					baseDamage = Random::RollDice(minDamage, maxDamage);
+
+					if (wand)
+					{
+						double elementalDamageMod = wand->InqDamageType() == InqDamageType() ? wand->InqFloatQuality(ELEMENTAL_DAMAGE_MOD_FLOAT, 1.0) : 1.0;
+						if (pSource->AsPlayer() && pHit->AsPlayer()) //pvp
+							elementalDamageMod = ((elementalDamageMod - 1.0) / 2.0) + 1.0;
+						baseDamage *= elementalDamageMod;
+					}
 				}
 
 				DamageEventData dmgEvent;
 				dmgEvent.source = pSource;
 				dmgEvent.target = pHit;
-				dmgEvent.weapon = g_pWorld->FindObject(m_CachedSpellCastData.wand_id);
+				dmgEvent.weapon = wand;
 				dmgEvent.damage_form = DF_MAGIC;
 				dmgEvent.damage_type = InqDamageType();
 				dmgEvent.hit_quadrant = DAMAGE_QUADRANT::DQ_UNDEF; //should spells have hit quadrants?

@@ -1355,6 +1355,12 @@ int CSpellcastingManager::LaunchSpellEffect()
 
 						CWeenieObject *topLevelOwner = target->GetWorldTopLevelOwner();
 
+						if (target->InqIntQuality(MAX_STACK_SIZE_INT, 1) > 0) //do not allow enchanting stackable items(ammunition)
+						{
+							m_pWeenie->SendText(csprintf("The %s can't be enchanted.", target->GetName().c_str()), LTT_MAGIC);
+							continue;
+						}
+
 						bool bAlreadyExisted = false;
 						if (target->m_Qualities._enchantment_reg && target->m_Qualities._enchantment_reg->IsEnchanted(enchant._id))
 							bAlreadyExisted = true;
@@ -1926,6 +1932,15 @@ bool CSpellcastingManager::AdjustVital(CWeenieObject *target)
 	double preVarianceDamage = boostMax;
 	double damageOrHealAmount = Random::RollDice(boostMin, boostMax);
 
+	CWeenieObject *wand = g_pWorld->FindObject(m_SpellCastData.wand_id);
+	if (wand)
+	{
+		double elementalDamageMod = wand->InqDamageType() == meta->_dt ? wand->InqFloatQuality(ELEMENTAL_DAMAGE_MOD_FLOAT, 1.0) : 1.0;
+		if (m_pWeenie->AsPlayer() && target->AsPlayer()) //pvp
+			elementalDamageMod = ((elementalDamageMod - 1.0) / 2.0) + 1.0;
+		damageOrHealAmount *= elementalDamageMod;
+	}
+
 	// negative spell
 	if (isDamage)
 	{
@@ -1952,7 +1967,7 @@ bool CSpellcastingManager::AdjustVital(CWeenieObject *target)
 		DamageEventData dmgEvent;
 		dmgEvent.source = m_pWeenie;
 		dmgEvent.target = target;
-		dmgEvent.weapon = g_pWorld->FindObject(m_SpellCastData.wand_id);
+		dmgEvent.weapon = wand;
 		dmgEvent.damage_form = DF_MAGIC;
 		dmgEvent.damage_type = meta->_dt;
 		dmgEvent.hit_quadrant = DAMAGE_QUADRANT::DQ_UNDEF; //should spells have hit quadrants?
