@@ -115,6 +115,8 @@ void CPhatACServerConfig::PostLoad()
 	m_bSpawnStaticCreatures = atoi(GetValue("spawn_static_creatures", "1")) != 0;
 	m_bEverythingUnlocked = atoi(GetValue("everything_unlocked", "0")) != 0;
 	m_bTownCrierBuffs = atoi(GetValue("town_crier_buffs", "0")) != 0;
+	m_TownCrierBuffLevel = (unsigned int)max(0, atoi(GetValue("town_crier_buff_level", "7")));
+	m_bTownCrierBuffBanes = atoi(GetValue("town_crier_buff_banes", "0")) != 0;
 
 	m_bEnableTeleCommands = atoi(GetValue("enable_teleport_commands", "0")) != 0;
 	m_bEnableXPCommands = atoi(GetValue("enable_xp_commands", "0")) != 0;
@@ -159,6 +161,7 @@ void CPhatACServerConfig::PostLoad()
 	m_fVitaeXPMultiplier = max(0.0, atof(GetValue("vitae_xp_multiplier", "1.0")));
 	m_PKTrophyID = (unsigned int)max(0, atoi(GetValue("pk_trophy_id", "0")));
 	m_bEnableSpellFociStarterPack = atoi(GetValue("enable_spell_foci_starter_pack", "0")) != 0;
+	m_PrimeNewCharacterSpellbook = (unsigned int)max(0, atoi(GetValue("prime_new_character_spellbook", "0")));
 
 	m_bShowLogins = atoi(GetValue("show_logins", "1")) != 0;
 	m_bSpeedHackKicking = atoi(GetValue("speed_hack_kicking", "1")) != 0;

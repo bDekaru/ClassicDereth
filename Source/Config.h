@@ -51,7 +51,10 @@ public:
 	virtual bool SpawnLandscape() { return m_bSpawnLandscape; }
 	virtual bool SpawnStaticCreatures() { return m_bSpawnStaticCreatures; }
 	virtual bool EverythingUnlocked() { return m_bEverythingUnlocked; }
+
 	virtual bool TownCrierBuffs() { return m_bTownCrierBuffs; }
+	virtual unsigned int TownCrierBuffLevel() { return m_TownCrierBuffLevel; };
+	virtual bool TownCrierBuffBanes() { return m_bTownCrierBuffBanes; }
 
 	virtual bool EnableTeleCommands() { return m_bEnableTeleCommands; }
 	virtual bool EnableXPCommands() { return m_bEnableXPCommands; }
@@ -74,7 +77,9 @@ public:
 	virtual bool DisableUnassignedXPAtMaxLevel() { return m_bDisableUnassignedXPAtMaxLevel; };
 	virtual double VitaeXPMultiplier() { return m_fVitaeXPMultiplier; }
 	virtual unsigned int PKTrophyID() { return m_PKTrophyID; };
+
 	virtual bool EnableSpellFociStarterPack() { return m_bEnableSpellFociStarterPack; };
+	virtual unsigned int PrimeNewCharacterSpellbook() { return m_PrimeNewCharacterSpellbook; };
 
 	virtual unsigned int MaxDormantLandblocks() { return m_MaxDormantLandblocks; }
 	virtual unsigned int DormantLandblockCleanupTime() { return m_DormantLandblockCleanupTime; }
@@ -116,7 +121,10 @@ protected:
 	bool m_bSpawnLandscape = true;
 	bool m_bSpawnStaticCreatures = true;
 	bool m_bEverythingUnlocked = true;
+
 	bool m_bTownCrierBuffs = true;
+	unsigned int m_TownCrierBuffLevel = 7;
+	bool m_bTownCrierBuffBanes = true;
 
 	bool m_bEnableTeleCommands = false;
 	bool m_bEnableXPCommands = false;
@@ -157,6 +165,7 @@ protected:
 	double m_fVitaeXPMultiplier = 1.0;
 	unsigned int m_PKTrophyID = 0;
 	bool m_bEnableSpellFociStarterPack = false;
+	unsigned int m_PrimeNewCharacterSpellbook = 0;
 
 	unsigned int m_MaxDormantLandblocks = 1000;
 	unsigned int m_DormantLandblockCleanupTime = 1800;
