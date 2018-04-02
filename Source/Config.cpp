@@ -153,6 +153,13 @@ void CPhatACServerConfig::PostLoad()
 	m_MaxDormantLandblocks = (unsigned int)max(0, atoi(GetValue("max_dormant_landblocks", "1000")));
 	m_DormantLandblockCleanupTime = (unsigned int)max(0, atoi(GetValue("dormant_landblock_cleanup_time", "1800")));
 
+	m_OverrideMaxLevel = (unsigned int)max(0, atoi(GetValue("override_max_level", "275")));
+	m_OverrideStartingXP = (unsigned int)max(0, atoi(GetValue("override_starting_xp", "0")));
+	m_bDisableUnassignedXPAtMaxLevel = atoi(GetValue("disable_unassigned_xp_at_max_level", "0")) != 0;
+	m_fVitaeXPMultiplier = max(0.0, atof(GetValue("vitae_xp_multiplier", "1.0")));
+	m_PKTrophyID = (unsigned int)max(0, atoi(GetValue("pk_trophy_id", "0")));
+	m_bEnableSpellFociStarterPack = atoi(GetValue("enable_spell_foci_starter_pack", "0")) != 0;
+
 	m_bShowLogins = atoi(GetValue("show_logins", "1")) != 0;
 	m_bSpeedHackKicking = atoi(GetValue("speed_hack_kicking", "1")) != 0;
 	m_bShowDeathMessagesGlobally = atoi(GetValue("show_death_messages_globally", "0")) != 0;

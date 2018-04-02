@@ -69,6 +69,13 @@ public:
 
 	virtual bool AutoCreateAccounts() { return m_bAutoCreateAccounts; }
 
+	virtual unsigned int OverrideMaxLevel() { return m_OverrideMaxLevel; };
+	virtual unsigned int OverrideStartingXP() { return m_OverrideStartingXP; };
+	virtual bool DisableUnassignedXPAtMaxLevel() { return m_bDisableUnassignedXPAtMaxLevel; };
+	virtual double VitaeXPMultiplier() { return m_fVitaeXPMultiplier; }
+	virtual unsigned int PKTrophyID() { return m_PKTrophyID; };
+	virtual bool EnableSpellFociStarterPack() { return m_bEnableSpellFociStarterPack; };
+
 	virtual unsigned int MaxDormantLandblocks() { return m_MaxDormantLandblocks; }
 	virtual unsigned int DormantLandblockCleanupTime() { return m_DormantLandblockCleanupTime; }
 
@@ -143,6 +150,13 @@ protected:
 	bool m_bSpellFociEnabled = true;
 
 	bool m_bAutoCreateAccounts = true;
+
+	unsigned int m_OverrideMaxLevel = 275;
+	unsigned int m_OverrideStartingXP = 0;
+	bool m_bDisableUnassignedXPAtMaxLevel = false;
+	double m_fVitaeXPMultiplier = 1.0;
+	unsigned int m_PKTrophyID = 0;
+	bool m_bEnableSpellFociStarterPack = false;
 
 	unsigned int m_MaxDormantLandblocks = 1000;
 	unsigned int m_DormantLandblockCleanupTime = 1800;

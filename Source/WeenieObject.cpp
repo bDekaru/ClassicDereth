@@ -1927,8 +1927,11 @@ void CWeenieObject::GiveXP(long long amount, bool showText, bool allegianceXP)
 			break;
 	}
 
-	m_Qualities.SetInt64(AVAILABLE_EXPERIENCE_INT64, newAvailableXP);
-	NotifyInt64StatUpdated(AVAILABLE_EXPERIENCE_INT64);
+	if (!(currentLevel == ExperienceSystem::GetMaxLevel() && g_pConfig->DisableUnassignedXPAtMaxLevel()))
+	{
+		m_Qualities.SetInt64(AVAILABLE_EXPERIENCE_INT64, newAvailableXP);
+		NotifyInt64StatUpdated(AVAILABLE_EXPERIENCE_INT64);
+	}
 
 	m_Qualities.SetInt64(TOTAL_EXPERIENCE_INT64, newTotalXP);
 	NotifyInt64StatUpdated(TOTAL_EXPERIENCE_INT64);

@@ -666,6 +666,8 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 				weenie->m_Qualities._create_list->clear(); //Clear the create list as we don't want what's in it.
 				g_pWorld->CreateEntity(weenie); //Briefly add the weenie to the world so we don't get errors when adding the starting gear.
 
+				weenie->GiveXP(g_pConfig->OverrideStartingXP()); //Add additional XP Override at character creation 
+
 				//add starter gear
 				GenerateStarterGear(weenie, cg, scg);
 
@@ -966,6 +968,16 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 	{
 		weenie->m_Qualities.AddSpell(LightningBolt1_SpellID);
 		sack->SpawnInContainer(W_ALCHEMCOBALT_CLASS, 10);
+	}
+
+	if (g_pConfig->EnableSpellFociStarterPack())
+	{
+		weenie->SpawnInContainer(W_PACKCREATUREESSENCE_CLASS, 1);
+		weenie->SpawnInContainer(W_PACKITEMESSENCE_CLASS, 1);
+		weenie->SpawnInContainer(W_PACKLIFEESSENCE_CLASS, 1);
+		weenie->SpawnInContainer(W_PACKWARESSENCE_CLASS, 1);
+
+		weenie->SpawnInContainer(W_TAPERPRISMATIC_CLASS, 250);
 	}
 
 	weenie->RecalculateCoinAmount();
