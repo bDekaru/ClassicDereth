@@ -469,7 +469,7 @@ void CPlayerWeenie::OnGivenXP(long long amount, bool allegianceXP)
 	}
 }
 
-void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, bool killedByPK)
+void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse)
 {
 	if (!pCorpse)
 		return;
@@ -539,12 +539,6 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, bool kill
 
 	for (auto item : removeList)
 		item->Remove();
-
-	if (killedByPK && g_pConfig->PKTrophyID() > 0)
-	{
-		CWeenieObject *pktrophyitem = g_pWeenieFactory->CreateWeenieByClassID(g_pConfig->PKTrophyID(), NULL, true);
-		alwaysDropList.push_back(pktrophyitem);
-	}
 
 	for (auto item : alwaysDropList)
 		FinishMoveItemToContainer(item, pCorpse, 0, true, true);
@@ -644,8 +638,6 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, bool kill
 
 void CPlayerWeenie::OnDeath(DWORD killer_id)
 {
-	bool killedByPK = false;
-	
 	_recallTime = -1.0; // cancel any portal recalls
 
 	m_bReviveAfterAnim = true;
@@ -673,8 +665,12 @@ void CPlayerWeenie::OnDeath(DWORD killer_id)
 		{
 			if (IsPK() && pKiller->_IsPlayer())
 			{
-				killedByPK = true;
-				
+				if (g_pConfig->PKTrophyID(level) > 0)
+				{
+					CWeenieObject *pktrophyitem = g_pWeenieFactory->CreateWeenieByClassID(g_pConfig->PKTrophyID(level), NULL, true);
+					(pKiller->AsContainer())->SpawnInContainer(pktrophyitem);
+				}
+
 				m_Qualities.SetFloat(PK_TIMESTAMP_FLOAT, Timer::cur_time + g_pConfig->PKRespiteTime());
 				m_Qualities.SetInt(PLAYER_KILLER_STATUS_INT, PKStatusEnum::NPK_PKStatus);
 				NotifyIntStatUpdated(PLAYER_KILLER_STATUS_INT, false);
@@ -688,7 +684,7 @@ void CPlayerWeenie::OnDeath(DWORD killer_id)
 	_pendingCorpse = CreateCorpse(false);
 
 	if (_pendingCorpse)
-		CalculateAndDropDeathItems(_pendingCorpse, killedByPK);
+		CalculateAndDropDeathItems(_pendingCorpse);
 
 	if (g_pConfig->HardcoreMode())
 	{

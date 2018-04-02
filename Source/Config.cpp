@@ -159,7 +159,14 @@ void CPhatACServerConfig::PostLoad()
 	m_OverrideStartingXP = (unsigned int)max(0, atoi(GetValue("override_starting_xp", "0")));
 	m_bDisableUnassignedXPAtMaxLevel = atoi(GetValue("disable_unassigned_xp_at_max_level", "0")) != 0;
 	m_fVitaeXPMultiplier = max(0.0, atof(GetValue("vitae_xp_multiplier", "1.0")));
-	m_PKTrophyID = (unsigned int)max(0, atoi(GetValue("pk_trophy_id", "0")));
+	
+	m_PKTrophyIDT1 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T1", "0")));
+	m_PKTrophyIDT2 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T2", "0")));
+	m_PKTrophyIDT3 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T3", "0")));
+	m_PKTrophyIDT4 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T4", "0")));
+	m_PKTrophyIDT5 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T5", "0")));
+	m_PKTrophyIDT6 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T6", "0")));
+
 	m_bEnableSpellFociStarterPack = atoi(GetValue("enable_spell_foci_starter_pack", "0")) != 0;
 	m_PrimeNewCharacterSpellbook = (unsigned int)max(0, atoi(GetValue("prime_new_character_spellbook", "0")));
 
@@ -236,3 +243,20 @@ double CPhatACServerConfig::RewardXPMultiplier(int level)
 		return m_fRewardXPMultiplierT6;
 }
 
+unsigned int CPhatACServerConfig::PKTrophyID(int level)
+{	
+	int tier = (ExperienceSystem::GetMaxLevel() / 6);
+
+	if (level <= (tier * 1))
+		return m_PKTrophyIDT1;
+	else if (level <= (tier * 2))
+		return m_PKTrophyIDT2;
+	else if (level <= (tier * 3))
+		return m_PKTrophyIDT3;
+	else if (level <= (tier * 4))
+		return m_PKTrophyIDT4;
+	else if (level <= (tier * 5))
+		return m_PKTrophyIDT5;
+	else 
+		return m_PKTrophyIDT6;
+}

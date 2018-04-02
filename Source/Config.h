@@ -76,7 +76,8 @@ public:
 	virtual unsigned int OverrideStartingXP() { return m_OverrideStartingXP; };
 	virtual bool DisableUnassignedXPAtMaxLevel() { return m_bDisableUnassignedXPAtMaxLevel; };
 	virtual double VitaeXPMultiplier() { return m_fVitaeXPMultiplier; }
-	virtual unsigned int PKTrophyID() { return m_PKTrophyID; };
+	
+	virtual unsigned int PKTrophyID(int level);
 
 	virtual bool EnableSpellFociStarterPack() { return m_bEnableSpellFociStarterPack; };
 	virtual unsigned int PrimeNewCharacterSpellbook() { return m_PrimeNewCharacterSpellbook; };
@@ -163,7 +164,14 @@ protected:
 	unsigned int m_OverrideStartingXP = 0;
 	bool m_bDisableUnassignedXPAtMaxLevel = false;
 	double m_fVitaeXPMultiplier = 1.0;
-	unsigned int m_PKTrophyID = 0;
+
+	unsigned int m_PKTrophyIDT1 = 0;
+	unsigned int m_PKTrophyIDT2 = 0;
+	unsigned int m_PKTrophyIDT3 = 0;
+	unsigned int m_PKTrophyIDT4 = 0;
+	unsigned int m_PKTrophyIDT5 = 0;
+	unsigned int m_PKTrophyIDT6 = 0;
+	
 	bool m_bEnableSpellFociStarterPack = false;
 	unsigned int m_PrimeNewCharacterSpellbook = 0;
 

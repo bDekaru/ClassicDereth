@@ -24,7 +24,7 @@ public:
 
 	virtual void PreSpawnCreate() override;
 
-	void CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, bool killedByPK = false);
+	void CalculateAndDropDeathItems(CCorpseWeenie *pCorpse);
 
 	virtual void OnDeathAnimComplete() override;
 	virtual void OnDeath(DWORD killer_id) override;
