@@ -344,6 +344,16 @@ void from_json(const nlohmann::json &reader, CTreasureTier &output)
 	}
 }
 
+void from_json(const nlohmann::json &reader, CTreasureType &output)
+{
+	output.tier = reader.value("tier", 0);
+	output.maxTreasureAmount = reader.value("maxTreasureAmount", 0);
+	output.lootChance = reader.value("lootChance", 0.0f);
+	output.maxMundaneAmount = reader.value("maxMundaneAmount", 0);
+	output.mundaneLootChance = reader.value("mundaneLootChance", 0.0f);
+	output.qualityModifier = reader.value("qualityModifier", 0.0f);
+}
+
 DEFINE_UNPACK_JSON(CTreasureProfile)
 {
 	if (HasField(reader, "options"))
@@ -443,6 +453,16 @@ DEFINE_UNPACK_JSON(CTreasureProfile)
 
 		for (auto iter = tempChestTreasureTypeReplacementTable.begin(); iter != tempChestTreasureTypeReplacementTable.end(); ++iter)
 			chestTreasureTypeReplacementTable.emplace(atoi(iter->first.c_str()), iter->second);
+	}
+
+	if (HasField(reader, "treasureTypeOverrides"))
+	{
+		// nlohmann::json doesn't like int keys in maps, so we read as string and convert to int.
+		std::map<std::string, CTreasureType> tempTreasureTypeOverrides;
+		tempTreasureTypeOverrides = reader.at("treasureTypeOverrides").get<std::map<std::string, CTreasureType>>();
+
+		for (auto iter = tempTreasureTypeOverrides.begin(); iter != tempTreasureTypeOverrides.end(); ++iter)
+			treasureTypeOverrides.emplace(atoi(iter->first.c_str()), iter->second);
 	}
 	return true;
 }
@@ -1016,12 +1036,16 @@ int CTreasureFactory::GenerateFromTypeOrWcid(CWeenieObject *parent, int destinat
 
 			ProcessList(entry, 0, creationData);
 		}
+		else if (_TreasureProfile->treasureTypeOverrides.find(treasureTypeOrWcid) != _TreasureProfile->treasureTypeOverrides.end())
+		{
+			CTreasureType *entry = &_TreasureProfile->treasureTypeOverrides.at(treasureTypeOrWcid);
+			return GenerateFromType(entry, parent, destinationType, isRegenLocationType, treasureTypeOrWcid, ptid, shade, profile);
+		}
 		else if (TreasureEntry2 *entry = g_pPortalDataEx->_treasureTableData.GetTreasureGenerationProfile(treasureTypeOrWcid))
 		{
 			//we're instructions for random treasure generation
 
 			//setup some default values
-			eTreasureTypeEntryType entryType;
 			int tierId = entry->_tier;
 			CTreasureTier *tier = &_TreasureProfile->tiers[tierId];
 			if (tier == NULL)
@@ -1036,113 +1060,15 @@ int CTreasureFactory::GenerateFromTypeOrWcid(CWeenieObject *parent, int destinat
 			if (maxMundaneAmount == 1)
 				mundaneLootChance = 1.0f;
 
-			if (parent->AsCorpse())
-			{
-				//we're a corpse
-				maxTreasureAmount = round(maxTreasureAmount * tier->lootAmountMultiplier);
-				lootChance = tier->lootChance;
-				mundaneLootChance = tier->miscLootChance;
+			CTreasureType treasureType;
+			treasureType.tier = tierId;
+			treasureType.maxTreasureAmount = maxTreasureAmount;
+			treasureType.lootChance = lootChance;
+			treasureType.maxMundaneAmount = maxMundaneAmount;
+			treasureType.mundaneLootChance = mundaneLootChance;
+			treasureType.qualityModifier = qualityModifier;
 
-				int level = parent->InqIntQuality(LEVEL_INT, 0);
-				if (level >= tier->qualityLootLevelThreshold && qualityModifier < tier->qualityLootModifier)
-					qualityModifier = tier->qualityLootModifier;
-			}
-			else if (parent->AsContainer() && !parent->AsMonster())
-			{
-				//we're a container so apply container related stuff.
-
-				//Turbine did a bad job of converting chests to the new treasure profiles resulting in chests with loot that
-				//doesnt match the level of the area they are located in. This is a quick fix for that. A better fix would be
-				//to edit the chest generator tables themselves. But even then it would require changing some chest wcids
-				//because there are chests wcids that are uses both in newbie and high level areas.
-				int newTreasureTypeOrWcid = 0;
-				for each(auto entry in _TreasureProfile->chestTreasureTypeReplacementTable)
-				{
-					if (treasureTypeOrWcid == entry.first)
-					{
-						newTreasureTypeOrWcid = entry.second;
-						break;
-					}
-				}
-
-				if (newTreasureTypeOrWcid != 0 && treasureTypeOrWcid != newTreasureTypeOrWcid)
-				{
-					treasureTypeOrWcid = newTreasureTypeOrWcid;
-					entry = g_pPortalDataEx->_treasureTableData.GetTreasureGenerationProfile(treasureTypeOrWcid);
-					if (!entry)
-						return amountCreated;
-				}
-
-				tierId = entry->_tier;
-				tier = &_TreasureProfile->tiers[tierId];
-				if (tier == NULL)
-					return amountCreated;
-				qualityModifier = entry->_lootQualityMod;
-				maxTreasureAmount = entry->_itemMaxAmount + entry->_magicItemMaxAmount;
-				if (maxTreasureAmount == 1)
-					maxTreasureAmount = 3;
-				maxTreasureAmount = round(maxTreasureAmount * tier->chestLootAmountMultiplier);
-				maxMundaneAmount = 0;
-				lootChance = tier->chestLootChance;
-				mundaneLootChance = 0;
-
-				if (qualityModifier < tier->qualityLootModifier)
-					qualityModifier = tier->qualityLootModifier;
-			}
-
-			//These are the 3 basic types for Turbine's loot tables. Basically warrior types drop less magical items and less casters.
-			//Magic types drop less items but they are all magical, they also drop more casters.
-			//General is an in-between type.
-			//These types were added in 2004 when they streamlined the treasure system, but even today there are lots of old creatures that still
-			//weren't migrated.
-			//For now all we use this for is to prevent warrior types from dropping scrolls.
-			switch (entry->_itemTreasureTypeSelectionChances)
-			{
-			case 0:
-				entryType = eTreasureTypeEntryType_Magic;
-				break;
-			case 8:
-				entryType = eTreasureTypeEntryType_Warrior;
-				break;
-			default:
-			case 9:
-				entryType = eTreasureTypeEntryType_General;
-				break;
-			}
-
-			for (int i = 0; i < maxTreasureAmount; i++)
-			{
-				if (getRandomNumberExclusive(100) < lootChance * 100)
-				{
-					if (CWeenieObject *newItem = GenerateTreasure(tierId, tier->GetRandomTreasureCategory(), qualityModifier))
-					{
-						g_pWeenieFactory->AddWeenieToDestination(newItem, parent, destinationType, isRegenLocationType, profile);
-						amountCreated++;
-					}
-				}
-			}
-
-			for (int i = 0; i < maxMundaneAmount; i++)
-			{
-				if (getRandomNumberExclusive(100) < mundaneLootChance * 100)
-				{
-					if (CWeenieObject *newItem = GenerateMundaneItem(tier))
-					{
-						g_pWeenieFactory->AddWeenieToDestination(newItem, parent, destinationType, isRegenLocationType, profile);
-						amountCreated++;
-					}
-				}
-			}
-
-			if (entryType != eTreasureTypeEntryType_Warrior && getRandomNumberExclusive(100) < tier->scrollLootChance * 100)
-			{
-				if (CWeenieObject *newItem = GenerateScroll(tier))
-				{
-					g_pWeenieFactory->AddWeenieToDestination(newItem, parent, destinationType, isRegenLocationType, profile);
-					amountCreated++;
-				}
-			}
-			return amountCreated;
+			return GenerateFromType(&treasureType, parent, destinationType, isRegenLocationType, treasureTypeOrWcid, ptid, shade, profile);
 		}
 	}
 	else
@@ -1155,6 +1081,130 @@ int CTreasureFactory::GenerateFromTypeOrWcid(CWeenieObject *parent, int destinat
 		}
 	}
 
+	return amountCreated;
+}
+
+int CTreasureFactory::GenerateFromType(CTreasureType *type, CWeenieObject * parent, int destinationType, bool isRegenLocationType, DWORD treasureTypeOrWcid, unsigned int ptid, float shade, const GeneratorProfile * profile)
+{
+	int amountCreated = 0;
+	int tierId = type->tier;
+	CTreasureTier *tier = &_TreasureProfile->tiers[type->tier];
+	if (tier == NULL)
+		return amountCreated;
+	int maxTreasureAmount = type->maxTreasureAmount;
+	int maxMundaneAmount = type->maxMundaneAmount;
+	float lootChance = type->lootChance;
+	float mundaneLootChance = type->mundaneLootChance;
+	float qualityModifier = type->qualityModifier;
+
+	if (parent->AsCorpse())
+	{
+		//we're a corpse
+		maxTreasureAmount = round(maxTreasureAmount * tier->lootAmountMultiplier);
+		lootChance = tier->lootChance;
+		mundaneLootChance = tier->miscLootChance;
+
+		int level = parent->InqIntQuality(LEVEL_INT, 0);
+		if (level >= tier->qualityLootLevelThreshold && qualityModifier < tier->qualityLootModifier)
+			qualityModifier = tier->qualityLootModifier;
+	}
+	else if (parent->AsContainer() && !parent->AsMonster())
+	{
+		//we're a container so apply container related stuff.
+
+		//Turbine did a bad job of converting chests to the new treasure profiles resulting in chests with loot that
+		//doesnt match the level of the area they are located in. This is a quick fix for that. A better fix would be
+		//to edit the chest generator tables themselves. But even then it would require changing some chest wcids
+		//because there are chests wcids that are uses both in newbie and high level areas.
+		int newTreasureTypeOrWcid = 0;
+		for each(auto entry in _TreasureProfile->chestTreasureTypeReplacementTable)
+		{
+			if (treasureTypeOrWcid == entry.first)
+			{
+				newTreasureTypeOrWcid = entry.second;
+				break;
+			}
+		}
+
+		if (newTreasureTypeOrWcid != 0 && treasureTypeOrWcid != newTreasureTypeOrWcid)
+		{
+			if (_TreasureProfile->treasureTypeOverrides.find(treasureTypeOrWcid) != _TreasureProfile->treasureTypeOverrides.end())
+			{
+				CTreasureType *entry = &_TreasureProfile->treasureTypeOverrides.at(treasureTypeOrWcid);
+				treasureTypeOrWcid = newTreasureTypeOrWcid;
+
+				tierId = type->tier;
+				tier = &_TreasureProfile->tiers[type->tier];
+				if (tier == NULL)
+					return amountCreated;
+				qualityModifier = type->qualityModifier;
+				maxTreasureAmount = type->maxTreasureAmount;
+				if (maxTreasureAmount == 1)
+					maxTreasureAmount = 3;
+
+				if (qualityModifier < tier->qualityLootModifier)
+					qualityModifier = tier->qualityLootModifier;
+			}
+			else if (TreasureEntry2 *entry = g_pPortalDataEx->_treasureTableData.GetTreasureGenerationProfile(treasureTypeOrWcid))
+			{
+				treasureTypeOrWcid = newTreasureTypeOrWcid;
+
+				tierId = entry->_tier;
+				tier = &_TreasureProfile->tiers[tierId];
+				if (tier == NULL)
+					return amountCreated;
+				qualityModifier = entry->_lootQualityMod;
+				maxTreasureAmount = entry->_itemMaxAmount + entry->_magicItemMaxAmount;
+				if (maxTreasureAmount == 1)
+					maxTreasureAmount = 3;
+
+				if (qualityModifier < tier->qualityLootModifier)
+					qualityModifier = tier->qualityLootModifier;
+			}
+			else
+				return amountCreated;
+		}
+
+		maxTreasureAmount = round(maxTreasureAmount * tier->chestLootAmountMultiplier);
+		lootChance = tier->chestLootChance;
+
+		//chests do not drop mundane items.
+		mundaneLootChance = 0;
+		maxMundaneAmount = 0;
+	}
+
+	for (int i = 0; i < maxTreasureAmount; i++)
+	{
+		if (getRandomNumberExclusive(100) < lootChance * 100)
+		{
+			if (CWeenieObject *newItem = GenerateTreasure(tierId, tier->GetRandomTreasureCategory(), qualityModifier))
+			{
+				g_pWeenieFactory->AddWeenieToDestination(newItem, parent, destinationType, isRegenLocationType, profile);
+				amountCreated++;
+			}
+		}
+	}
+
+	for (int i = 0; i < maxMundaneAmount; i++)
+	{
+		if (getRandomNumberExclusive(100) < mundaneLootChance * 100)
+		{
+			if (CWeenieObject *newItem = GenerateMundaneItem(tier))
+			{
+				g_pWeenieFactory->AddWeenieToDestination(newItem, parent, destinationType, isRegenLocationType, profile);
+				amountCreated++;
+			}
+		}
+	}
+
+	if (getRandomNumberExclusive(100) < tier->scrollLootChance * 100)
+	{
+		if (CWeenieObject *newItem = GenerateScroll(tier))
+		{
+			g_pWeenieFactory->AddWeenieToDestination(newItem, parent, destinationType, isRegenLocationType, profile);
+			amountCreated++;
+		}
+	}
 	return amountCreated;
 }
 

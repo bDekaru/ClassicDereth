@@ -13886,5 +13886,15 @@
     "1": 3,
     "338": 456,
     "456": 457
+  },
+  "treasureTypeOverrides": {
+    "1000": {
+      "tier": 6,
+      "maxTreasureAmount": 10,
+      "lootChance": 0.2,
+      "maxMundaneAmount": 2,
+      "mundaneLootChance": 0.2,
+      "qualityModifier": 0.0
+    }
   }
 }

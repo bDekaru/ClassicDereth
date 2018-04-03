@@ -38,6 +38,7 @@
 #include "InferredPortalData.h"
 #include "RandomRange.h"
 #include "House.h"
+#include "GameEventManager.h"
 
 // Most of these commands are just for experimenting and never meant to be used in a real game
 // TODO: Add flags to these commands so they are only accessible under certain modes such as a sandbox mode
@@ -2701,7 +2702,7 @@ CLIENT_COMMAND(activeevents, "", "", ADMIN_ACCESS)
 {
 	std::string eventText = "Enabled events:";
 
-	for (auto &entry : g_pPortalDataEx->_gameEvents._gameEvents)
+	for (auto &entry : g_pGameEventManager->_gameEvents)
 	{
 		if (entry.second._eventState != GameEventState::Off_GameEventState)
 		{		
