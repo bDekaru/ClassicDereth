@@ -2218,7 +2218,7 @@ float CMonsterWeenie::GetEffectiveArmorLevel(DamageEventData &damageData, bool b
 	buffDetails.CalculateEnchantedValue();
 
 	if (bIgnoreMagicArmor)
-		return buffDetails.enchantedValue_DecreasingOnly; //debuffs still count
+		return buffDetails.rawValue;
 	else
 		return buffDetails.enchantedValue;
 }
