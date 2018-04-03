@@ -995,7 +995,6 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 		break;
 	case OnTop_RegenLocationType:
 	case OnTopTreasure_RegenLocationType:
-		//untested
 		if (!profile->pos_val.objcell_id)
 			pos.frame.m_origin = pos.localtoglobal(profile->pos_val.frame.m_origin);
 		else
@@ -1004,6 +1003,11 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 		pos.frame.m_origin.z = CalcSurfaceZ(pos.objcell_id, pos.frame.m_origin.x, pos.frame.m_origin.y, false);
 
 		weenie->SetInitialPosition(pos);
+		if (!g_pWorld->CreateEntity(weenie))
+		{
+			LOG(Temp, Normal, TEXT("Failed creating generated spawn %s.\n"), GetWCIDName(profile->type));
+			return;
+		}
 		break;
 	case Shop_RegenLocationType:
 	case ShopTreasure_RegenLocationType:
