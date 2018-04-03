@@ -24,6 +24,7 @@
 #include "Qualities.h"
 #include "SkillTable.h"
 #include "QualityFilter.h"
+#include "Config.h"
 
 ObjCache *ObjCaches::RegionDescs = NULL;
 ObjCache *ObjCaches::LandBlocks = NULL;
@@ -147,6 +148,10 @@ void ObjCaches::InitCaches(bool initTables, const char *jsonDataPath)
 		CachedSpellTable = CSpellTable::Get(0x0E00000E);
 		CachedSpellComponentTable = SpellComponentTable::Get(0x0E00000F);
 		CachedExperienceTable = ExperienceTable::Get(0x0E000018);
+
+		if(g_pConfig->OverrideMaxLevel() > 0 && g_pConfig->OverrideMaxLevel() < 275)
+			CachedExperienceTable->_max_level = g_pConfig->OverrideMaxLevel();
+
 		CachedEnchantableFilter = ACQualityFilter::Get(0x0E010001);
 
 #if PHATSDK_IS_SERVER

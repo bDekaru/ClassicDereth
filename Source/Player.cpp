@@ -436,8 +436,8 @@ void CPlayerWeenie::UpdateVitaeEnchantment()
 void CPlayerWeenie::OnGivenXP(long long amount, bool allegianceXP)
 {
 	if (m_Qualities.GetVitaeValue() < 1.0 && !allegianceXP)
-	{
-		DWORD64 vitae_pool = InqIntQuality(VITAE_CP_POOL_INT, 0) + min(amount, 1000000000);
+	{	
+		DWORD64 vitae_pool = InqIntQuality(VITAE_CP_POOL_INT, 0) + min((amount * g_pConfig->VitaeXPMultiplier()), 1000000000);
 		float new_vitae = 1.0;		
 		bool has_new_vitae = VitaeSystem::DetermineNewVitaeLevel(m_Qualities.GetVitaeValue(), InqIntQuality(DEATH_LEVEL_INT, 1), &vitae_pool, &new_vitae);
 
@@ -665,6 +665,12 @@ void CPlayerWeenie::OnDeath(DWORD killer_id)
 		{
 			if (IsPK() && pKiller->_IsPlayer())
 			{
+				if (g_pConfig->PKTrophyID(level) > 0)
+				{
+					CWeenieObject *pktrophyitem = g_pWeenieFactory->CreateWeenieByClassID(g_pConfig->PKTrophyID(level), NULL, true);
+					(pKiller->AsContainer())->SpawnInContainer(pktrophyitem);
+				}
+
 				m_Qualities.SetFloat(PK_TIMESTAMP_FLOAT, Timer::cur_time + g_pConfig->PKRespiteTime());
 				m_Qualities.SetInt(PLAYER_KILLER_STATUS_INT, PKStatusEnum::NPK_PKStatus);
 				NotifyIntStatUpdated(PLAYER_KILLER_STATUS_INT, false);
