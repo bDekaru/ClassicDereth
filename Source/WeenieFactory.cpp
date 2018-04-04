@@ -946,6 +946,8 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 	case WieldTreasure_RegenLocationType:
 		if (CMonsterWeenie *creature = parent->AsMonster())
 			creature->SpawnWielded(weenie);
+		else if(CContainerWeenie *container = parent->AsContainer())
+			container->SpawnInContainer(weenie);
 		break;
 	case Specific_RegenLocationType:
 	case SpecificTreasure_RegenLocationType:
