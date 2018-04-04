@@ -77,6 +77,7 @@ public:
 	virtual bool DisableUnassignedXPAtMaxLevel() { return m_bDisableUnassignedXPAtMaxLevel; };
 	virtual double VitaeXPMultiplier() { return m_fVitaeXPMultiplier; }
 	
+	virtual unsigned int PKTrophyStartingLevel() { return m_PKTrophyStartingLevel; };
 	virtual unsigned int PKTrophyID(int level);
 
 	virtual bool EnableSpellFociStarterPack() { return m_bEnableSpellFociStarterPack; };
@@ -165,6 +166,8 @@ protected:
 	bool m_bDisableUnassignedXPAtMaxLevel = false;
 	double m_fVitaeXPMultiplier = 1.0;
 
+	unsigned int m_PKTrophyStartingLevel = 1;
+	unsigned int m_PKTrophyIDT0 = 0;
 	unsigned int m_PKTrophyIDT1 = 0;
 	unsigned int m_PKTrophyIDT2 = 0;
 	unsigned int m_PKTrophyIDT3 = 0;
