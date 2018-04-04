@@ -655,6 +655,8 @@ void CPlayerWeenie::OnDeath(DWORD killer_id)
 		NotifyPositionStatUpdated(LAST_OUTSIDE_DEATH_POSITION, true);
 	}
 
+	double PreDeathVitaeValue = m_Qualities.GetVitaeValue();
+
 	UpdateVitaePool(0);
 	ReduceVitae(0.05f);
 	UpdateVitaeEnchantment();
@@ -665,8 +667,7 @@ void CPlayerWeenie::OnDeath(DWORD killer_id)
 		{
 			if (IsPK() && pKiller->_IsPlayer())
 			{
-				
-				if(m_Qualities.GetVitaeValue() >= 1.0 || g_pConfig->EnablePKTrophyWithVitae())
+				if(PreDeathVitaeValue >= 1.0 || g_pConfig->EnablePKTrophyWithVitae())
 				{
 					if (g_pConfig->PKTrophyID(level) > 0)
 					{
