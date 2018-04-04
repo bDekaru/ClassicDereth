@@ -981,7 +981,7 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->SpawnInContainer(W_PACKLIFEESSENCE_CLASS, 1);
 		weenie->SpawnInContainer(W_PACKWARESSENCE_CLASS, 1);
 
-		weenie->SpawnInContainer(W_TAPERPRISMATIC_CLASS, 250);
+		weenie->SpawnInContainer(W_TAPERPRISMATIC_CLASS, 25);
 	}
 
 	if(g_pConfig->PrimeNewCharacterSpellbook() > 0)

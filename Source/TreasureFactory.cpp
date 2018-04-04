@@ -1470,49 +1470,6 @@ bool CTreasureFactory::MutateItem(CWeenieObject *newItem, sItemCreationInfo &cre
 	int gemCount = 0;
 	MaterialType gemType = Undef_MaterialType;
 
-	//std::vector<MaterialType> possibleMaterialsList;
-	//if (!entry->possibleMaterials.empty())
-	//{
-	//	for each(auto possibleMaterial in entry->possibleMaterials)
-	//	{
-	//		if (possibleMaterial == MaterialType::Ceramic_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsCeramic.begin(), tier->materialsCeramic.end());
-	//		if (possibleMaterial == MaterialType::Cloth_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsCloth.begin(), tier->materialsCloth.end());
-	//		if (possibleMaterial == MaterialType::Gem_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsGem.begin(), tier->materialsGem.end());
-	//		if (possibleMaterial == MaterialType::Leather_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsLeather.begin(), tier->materialsLeather.end());
-	//		if (possibleMaterial == MaterialType::Metal_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsMetal.begin(), tier->materialsMetal.end());
-	//		if (possibleMaterial == MaterialType::Stone_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsStone.begin(), tier->materialsStone.end());
-	//		if (possibleMaterial == MaterialType::Wood_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsWood.begin(), tier->materialsWood.end());
-	//	}
-	//}
-	//else if (!category->possibleMaterials.empty())
-	//{ //if we do not have our own materials entry try the category
-	//	for each(auto possibleMaterial in category->possibleMaterials)
-	//	{
-	//		if (possibleMaterial == MaterialType::Ceramic_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsCeramic.begin(), tier->materialsCeramic.end());
-	//		if (possibleMaterial == MaterialType::Cloth_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsCloth.begin(), tier->materialsCloth.end());
-	//		if (possibleMaterial == MaterialType::Gem_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsGem.begin(), tier->materialsGem.end());
-	//		if (possibleMaterial == MaterialType::Leather_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsLeather.begin(), tier->materialsLeather.end());
-	//		if (possibleMaterial == MaterialType::Metal_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsMetal.begin(), tier->materialsMetal.end());
-	//		if (possibleMaterial == MaterialType::Stone_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsStone.begin(), tier->materialsStone.end());
-	//		if (possibleMaterial == MaterialType::Wood_MaterialType)
-	//			possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsWood.begin(), tier->materialsWood.end());
-	//	}
-	//}
-	//material = possibleMaterialsList[getRandomNumberExclusive(possibleMaterialsList.size())];
-
 	if (newItem->m_Qualities.InqInt(TSYS_MUTATION_DATA_INT, tsysMutationDataInt, TRUE, TRUE) && tsysMutationDataInt)
 	{
 		DWORD tsysMutationData = (DWORD)tsysMutationDataInt;
@@ -1522,26 +1479,85 @@ bool CTreasureFactory::MutateItem(CWeenieObject *newItem, sItemCreationInfo &cre
 		BYTE gemCode = (tsysMutationData >> 8) & 0xFF;
 		BYTE materialCode = (tsysMutationData >> 0) & 0xFF;
 
-		MaterialType materialCategory = g_pPortalDataEx->_treasureTableData.RollBaseMaterialFromMaterialCode(materialCode, tier->tierId);
-		if (materialCategory != MaterialType::Undef_MaterialType)
+		std::vector<MaterialType> possibleMaterialsList;
+		if (!entry->possibleMaterials.empty())
 		{
-			material = g_pPortalDataEx->_treasureTableData.RollMaterialFromBaseMaterial(materialCategory, tier->tierId);
-			if (material != MaterialType::Undef_MaterialType)
+			for each(auto possibleMaterial in entry->possibleMaterials)
 			{
-				newItem->m_Qualities.SetInt(MATERIAL_TYPE_INT, material);
-				//materialValueMultiplier = *g_pPortalDataEx->_treasureTableData._materialValueAddedPossibly.lookup(material);
-
-				int ptid = g_pPortalDataEx->_treasureTableData.RollPaletteTemplateIDFromMaterialAndColorCode(material, colorCode);
-				if (ptid != 0)
-				{
-					newItem->m_Qualities.SetInt(PALETTE_TEMPLATE_INT, ptid);
-					newItem->m_Qualities.SetFloat(SHADE_FLOAT, getRandomDouble(1.0));
-					newItem->m_Qualities.SetFloat(SHADE2_FLOAT, getRandomDouble(1.0));
-					newItem->m_Qualities.SetFloat(SHADE3_FLOAT, getRandomDouble(1.0));
-					newItem->m_Qualities.SetFloat(SHADE4_FLOAT, getRandomDouble(1.0));
-				}
+				if (possibleMaterial == MaterialType::Ceramic_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsCeramic.begin(), tier->materialsCeramic.end());
+				if (possibleMaterial == MaterialType::Cloth_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsCloth.begin(), tier->materialsCloth.end());
+				if (possibleMaterial == MaterialType::Gem_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsGem.begin(), tier->materialsGem.end());
+				if (possibleMaterial == MaterialType::Leather_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsLeather.begin(), tier->materialsLeather.end());
+				if (possibleMaterial == MaterialType::Metal_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsMetal.begin(), tier->materialsMetal.end());
+				if (possibleMaterial == MaterialType::Stone_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsStone.begin(), tier->materialsStone.end());
+				if (possibleMaterial == MaterialType::Wood_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsWood.begin(), tier->materialsWood.end());
 			}
 		}
+		else if (!category->possibleMaterials.empty())
+		{ //if we do not have our own materials entry try the category
+			for each(auto possibleMaterial in category->possibleMaterials)
+			{
+				if (possibleMaterial == MaterialType::Ceramic_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsCeramic.begin(), tier->materialsCeramic.end());
+				if (possibleMaterial == MaterialType::Cloth_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsCloth.begin(), tier->materialsCloth.end());
+				if (possibleMaterial == MaterialType::Gem_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsGem.begin(), tier->materialsGem.end());
+				if (possibleMaterial == MaterialType::Leather_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsLeather.begin(), tier->materialsLeather.end());
+				if (possibleMaterial == MaterialType::Metal_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsMetal.begin(), tier->materialsMetal.end());
+				if (possibleMaterial == MaterialType::Stone_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsStone.begin(), tier->materialsStone.end());
+				if (possibleMaterial == MaterialType::Wood_MaterialType)
+					possibleMaterialsList.insert(possibleMaterialsList.end(), tier->materialsWood.begin(), tier->materialsWood.end());
+			}
+		}
+		material = possibleMaterialsList[getRandomNumberExclusive(possibleMaterialsList.size())];
+
+		if (material != MaterialType::Undef_MaterialType)
+		{
+			newItem->m_Qualities.SetInt(MATERIAL_TYPE_INT, material);
+
+			int ptid = g_pPortalDataEx->_treasureTableData.RollPaletteTemplateIDFromMaterialAndColorCode(material, colorCode);
+			if (ptid != 0)
+			{
+				newItem->m_Qualities.SetInt(PALETTE_TEMPLATE_INT, ptid);
+				newItem->m_Qualities.SetFloat(SHADE_FLOAT, getRandomDouble(1.0));
+				newItem->m_Qualities.SetFloat(SHADE2_FLOAT, getRandomDouble(1.0));
+				newItem->m_Qualities.SetFloat(SHADE3_FLOAT, getRandomDouble(1.0));
+				newItem->m_Qualities.SetFloat(SHADE4_FLOAT, getRandomDouble(1.0));
+			}
+		}
+
+		//The following code generated materials from the inferred data
+		//MaterialType materialCategory = g_pPortalDataEx->_treasureTableData.RollBaseMaterialFromMaterialCode(materialCode, tier->tierId);
+		//if (materialCategory != MaterialType::Undef_MaterialType)
+		//{
+		//	material = g_pPortalDataEx->_treasureTableData.RollMaterialFromBaseMaterial(materialCategory, tier->tierId);
+		//	if (material != MaterialType::Undef_MaterialType)
+		//	{
+		//		newItem->m_Qualities.SetInt(MATERIAL_TYPE_INT, material);
+		//		//materialValueMultiplier = *g_pPortalDataEx->_treasureTableData._materialValueAddedPossibly.lookup(material);
+
+		//		int ptid = g_pPortalDataEx->_treasureTableData.RollPaletteTemplateIDFromMaterialAndColorCode(material, colorCode);
+		//		if (ptid != 0)
+		//		{
+		//			newItem->m_Qualities.SetInt(PALETTE_TEMPLATE_INT, ptid);
+		//			newItem->m_Qualities.SetFloat(SHADE_FLOAT, getRandomDouble(1.0));
+		//			newItem->m_Qualities.SetFloat(SHADE2_FLOAT, getRandomDouble(1.0));
+		//			newItem->m_Qualities.SetFloat(SHADE3_FLOAT, getRandomDouble(1.0));
+		//			newItem->m_Qualities.SetFloat(SHADE4_FLOAT, getRandomDouble(1.0));
+		//		}
+		//	}
+		//}
 	}
 
 	int maxGemCount = _TreasureProfile->workmanshipProperties[itemWorkmanship].maxGemCount;
