@@ -1615,7 +1615,7 @@ void CMonsterWeenie::DropAllLoot(CCorpseWeenie *pCorpse)
 void CMonsterWeenie::GenerateDeathLoot(CCorpseWeenie *pCorpse)
 {
 	if (m_Qualities._create_list)
-		g_pWeenieFactory->AddFromCreateList(pCorpse, m_Qualities._create_list, (DestinationType)(Contain_DestinationType | ContainTreasure_DestinationType));
+		g_pWeenieFactory->AddFromCreateList(pCorpse, m_Qualities._create_list, (DestinationType)(Contain_DestinationType | Treasure_DestinationType));
 
 	if (DWORD deathTreasureType = InqDIDQuality(DEATH_TREASURE_TYPE_DID, 0))
 		g_pWeenieFactory->GenerateFromTypeOrWcid(pCorpse, DestinationType::ContainTreasure_DestinationType, deathTreasureType);
@@ -2218,7 +2218,7 @@ float CMonsterWeenie::GetEffectiveArmorLevel(DamageEventData &damageData, bool b
 	buffDetails.CalculateEnchantedValue();
 
 	if (bIgnoreMagicArmor)
-		return buffDetails.enchantedValue_DecreasingOnly; //debuffs still count
+		return buffDetails.rawValue;
 	else
 		return buffDetails.enchantedValue;
 }

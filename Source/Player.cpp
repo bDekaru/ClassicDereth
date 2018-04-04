@@ -2870,6 +2870,22 @@ bool CPlayerWeenie::SpawnSalvageBagInContainer(MaterialType material, int amount
 
 void CPlayerWeenie::SetLoginPlayerQualities()
 {
+	//Temporary as a way to fix existing characters
+	if (m_Qualities._skillStatsTable)
+	{
+		for (PackableHashTableWithJson<STypeSkill, Skill>::iterator entry = m_Qualities._skillStatsTable->begin(); entry != m_Qualities._skillStatsTable->end(); entry++)
+		{
+			Skill skill = entry->second;
+			if (skill._sac == SKILL_ADVANCEMENT_CLASS::SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
+				m_Qualities.SetSkillLevel(entry->first, 10);
+			else if (skill._sac == SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
+				m_Qualities.SetSkillLevel(entry->first, 5);
+			else
+				m_Qualities.SetSkillLevel(entry->first, 0);
+		}
+	}
+	//End of temporary code
+
 	g_pAllegianceManager->SetWeenieAllegianceQualities(this);
 	m_Qualities.SetFloat(LOGIN_TIMESTAMP_FLOAT, Timer::cur_time);
 

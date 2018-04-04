@@ -588,6 +588,10 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 				for (DWORD i = 0; i < cg.numSkills; i++)
 				{
 					weenie->m_Qualities.SetSkillAdvancementClass((STypeSkill)i, cg.skillAdvancementClasses[i]);
+					if (cg.skillAdvancementClasses[i] == SKILL_ADVANCEMENT_CLASS::SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
+						weenie->m_Qualities.SetSkillLevel((STypeSkill)i, 10);
+					else if (cg.skillAdvancementClasses[i] == SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
+						weenie->m_Qualities.SetSkillLevel((STypeSkill)i, 5);
 				}
 				
 				weenie->m_Qualities.SetInt(AGE_INT, 0);
