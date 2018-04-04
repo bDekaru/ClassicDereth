@@ -1006,6 +1006,29 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(AcidVulnerabilityOther1_SpellID);
 		weenie->m_Qualities.AddSpell(LightningVulnerabilityOther1_SpellID);
 
+		weenie->m_Qualities.AddSpell(HealSelf1_SpellID);
+		weenie->m_Qualities.AddSpell(HealOther1_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeSelf1_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeOther1_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostSelf1_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostOther1_SpellID);
+
+		weenie->m_Qualities.AddSpell(StaminatoManaSelf1_SpellID);
+		weenie->m_Qualities.AddSpell(HealthtoManaSelf1_SpellID);
+		weenie->m_Qualities.AddSpell(StaminatoHealthSelf1_SpellID);
+
+		weenie->m_Qualities.AddSpell(DrainHealth1_SpellID);
+		weenie->m_Qualities.AddSpell(DrainStamina1_SpellID);
+		weenie->m_Qualities.AddSpell(DrainMana1_SpellID);
+
+		weenie->m_Qualities.AddSpell(HarmOther1_SpellID);
+		weenie->m_Qualities.AddSpell(EnfeebleOther1_SpellID);
+		weenie->m_Qualities.AddSpell(ManaDrainOther1_SpellID);
+
+		weenie->m_Qualities.AddSpell(RegenerationSelf1_SpellID);
+		weenie->m_Qualities.AddSpell(RejuvenationSelf1_SpellID);
+		weenie->m_Qualities.AddSpell(ManaRenewalSelf1_SpellID);
+
 		weenie->m_Qualities.AddSpell(MagicYieldOther1_SpellID);
 		weenie->m_Qualities.AddSpell(VulnerabilityOther1_SpellID);
 		weenie->m_Qualities.AddSpell(DefenselessnessOther1_SpellID);
@@ -1023,11 +1046,15 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(WarMagicMasterySelf1_SpellID);
 		weenie->m_Qualities.AddSpell(ManaMasterySelf1_SpellID);
 
+		weenie->m_Qualities.AddSpell(ArcaneEnlightenmentSelf1_SpellID);
+		weenie->m_Qualities.AddSpell(HealingMasterySelf1_SpellID);
 		weenie->m_Qualities.AddSpell(SprintSelf1_SpellID);
 		weenie->m_Qualities.AddSpell(JumpingMasterySelf1_SpellID);
+
 		weenie->m_Qualities.AddSpell(ImpregnabilitySelf1_SpellID);
 		weenie->m_Qualities.AddSpell(InvulnerabilitySelf1_SpellID);
 		weenie->m_Qualities.AddSpell(MagicResistanceSelf1_SpellID);
+		
 		weenie->m_Qualities.AddSpell(FealtySelf1_SpellID);
 		weenie->m_Qualities.AddSpell(LeadershipMasterySelf1_SpellID);
 
@@ -1056,6 +1083,28 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(FrostBane1_SpellID);
 		weenie->m_Qualities.AddSpell(LightningBane1_SpellID);
 		weenie->m_Qualities.AddSpell(AcidBane1_SpellID);
+
+		weenie->m_Qualities.AddSpell(ForceBolt1_SpellID);
+		weenie->m_Qualities.AddSpell(ForceArc1_SpellID);
+		weenie->m_Qualities.AddSpell(ForceStreak1_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBlade1_SpellID);
+		weenie->m_Qualities.AddSpell(BladeArc1_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBladeStreak1_SpellID);
+		weenie->m_Qualities.AddSpell(ShockWave1_SpellID);
+		weenie->m_Qualities.AddSpell(ShockArc1_SpellID);
+		weenie->m_Qualities.AddSpell(ShockwaveStreak1_SpellID);
+		weenie->m_Qualities.AddSpell(FlameBolt1_SpellID);
+		weenie->m_Qualities.AddSpell(FlameArc1_SpellID);
+		weenie->m_Qualities.AddSpell(FlameStreak1_SpellID);
+		weenie->m_Qualities.AddSpell(FrostBolt1_SpellID);
+		weenie->m_Qualities.AddSpell(FrostArc1_SpellID);
+		weenie->m_Qualities.AddSpell(FrostStreak1_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStream1_SpellID);
+		weenie->m_Qualities.AddSpell(AcidArc1_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStreak1_SpellID);
+		weenie->m_Qualities.AddSpell(LightningBolt1_SpellID);
+		weenie->m_Qualities.AddSpell(LightningArc1_SpellID);
+		weenie->m_Qualities.AddSpell(LightningStreak1_SpellID);
 	}
 	if (g_pConfig->PrimeNewCharacterSpellbook() > 1)
 	{
@@ -1079,6 +1128,29 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(AcidVulnerabilityOther2_SpellID);
 		weenie->m_Qualities.AddSpell(LightningVulnerabilityOther2_SpellID);
 
+		weenie->m_Qualities.AddSpell(HealSelf2_SpellID);
+		weenie->m_Qualities.AddSpell(HealOther2_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeSelf2_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeOther2_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostSelf2_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostOther2_SpellID);
+
+		weenie->m_Qualities.AddSpell(StaminatoManaSelf2_SpellID);
+		weenie->m_Qualities.AddSpell(HealthtoManaSelf2_SpellID);
+		weenie->m_Qualities.AddSpell(StaminatoHealthSelf2_SpellID);
+
+		weenie->m_Qualities.AddSpell(DrainHealth2_SpellID);
+		weenie->m_Qualities.AddSpell(DrainStamina2_SpellID);
+		weenie->m_Qualities.AddSpell(DrainMana2_SpellID);
+
+		weenie->m_Qualities.AddSpell(HarmOther2_SpellID);
+		weenie->m_Qualities.AddSpell(EnfeebleOther2_SpellID);
+		weenie->m_Qualities.AddSpell(ManaDrainOther2_SpellID);
+
+		weenie->m_Qualities.AddSpell(RegenerationSelf2_SpellID);
+		weenie->m_Qualities.AddSpell(RejuvenationSelf2_SpellID);
+		weenie->m_Qualities.AddSpell(ManaRenewalSelf2_SpellID);
+
 		weenie->m_Qualities.AddSpell(MagicYieldOther2_SpellID);
 		weenie->m_Qualities.AddSpell(VulnerabilityOther2_SpellID);
 		weenie->m_Qualities.AddSpell(DefenselessnessOther2_SpellID);
@@ -1096,11 +1168,15 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(WarMagicMasterySelf2_SpellID);
 		weenie->m_Qualities.AddSpell(ManaMasterySelf2_SpellID);
 
+		weenie->m_Qualities.AddSpell(ArcaneEnlightenmentSelf2_SpellID);
+		weenie->m_Qualities.AddSpell(HealingMasterySelf2_SpellID);
 		weenie->m_Qualities.AddSpell(SprintSelf2_SpellID);
 		weenie->m_Qualities.AddSpell(JumpingMasterySelf2_SpellID);
+
 		weenie->m_Qualities.AddSpell(ImpregnabilitySelf2_SpellID);
 		weenie->m_Qualities.AddSpell(InvulnerabilitySelf2_SpellID);
 		weenie->m_Qualities.AddSpell(MagicResistanceSelf2_SpellID);
+
 		weenie->m_Qualities.AddSpell(FealtySelf2_SpellID);
 		weenie->m_Qualities.AddSpell(LeadershipMasterySelf2_SpellID);
 
@@ -1129,6 +1205,28 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(FrostBane2_SpellID);
 		weenie->m_Qualities.AddSpell(LightningBane2_SpellID);
 		weenie->m_Qualities.AddSpell(AcidBane2_SpellID);
+
+		weenie->m_Qualities.AddSpell(ForceBolt2_SpellID);
+		weenie->m_Qualities.AddSpell(ForceArc2_SpellID);
+		weenie->m_Qualities.AddSpell(ForceStreak2_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBlade2_SpellID);
+		weenie->m_Qualities.AddSpell(BladeArc2_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBladeStreak2_SpellID);
+		weenie->m_Qualities.AddSpell(ShockWave2_SpellID);
+		weenie->m_Qualities.AddSpell(ShockArc2_SpellID);
+		weenie->m_Qualities.AddSpell(ShockwaveStreak2_SpellID);
+		weenie->m_Qualities.AddSpell(FlameBolt2_SpellID);
+		weenie->m_Qualities.AddSpell(FlameArc2_SpellID);
+		weenie->m_Qualities.AddSpell(FlameStreak2_SpellID);
+		weenie->m_Qualities.AddSpell(FrostBolt2_SpellID);
+		weenie->m_Qualities.AddSpell(FrostArc2_SpellID);
+		weenie->m_Qualities.AddSpell(FrostStreak2_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStream2_SpellID);
+		weenie->m_Qualities.AddSpell(AcidArc2_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStreak2_SpellID);
+		weenie->m_Qualities.AddSpell(LightningBolt2_SpellID);
+		weenie->m_Qualities.AddSpell(LightningArc2_SpellID);
+		weenie->m_Qualities.AddSpell(LightningStreak2_SpellID);
 	}
 	if (g_pConfig->PrimeNewCharacterSpellbook() > 2)
 	{
@@ -1152,6 +1250,29 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(AcidVulnerabilityOther3_SpellID);
 		weenie->m_Qualities.AddSpell(LightningVulnerabilityOther3_SpellID);
 
+		weenie->m_Qualities.AddSpell(HealSelf3_SpellID);
+		weenie->m_Qualities.AddSpell(HealOther3_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeSelf3_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeOther3_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostSelf3_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostOther3_SpellID);
+
+		weenie->m_Qualities.AddSpell(StaminatoManaSelf3_SpellID);
+		weenie->m_Qualities.AddSpell(HealthtoManaSelf3_SpellID);
+		weenie->m_Qualities.AddSpell(StaminatoHealthSelf3_SpellID);
+
+		weenie->m_Qualities.AddSpell(DrainHealth3_SpellID);
+		weenie->m_Qualities.AddSpell(DrainStamina3_SpellID);
+		weenie->m_Qualities.AddSpell(DrainMana3_SpellID);
+
+		weenie->m_Qualities.AddSpell(HarmOther3_SpellID);
+		weenie->m_Qualities.AddSpell(EnfeebleOther3_SpellID);
+		weenie->m_Qualities.AddSpell(ManaDrainOther3_SpellID);
+
+		weenie->m_Qualities.AddSpell(RegenerationSelf3_SpellID);
+		weenie->m_Qualities.AddSpell(RejuvenationSelf3_SpellID);
+		weenie->m_Qualities.AddSpell(ManaRenewalSelf3_SpellID);
+
 		weenie->m_Qualities.AddSpell(MagicYieldOther3_SpellID);
 		weenie->m_Qualities.AddSpell(VulnerabilityOther3_SpellID);
 		weenie->m_Qualities.AddSpell(DefenselessnessOther3_SpellID);
@@ -1169,11 +1290,15 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(WarMagicMasterySelf3_SpellID);
 		weenie->m_Qualities.AddSpell(ManaMasterySelf3_SpellID);
 
+		weenie->m_Qualities.AddSpell(ArcaneEnlightenmentSelf3_SpellID);
+		weenie->m_Qualities.AddSpell(HealingMasterySelf3_SpellID);
 		weenie->m_Qualities.AddSpell(SprintSelf3_SpellID);
 		weenie->m_Qualities.AddSpell(JumpingMasterySelf3_SpellID);
+
 		weenie->m_Qualities.AddSpell(ImpregnabilitySelf3_SpellID);
 		weenie->m_Qualities.AddSpell(InvulnerabilitySelf3_SpellID);
 		weenie->m_Qualities.AddSpell(MagicResistanceSelf3_SpellID);
+
 		weenie->m_Qualities.AddSpell(FealtySelf3_SpellID);
 		weenie->m_Qualities.AddSpell(LeadershipMasterySelf3_SpellID);
 
@@ -1203,6 +1328,28 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(LightningBane3_SpellID);
 		weenie->m_Qualities.AddSpell(AcidBane3_SpellID);
 
+		weenie->m_Qualities.AddSpell(ForceBolt3_SpellID);
+		weenie->m_Qualities.AddSpell(ForceArc3_SpellID);
+		weenie->m_Qualities.AddSpell(ForceStreak3_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBlade3_SpellID);
+		weenie->m_Qualities.AddSpell(BladeArc3_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBladeStreak3_SpellID);
+		weenie->m_Qualities.AddSpell(ShockWave3_SpellID);
+		weenie->m_Qualities.AddSpell(ShockArc3_SpellID);
+		weenie->m_Qualities.AddSpell(ShockwaveStreak3_SpellID);
+		weenie->m_Qualities.AddSpell(FlameBolt3_SpellID);
+		weenie->m_Qualities.AddSpell(FlameArc3_SpellID);
+		weenie->m_Qualities.AddSpell(FlameStreak3_SpellID);
+		weenie->m_Qualities.AddSpell(FrostBolt3_SpellID);
+		weenie->m_Qualities.AddSpell(FrostArc3_SpellID);
+		weenie->m_Qualities.AddSpell(FrostStreak3_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStream3_SpellID);
+		weenie->m_Qualities.AddSpell(AcidArc3_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStreak3_SpellID);
+		weenie->m_Qualities.AddSpell(LightningBolt3_SpellID);
+		weenie->m_Qualities.AddSpell(LightningArc3_SpellID);
+		weenie->m_Qualities.AddSpell(LightningStreak3_SpellID);
+
 		weenie->m_Qualities.AddSpell(PortalRecall_SpellID);
 		weenie->m_Qualities.AddSpell(PortalTieRecall1_SpellID);
 		weenie->m_Qualities.AddSpell(PortalTieRecall2_SpellID);
@@ -1211,7 +1358,6 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(PortalTie1_SpellID);
 		weenie->m_Qualities.AddSpell(PortalTie2_SpellID);
 		weenie->m_Qualities.AddSpell(LifestoneTie1_SpellID);
-
 	}
 	if (g_pConfig->PrimeNewCharacterSpellbook() > 3)
 	{
@@ -1235,6 +1381,29 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(AcidVulnerabilityOther4_SpellID);
 		weenie->m_Qualities.AddSpell(LightningVulnerabilityOther4_SpellID);
 
+		weenie->m_Qualities.AddSpell(HealSelf4_SpellID);
+		weenie->m_Qualities.AddSpell(HealOther4_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeSelf4_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeOther4_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostSelf4_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostOther4_SpellID);
+
+		weenie->m_Qualities.AddSpell(StaminatoManaSelf4_SpellID);
+		weenie->m_Qualities.AddSpell(HealthtoManaSelf4_SpellID);
+		weenie->m_Qualities.AddSpell(StaminatoHealthSelf4_SpellID);
+
+		weenie->m_Qualities.AddSpell(DrainHealth4_SpellID);
+		weenie->m_Qualities.AddSpell(DrainStamina4_SpellID);
+		weenie->m_Qualities.AddSpell(DrainMana4_SpellID);
+
+		weenie->m_Qualities.AddSpell(HarmOther4_SpellID);
+		weenie->m_Qualities.AddSpell(EnfeebleOther4_SpellID);
+		weenie->m_Qualities.AddSpell(ManaDrainOther4_SpellID);
+
+		weenie->m_Qualities.AddSpell(RegenerationSelf4_SpellID);
+		weenie->m_Qualities.AddSpell(RejuvenationSelf4_SpellID);
+		weenie->m_Qualities.AddSpell(ManaRenewalSelf4_SpellID);
+
 		weenie->m_Qualities.AddSpell(MagicYieldOther4_SpellID);
 		weenie->m_Qualities.AddSpell(VulnerabilityOther4_SpellID);
 		weenie->m_Qualities.AddSpell(DefenselessnessOther4_SpellID);
@@ -1252,11 +1421,15 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(WarMagicMasterySelf4_SpellID);
 		weenie->m_Qualities.AddSpell(ManaMasterySelf4_SpellID);
 
+		weenie->m_Qualities.AddSpell(ArcaneEnlightenmentSelf4_SpellID);
+		weenie->m_Qualities.AddSpell(HealingMasterySelf4_SpellID);
 		weenie->m_Qualities.AddSpell(SprintSelf4_SpellID);
 		weenie->m_Qualities.AddSpell(JumpingMasterySelf4_SpellID);
+
 		weenie->m_Qualities.AddSpell(ImpregnabilitySelf4_SpellID);
 		weenie->m_Qualities.AddSpell(InvulnerabilitySelf4_SpellID);
 		weenie->m_Qualities.AddSpell(MagicResistanceSelf4_SpellID);
+
 		weenie->m_Qualities.AddSpell(FealtySelf4_SpellID);
 		weenie->m_Qualities.AddSpell(LeadershipMasterySelf4_SpellID);
 
@@ -1286,6 +1459,28 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(LightningBane4_SpellID);
 		weenie->m_Qualities.AddSpell(AcidBane4_SpellID);
 
+		weenie->m_Qualities.AddSpell(ForceBolt4_SpellID);
+		weenie->m_Qualities.AddSpell(ForceArc4_SpellID);
+		weenie->m_Qualities.AddSpell(ForceStreak4_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBlade4_SpellID);
+		weenie->m_Qualities.AddSpell(BladeArc4_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBladeStreak4_SpellID);
+		weenie->m_Qualities.AddSpell(ShockWave4_SpellID);
+		weenie->m_Qualities.AddSpell(ShockArc4_SpellID);
+		weenie->m_Qualities.AddSpell(ShockwaveStreak4_SpellID);
+		weenie->m_Qualities.AddSpell(FlameBolt4_SpellID);
+		weenie->m_Qualities.AddSpell(FlameArc4_SpellID);
+		weenie->m_Qualities.AddSpell(FlameStreak4_SpellID);
+		weenie->m_Qualities.AddSpell(FrostBolt4_SpellID);
+		weenie->m_Qualities.AddSpell(FrostArc4_SpellID);
+		weenie->m_Qualities.AddSpell(FrostStreak4_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStream4_SpellID);
+		weenie->m_Qualities.AddSpell(AcidArc4_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStreak4_SpellID);
+		weenie->m_Qualities.AddSpell(LightningBolt4_SpellID);
+		weenie->m_Qualities.AddSpell(LightningArc4_SpellID);
+		weenie->m_Qualities.AddSpell(LightningStreak4_SpellID);
+
 		weenie->m_Qualities.AddSpell(SummonPortal1_SpellID);
 		weenie->m_Qualities.AddSpell(SummonSecondPortal1_SpellID);
 	}
@@ -1311,6 +1506,29 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(AcidVulnerabilityOther5_SpellID);
 		weenie->m_Qualities.AddSpell(LightningVulnerabilityOther5_SpellID);
 
+		weenie->m_Qualities.AddSpell(HealSelf5_SpellID);
+		weenie->m_Qualities.AddSpell(HealOther5_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeSelf5_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeOther5_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostSelf5_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostOther5_SpellID);
+
+		weenie->m_Qualities.AddSpell(StaminatoManaSelf5_SpellID);
+		weenie->m_Qualities.AddSpell(HealthtoManaSelf5_SpellID);
+		weenie->m_Qualities.AddSpell(StaminatoHealthSelf5_SpellID);
+
+		weenie->m_Qualities.AddSpell(DrainHealth5_SpellID);
+		weenie->m_Qualities.AddSpell(DrainStamina5_SpellID);
+		weenie->m_Qualities.AddSpell(DrainMana5_SpellID);
+
+		weenie->m_Qualities.AddSpell(HarmOther5_SpellID);
+		weenie->m_Qualities.AddSpell(EnfeebleOther5_SpellID);
+		weenie->m_Qualities.AddSpell(ManaDrainOther5_SpellID);
+
+		weenie->m_Qualities.AddSpell(RegenerationSelf5_SpellID);
+		weenie->m_Qualities.AddSpell(RejuvenationSelf5_SpellID);
+		weenie->m_Qualities.AddSpell(ManaRenewalSelf5_SpellID);
+
 		weenie->m_Qualities.AddSpell(MagicYieldOther5_SpellID);
 		weenie->m_Qualities.AddSpell(VulnerabilityOther5_SpellID);
 		weenie->m_Qualities.AddSpell(DefenselessnessOther5_SpellID);
@@ -1328,11 +1546,15 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(WarMagicMasterySelf5_SpellID);
 		weenie->m_Qualities.AddSpell(ManaMasterySelf5_SpellID);
 
+		weenie->m_Qualities.AddSpell(ArcaneEnlightenmentSelf5_SpellID);
+		weenie->m_Qualities.AddSpell(HealingMasterySelf5_SpellID);
 		weenie->m_Qualities.AddSpell(SprintSelf5_SpellID);
 		weenie->m_Qualities.AddSpell(JumpingMasterySelf5_SpellID);
+
 		weenie->m_Qualities.AddSpell(ImpregnabilitySelf5_SpellID);
 		weenie->m_Qualities.AddSpell(InvulnerabilitySelf5_SpellID);
 		weenie->m_Qualities.AddSpell(MagicResistanceSelf5_SpellID);
+
 		weenie->m_Qualities.AddSpell(FealtySelf5_SpellID);
 		weenie->m_Qualities.AddSpell(LeadershipMasterySelf5_SpellID);
 
@@ -1361,6 +1583,28 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(FrostBane5_SpellID);
 		weenie->m_Qualities.AddSpell(LightningBane5_SpellID);
 		weenie->m_Qualities.AddSpell(AcidBane5_SpellID);
+
+		weenie->m_Qualities.AddSpell(ForceBolt5_SpellID);
+		weenie->m_Qualities.AddSpell(ForceArc5_SpellID);
+		weenie->m_Qualities.AddSpell(ForceStreak5_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBlade5_SpellID);
+		weenie->m_Qualities.AddSpell(BladeArc5_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBladeStreak5_SpellID);
+		weenie->m_Qualities.AddSpell(ShockWave5_SpellID);
+		weenie->m_Qualities.AddSpell(ShockArc5_SpellID);
+		weenie->m_Qualities.AddSpell(ShockwaveStreak5_SpellID);
+		weenie->m_Qualities.AddSpell(FlameBolt5_SpellID);
+		weenie->m_Qualities.AddSpell(FlameArc5_SpellID);
+		weenie->m_Qualities.AddSpell(FlameStreak5_SpellID);
+		weenie->m_Qualities.AddSpell(FrostBolt5_SpellID);
+		weenie->m_Qualities.AddSpell(FrostArc5_SpellID);
+		weenie->m_Qualities.AddSpell(FrostStreak5_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStream5_SpellID);
+		weenie->m_Qualities.AddSpell(AcidArc5_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStreak5_SpellID);
+		weenie->m_Qualities.AddSpell(LightningBolt5_SpellID);
+		weenie->m_Qualities.AddSpell(LightningArc5_SpellID);
+		weenie->m_Qualities.AddSpell(LightningStreak5_SpellID);
 	}
 	if (g_pConfig->PrimeNewCharacterSpellbook() > 5)
 	{
@@ -1384,6 +1628,29 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(AcidVulnerabilityOther6_SpellID);
 		weenie->m_Qualities.AddSpell(LightningVulnerabilityOther6_SpellID);
 
+		weenie->m_Qualities.AddSpell(HealSelf6_SpellID);
+		weenie->m_Qualities.AddSpell(HealOther6_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeSelf6_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeOther6_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostSelf6_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostOther6_SpellID);
+
+		weenie->m_Qualities.AddSpell(StaminatoManaSelf6_SpellID);
+		weenie->m_Qualities.AddSpell(HealthtoManaSelf6_SpellID);
+		weenie->m_Qualities.AddSpell(StaminatoHealthSelf6_SpellID);
+
+		weenie->m_Qualities.AddSpell(DrainHealth6_SpellID);
+		weenie->m_Qualities.AddSpell(DrainStamina6_SpellID);
+		weenie->m_Qualities.AddSpell(DrainMana6_SpellID);
+
+		weenie->m_Qualities.AddSpell(HarmOther6_SpellID);
+		weenie->m_Qualities.AddSpell(EnfeebleOther6_SpellID);
+		weenie->m_Qualities.AddSpell(ManaDrainOther6_SpellID);
+
+		weenie->m_Qualities.AddSpell(RegenerationSelf6_SpellID);
+		weenie->m_Qualities.AddSpell(RejuvenationSelf6_SpellID);
+		weenie->m_Qualities.AddSpell(ManaRenewalSelf6_SpellID);
+
 		weenie->m_Qualities.AddSpell(MagicYieldOther6_SpellID);
 		weenie->m_Qualities.AddSpell(VulnerabilityOther6_SpellID);
 		weenie->m_Qualities.AddSpell(DefenselessnessOther6_SpellID);
@@ -1401,11 +1668,15 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(WarMagicMasterySelf6_SpellID);
 		weenie->m_Qualities.AddSpell(ManaMasterySelf6_SpellID);
 
+		weenie->m_Qualities.AddSpell(ArcaneEnlightenmentSelf6_SpellID);
+		weenie->m_Qualities.AddSpell(HealingMasterySelf6_SpellID);
 		weenie->m_Qualities.AddSpell(SprintSelf6_SpellID);
 		weenie->m_Qualities.AddSpell(JumpingMasterySelf6_SpellID);
+
 		weenie->m_Qualities.AddSpell(ImpregnabilitySelf6_SpellID);
 		weenie->m_Qualities.AddSpell(InvulnerabilitySelf6_SpellID);
 		weenie->m_Qualities.AddSpell(MagicResistanceSelf6_SpellID);
+
 		weenie->m_Qualities.AddSpell(FealtySelf6_SpellID);
 		weenie->m_Qualities.AddSpell(LeadershipMasterySelf6_SpellID);
 
@@ -1434,6 +1705,28 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(FrostBane6_SpellID);
 		weenie->m_Qualities.AddSpell(LightningBane6_SpellID);
 		weenie->m_Qualities.AddSpell(AcidBane6_SpellID);
+
+		weenie->m_Qualities.AddSpell(ForceBolt6_SpellID);
+		weenie->m_Qualities.AddSpell(ForceArc6_SpellID);
+		weenie->m_Qualities.AddSpell(ForceStreak6_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBlade6_SpellID);
+		weenie->m_Qualities.AddSpell(BladeArc6_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBladeStreak6_SpellID);
+		weenie->m_Qualities.AddSpell(ShockWave6_SpellID);
+		weenie->m_Qualities.AddSpell(ShockArc6_SpellID);
+		weenie->m_Qualities.AddSpell(ShockwaveStreak6_SpellID);
+		weenie->m_Qualities.AddSpell(FlameBolt6_SpellID);
+		weenie->m_Qualities.AddSpell(FlameArc6_SpellID);
+		weenie->m_Qualities.AddSpell(FlameStreak6_SpellID);
+		weenie->m_Qualities.AddSpell(FrostBolt6_SpellID);
+		weenie->m_Qualities.AddSpell(FrostArc6_SpellID);
+		weenie->m_Qualities.AddSpell(FrostStreak6_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStream6_SpellID);
+		weenie->m_Qualities.AddSpell(AcidArc6_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStreak6_SpellID);
+		weenie->m_Qualities.AddSpell(LightningBolt6_SpellID);
+		weenie->m_Qualities.AddSpell(LightningArc6_SpellID);
+		weenie->m_Qualities.AddSpell(LightningStreak6_SpellID);
 	}
 	if (g_pConfig->PrimeNewCharacterSpellbook() > 6)
 	{
@@ -1457,6 +1750,29 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(AcidVulnerabilityOther7_SpellID);
 		weenie->m_Qualities.AddSpell(LightningVulnerabilityOther7_SpellID);
 
+		weenie->m_Qualities.AddSpell(healself7_SpellID);
+		weenie->m_Qualities.AddSpell(healother7_SpellID);
+		weenie->m_Qualities.AddSpell(RevitalizeSelf7_SpellID);
+		weenie->m_Qualities.AddSpell(Revitalizeother7_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostSelf7_SpellID);
+		weenie->m_Qualities.AddSpell(ManaBoostOther7_SpellID);
+
+		weenie->m_Qualities.AddSpell(StaminatoManaSelf7_SpellID);
+		weenie->m_Qualities.AddSpell(HealthtoManaSelf7_SpellID);
+		weenie->m_Qualities.AddSpell(StaminatoHealthSelf7_SpellID);
+
+		weenie->m_Qualities.AddSpell(DrainHealth7_SpellID);
+		weenie->m_Qualities.AddSpell(DrainStamina7_SpellID);
+		weenie->m_Qualities.AddSpell(DrainMana7_SpellID);
+
+		weenie->m_Qualities.AddSpell(HarmOther7_SpellID);
+		weenie->m_Qualities.AddSpell(EnfeebleOther7_SpellID);
+		weenie->m_Qualities.AddSpell(ManaDrainOther7_SpellID);
+
+		weenie->m_Qualities.AddSpell(RegenerationSelf7_SpellID);
+		weenie->m_Qualities.AddSpell(RejuvenationSelf7_SpellID);
+		weenie->m_Qualities.AddSpell(ManaRenewalSelf7_SpellID);
+
 		weenie->m_Qualities.AddSpell(MagicYieldOther7_SpellID);
 		weenie->m_Qualities.AddSpell(VulnerabilityOther7_SpellID);
 		weenie->m_Qualities.AddSpell(DefenselessnessOther7_SpellID);
@@ -1474,11 +1790,15 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(WarMagicMasterySelf7_SpellID);
 		weenie->m_Qualities.AddSpell(ManaMasterySelf7_SpellID);
 
+		weenie->m_Qualities.AddSpell(ArcaneEnlightenmentSelf7_SpellID);
+		weenie->m_Qualities.AddSpell(HealingMasterySelf7_SpellID);
 		weenie->m_Qualities.AddSpell(SprintSelf7_SpellID);
 		weenie->m_Qualities.AddSpell(JumpingMasterySelf7_SpellID);
+
 		weenie->m_Qualities.AddSpell(ImpregnabilitySelf7_SpellID);
 		weenie->m_Qualities.AddSpell(InvulnerabilitySelf7_SpellID);
 		weenie->m_Qualities.AddSpell(MagicResistanceSelf7_SpellID);
+
 		weenie->m_Qualities.AddSpell(FealtySelf7_SpellID);
 		weenie->m_Qualities.AddSpell(LeadershipMasterySelf7_SpellID);
 
@@ -1490,7 +1810,7 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(DaggerMasterySelf7_SpellID);
 		weenie->m_Qualities.AddSpell(UnarmedCombatMasterySelf7_SpellID);
 
-		weenie->m_Qualities.AddSpell(CrossbowMasteryOther7_SpellID);
+		weenie->m_Qualities.AddSpell(CrossbowMasterySelf7_SpellID);
 		weenie->m_Qualities.AddSpell(BowMasterySelf7_SpellID);
 		weenie->m_Qualities.AddSpell(ThrownWeaponMasterySelf7_SpellID);
 
@@ -1507,6 +1827,28 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(FrostBane7_SpellID);
 		weenie->m_Qualities.AddSpell(LightningBane7_SpellID);
 		weenie->m_Qualities.AddSpell(AcidBane7_SpellID);
+
+		weenie->m_Qualities.AddSpell(ForceBolt7_SpellID);
+		weenie->m_Qualities.AddSpell(ForceArc7_SpellID);
+		weenie->m_Qualities.AddSpell(ForceStreak7_SpellID);
+		weenie->m_Qualities.AddSpell(Whirlingblade7_SpellID);
+		weenie->m_Qualities.AddSpell(BladeArc7_SpellID);
+		weenie->m_Qualities.AddSpell(WhirlingBladeStreak7_SpellID);
+		weenie->m_Qualities.AddSpell(Shockwave7_SpellID);
+		weenie->m_Qualities.AddSpell(ShockArc7_SpellID);
+		weenie->m_Qualities.AddSpell(ShockwaveStreak7_SpellID);
+		weenie->m_Qualities.AddSpell(FlameBolt7_SpellID);
+		weenie->m_Qualities.AddSpell(FlameArc7_SpellID);
+		weenie->m_Qualities.AddSpell(FlameStreak7_SpellID);
+		weenie->m_Qualities.AddSpell(FrostBolt7_SpellID);
+		weenie->m_Qualities.AddSpell(FrostArc7_SpellID);
+		weenie->m_Qualities.AddSpell(FrostStreak7_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStream7_SpellID);
+		weenie->m_Qualities.AddSpell(AcidArc7_SpellID);
+		weenie->m_Qualities.AddSpell(AcidStreak7_SpellID);
+		weenie->m_Qualities.AddSpell(Lightningbolt7_SpellID);
+		weenie->m_Qualities.AddSpell(LightningArc7_SpellID);
+		weenie->m_Qualities.AddSpell(LightningStreak7_SpellID);
 	}
 
 	weenie->RecalculateCoinAmount();

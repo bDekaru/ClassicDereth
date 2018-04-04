@@ -655,6 +655,8 @@ void CPlayerWeenie::OnDeath(DWORD killer_id)
 		NotifyPositionStatUpdated(LAST_OUTSIDE_DEATH_POSITION, true);
 	}
 
+	double PreDeathVitaeValue = m_Qualities.GetVitaeValue();
+
 	UpdateVitaePool(0);
 	ReduceVitae(0.05f);
 	UpdateVitaeEnchantment();
@@ -665,10 +667,13 @@ void CPlayerWeenie::OnDeath(DWORD killer_id)
 		{
 			if (IsPK() && pKiller->_IsPlayer())
 			{
-				if (g_pConfig->PKTrophyID(level) > 0)
+				if(PreDeathVitaeValue >= 1.0 || g_pConfig->EnablePKTrophyWithVitae())
 				{
-					CWeenieObject *pktrophyitem = g_pWeenieFactory->CreateWeenieByClassID(g_pConfig->PKTrophyID(level), NULL, true);
-					(pKiller->AsContainer())->SpawnInContainer(pktrophyitem);
+					if (g_pConfig->PKTrophyID(level) > 0)
+					{
+						CWeenieObject *pktrophyitem = g_pWeenieFactory->CreateWeenieByClassID(g_pConfig->PKTrophyID(level), NULL, true);
+						(pKiller->AsContainer())->SpawnInContainer(pktrophyitem);
+					}
 				}
 
 				m_Qualities.SetFloat(PK_TIMESTAMP_FLOAT, Timer::cur_time + g_pConfig->PKRespiteTime());

@@ -160,6 +160,9 @@ void CPhatACServerConfig::PostLoad()
 	m_bDisableUnassignedXPAtMaxLevel = atoi(GetValue("disable_unassigned_xp_at_max_level", "0")) != 0;
 	m_fVitaeXPMultiplier = max(0.0, atof(GetValue("vitae_xp_multiplier", "1.0")));
 	
+	m_PKTrophyStartingLevel = (unsigned int)max(0, atoi(GetValue("pk_trophy_starting_level", "1")));
+	m_bEnablePKTrophyWithVitae = atoi(GetValue("enable_pk_trophy_with_vitae", "0")) != 0;
+	m_PKTrophyIDT0 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T0", "0")));
 	m_PKTrophyIDT1 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T1", "0")));
 	m_PKTrophyIDT2 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T2", "0")));
 	m_PKTrophyIDT3 = (unsigned int)max(0, atoi(GetValue("pk_trophy_id_T3", "0")));
@@ -247,7 +250,9 @@ unsigned int CPhatACServerConfig::PKTrophyID(int level)
 {	
 	int tier = (ExperienceSystem::GetMaxLevel() / 6);
 
-	if (level <= (tier * 1))
+	if(level < m_PKTrophyStartingLevel)
+		return m_PKTrophyIDT0;
+	else if (level <= (tier * 1))
 		return m_PKTrophyIDT1;
 	else if (level <= (tier * 2))
 		return m_PKTrophyIDT2;
