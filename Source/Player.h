@@ -166,6 +166,8 @@ public:
 	CCorpseWeenie *_pendingCorpse = NULL;
 	DWORD GetAccountHouseId();
 
+	double _nextUseTime = -1.0;
+
 protected:
 	CClient *m_pClient;
 
