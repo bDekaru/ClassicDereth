@@ -2358,7 +2358,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 					case TINKER_NAME_STRING:
 					case IMBUER_NAME_STRING:
 					case CRAFTSMAN_NAME_STRING:
-						value = modificationSource->InqStringQuality(NAME_STRING, "");
+						value = this->InqStringQuality(NAME_STRING, "");
 						break;
 					default:
 						value = modificationSource->InqStringQuality(stringMod._stat, "");
@@ -2375,7 +2375,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 					case TINKER_NAME_STRING:
 					case IMBUER_NAME_STRING:
 					case CRAFTSMAN_NAME_STRING:
-						value = modificationSource->InqStringQuality(NAME_STRING, "");
+						value = this->InqStringQuality(NAME_STRING, "");
 						break;
 					default:
 						value = modificationSource->InqStringQuality(stringMod._stat, "");
@@ -2509,7 +2509,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 					{
 					case ALLOWED_WIELDER_IID:
 					case ALLOWED_ACTIVATOR_IID:
-						value = modificationSource->GetID();
+						value = this->GetID();
 						break;
 					default:
 						value = modificationSource->InqIIDQuality(iidMod._stat, 0);
@@ -2525,7 +2525,7 @@ void CPlayerWeenie::PerformUseModifications(int index, CCraftOperation *op, CWee
 					{
 					case ALLOWED_WIELDER_IID:
 					case ALLOWED_ACTIVATOR_IID:
-						value = modificationSource->GetID();
+						value = this->GetID();
 						break;
 					default:
 						value = modificationSource->InqIIDQuality(iidMod._stat, 0);

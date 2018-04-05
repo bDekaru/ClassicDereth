@@ -1002,7 +1002,8 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 		else
 			pos = profile->pos_val;
 
-		pos.frame.m_origin.z = CalcSurfaceZ(pos.objcell_id, pos.frame.m_origin.x, pos.frame.m_origin.y, false);
+		if ((pos.objcell_id & 0xFFFF) < 0x100) //outdoors
+			pos.frame.m_origin.z = CalcSurfaceZ(pos.objcell_id, pos.frame.m_origin.x, pos.frame.m_origin.y, false);
 
 		weenie->SetInitialPosition(pos);
 		if (!g_pWorld->CreateEntity(weenie))
