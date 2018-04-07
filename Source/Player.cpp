@@ -3168,6 +3168,8 @@ void CWandSpellUseEvent::OnReadyToUse()
 		_newManaValue = itemCurrentMana - manaCost;
 	}
 
+	_weenie->MakeSpellcastingManager()->m_bCasting = true;
+
 	if (motion)
 		ExecuteUseAnimation(motion);
 	else
@@ -3191,6 +3193,20 @@ void CWandSpellUseEvent::OnUseAnimSuccess(DWORD motion)
 	_weenie->MakeSpellcastingManager()->CastSpellInstant(_targetId, _spellId);
 	_weenie->DoForcedStopCompletely();
 	Done();
+}
+
+void CWandSpellUseEvent::Cancel(DWORD error)
+{
+	_weenie->MakeSpellcastingManager()->m_bCasting = false;
+
+	CUseEventData::Cancel(error);
+}
+
+void CWandSpellUseEvent::Done(DWORD error)
+{
+	_weenie->MakeSpellcastingManager()->m_bCasting = false;
+
+	CUseEventData::Done(error);
 }
 
 void CLifestoneRecallUseEvent::OnReadyToUse()

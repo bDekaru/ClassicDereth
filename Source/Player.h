@@ -166,8 +166,6 @@ public:
 	CCorpseWeenie *_pendingCorpse = NULL;
 	DWORD GetAccountHouseId();
 
-	double _nextUseTime = -1.0;
-
 protected:
 	CClient *m_pClient;
 
@@ -193,6 +191,8 @@ public:
 	CWandSpellUseEvent(DWORD wandId, DWORD targetId);
 	virtual void OnReadyToUse() override;
 	virtual void OnUseAnimSuccess(DWORD motion) override;
+	virtual void Cancel(DWORD error = 0) override;
+	virtual void Done(DWORD error = 0) override;
 };
 
 class CLifestoneRecallUseEvent : public CUseEventData
