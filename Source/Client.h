@@ -27,19 +27,19 @@ public:
 	const char *GetAccount(); //The client's account name.
 	const char *GetDescription(); //The status text to display for this client.
 
-	void SetArrayPos(DWORD arrayPos) { m_ArrayPos = arrayPos; }
-	DWORD GetArrayPos() { return m_ArrayPos; }
+	void SetArrayPos(uint32_t arrayPos) { m_ArrayPos = arrayPos; }
+	uint32_t GetArrayPos() { return m_ArrayPos; }
 
 	WORD GetSlot(); // The client's assigned RecipientID.
 
 	SOCKADDR_IN* GetHostAddress(); // The client's address.
 
-	void SetLoginData(DWORD dwUnixTime, DWORD dwPortalStamp, DWORD dwCellStamp);
+	void SetLoginData(uint32_t dwUnixTime, uint32_t dwPortalStamp, uint32_t dwCellStamp);
 
 	void IncomingBlob(BlobPacket_s *blob, double recvTime);
-	void ProcessMessage(BYTE *data, DWORD length, WORD);
-	void SendNetMessage(BinaryWriter*, WORD group, BOOL game_event = 0, BOOL del = 1);
-	void SendNetMessage(void *data, DWORD length, WORD group, BOOL game_event = 0);
+	void ProcessMessage(BYTE *data, uint32_t length, WORD);
+	void SendNetMessage(BinaryWriter*, WORD group, BOOL game_event = 0, BOOL del = 1, bool ephemeral = false);
+	void SendNetMessage(void *data, uint32_t length, WORD group, BOOL game_event = 0, BOOL del = 1, bool ephemeral = false);
 
 	CPacketController *GetPacketController() { return m_pPC; }
 	CClientEvents *GetEvents() { return m_pEvents; }
@@ -49,8 +49,11 @@ public:
 
 	const AccountInformation_t &GetAccountInfo();
 	const std::list<CharacterDesc_t> &GetCharacters();
-	bool HasCharacter(DWORD character_weenie_id);
-	DWORD IncCharacterInstanceTS(DWORD character_weenie_id);
+	bool HasCharacter(uint32_t character_weenie_id);
+	uint32_t IncCharacterInstanceTS(uint32_t character_weenie_id);
+
+	bool RemoveCharacterGag(unsigned int character_id);
+	bool IsCharacterGagged(unsigned int character_id);
 
 private:
 	void UpdateLoginScreen();
@@ -59,15 +62,17 @@ private:
 	void EnterWorld();
 	void ExitWorld();
 	void DeleteCharacter(BinaryReader *);
+	void RestoreCharacter(BinaryReader *);
 	void CreateCharacter(BinaryReader *);
-	void GenerateStarterGear(CWeenieObject *weenie, ACCharGenResult cg, Sex_CG *scg);
+	void GenerateStarterGear(CWeenieObject *weenie, ACCharGenResult &cg, Sex_CG *scg);
 
-	void SendLandblock(DWORD dwFileID);
-	void SendLandblockInfo(DWORD dwFileID);
-	void SendLandcell(DWORD dwFileID);
+	void SendLandblock(uint32_t dwFileID);
+	void SendLandblockInfo(uint32_t dwFileID);
+	void SendLandcell(uint32_t dwFileID);
 
 	//
 	BOOL CheckNameValidity(const char *name, int access, std::string &resultName);
+	BOOL CheckBadName(const std::string name);
 
 	// This is a dumbly separated way of parsing methods. Change this.
 	CClientEvents *m_pEvents;
@@ -82,9 +87,9 @@ private:
 		std::string account; // Account name
 
 		// These are sent by the client
-		DWORD ClientLoginUnixTime = 0;
-		DWORD PortalStamp = 0;
-		DWORD CellStamp = 0;
+		uint32_t ClientLoginUnixTime = 0;
+		uint32_t PortalStamp = 0;
+		uint32_t CellStamp = 0;
 
 		double fLoginTime = 0.0;
 
@@ -98,7 +103,7 @@ private:
 	std::list<CharacterDesc_t> m_Characters;
 	std::list<CharacterDesc_t> m_CharactersSent;
 
-	DWORD m_ArrayPos = 0;
+	uint32_t m_ArrayPos = 0;
 };
 
 

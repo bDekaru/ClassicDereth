@@ -53,7 +53,7 @@ END
 IDD_MAIN DIALOGEX 0, 0, 431, 292
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_STATICEDGE
-CAPTION "GDL - Classic Dereth"
+CAPTION "GDLE - Classic Dereth"
 MENU IDR_MENU
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -113,15 +113,16 @@ BEGIN
     LTEXT           "Port:",IDC_STATIC,132,8,36,8
 END
 
-IDD_ABOUT DIALOGEX 0, 0, 255, 152
+IDD_ABOUT DIALOGEX 0, 0, 255, 224
 STYLE DS_SETFONT | DS_MODALFRAME | DS_NOIDLEMSG | DS_3DLOOK | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION
-CAPTION "About GDL - Classic Dereth"
+CAPTION "About GDLE - Classic Dereth"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "Close",IDOK,198,130,50,14
-    LTEXT           "",IDC_CREDITS,7,7,241,122,0,WS_EX_TRANSPARENT
-    DEFPUSHBUTTON   "Visit Github",IDC_WEBSITE,8,130,75,14
-    DEFPUSHBUTTON   "Visit GDL Github",IDC_WEBSITE2,100,130,75,14
+    DEFPUSHBUTTON   "Close",IDOK,198,203,50,14
+    LTEXT           "",IDC_CREDITS,7,7,241,150,0,WS_EX_TRANSPARENT
+    DEFPUSHBUTTON   "Visit Github",IDC_WEBSITE,8,167,70,14
+    DEFPUSHBUTTON   "Visit GDLEnhanced",IDC_WEBSITE3,8,185,70,14
+    DEFPUSHBUTTON   "Visit GDL Github",IDC_WEBSITE2,8,203,70,14
 END
 
 
@@ -162,7 +163,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 248
         TOPMARGIN, 7
-        BOTTOMMARGIN, 145
+        BOTTOMMARGIN, 217
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -215,11 +216,6 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
-// Bitmap
-//
-
-/////////////////////////////////////////////////////////////////////////////
-//
 // AFX_DIALOG_LAYOUT
 //
 
@@ -240,8 +236,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,11
- PRODUCTVERSION 1,0,0,11
+ FILEVERSION 1,0,34,0
+ PRODUCTVERSION 1,0,34,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -256,9 +252,9 @@ BEGIN
     BEGIN
         BLOCK "040004b0"
         BEGIN
-            VALUE "FileVersion", "1.0.0.0"
-            VALUE "ProductName", "GDL - Classic Dereth"
-            VALUE "ProductVersion", "1.0.0.0"
+            VALUE "FileVersion", "1.0.34.0"
+            VALUE "ProductName", "GDLE - Classic Dereth"
+            VALUE "ProductVersion", "1.0.34.0"
         END
     END
     BLOCK "VarFileInfo"

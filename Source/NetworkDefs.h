@@ -3,9 +3,9 @@
 
 struct BlobHeader_s //Size: 0x14
 {
-	DWORD dwSequence; //0x00
-	DWORD dwFlags; //0x04
-	DWORD dwCRC; //0x08
+	uint32_t dwSequence; //0x00
+	uint32_t dwFlags; //0x04
+	uint32_t dwCRC; //0x08
 	WORD wRecID; //0x0C
 	WORD wTime; //0x0E
 	WORD wSize; //0x10
@@ -29,9 +29,9 @@ struct BlobPacket_s
 
 struct FragHeader_s
 {
-	//DWORD dwSequence;
-	//DWORD dwID;
-	DWORD64 id;
+	//uint32_t dwSequence;
+	//uint32_t dwID;
+	uint64_t id;
 	WORD wCount;
 	WORD wSize;
 	WORD wIndex;
@@ -43,8 +43,6 @@ struct FragPacket_s
 	FragHeader_s header;
 	BYTE data[];
 };
-#pragma pack(pop)
-#pragma warning(default: 4200)
 
 //Blob types.
 #define BT_NULL 0x00000000 //Used on account login packets.
@@ -69,6 +67,8 @@ struct FragPacket_s
 #define BT_FLOW 0x08000000 //hi u
 #define BT_ERROR 0x00800000 //
 
+#define BT_NETERROR 0x00100000
+
 #define BT_EPHEMERAL 0x80000000
 
 #define BT_USES_CRC 0x2
@@ -77,7 +77,14 @@ struct FragPacket_s
 #define PRIVATE_MSG 9 // old value was 0x04?
 #define EVENT_MSG 5 // old value was 0x07?
 
-#define MAX_BLOB_LEN 0x1E8
+#define MAX_BLOB_LEN 0x1E4
 #define MAX_FRAGMENT_LEN 0x1C0
 #define MAX_MESSAGE_LEN (0x1C0 * 0x10)
 
+#define ST_SERVER_ERRORS 0x00000008
+
+#define STR_LOGIN_FAILED 0x04DF9C54
+#define STR_LOGIN_SERVER_FULL 0x00F9982C
+#define STR_LOGIN_CLIENT_VERSION 0x00A7E948
+#define STR_LOGIN_ACCOUNT_ONLINE 0x0C559B1E
+#define STR_LOGIN_INVALID_AUTH 0x082E3779

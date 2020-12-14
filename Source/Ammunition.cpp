@@ -1,5 +1,4 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "WeenieObject.h"
 #include "Ammunition.h"
 #include "Player.h"
@@ -101,6 +100,15 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 	{
 		CWeenieObject *pSource = g_pWorld->FindObject(_sourceID);
 
+		pHit->m_Qualities.SetInstanceID(CURRENT_ATTACKER_IID, _sourceID);
+
+		uint32_t currentEnemy;
+		if (pHit->m_Qualities.InqInstanceID(CURRENT_ENEMY_IID, currentEnemy))
+		{
+			if(currentEnemy == 0)
+				pHit->m_Qualities.SetInstanceID(CURRENT_ENEMY_IID, _sourceID);
+		}
+
 		if (!pHit->ImmuneToDamage(pSource))
 		{
 			targetCollision = true;
@@ -109,26 +117,36 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 			float variance;
 
 			CWeenieObject *weapon = g_pWorld->FindObject(_launcherID);
+
+			// For thrown weaps, the weapon no longer exists on the last missile in a stack. So for these we will just use the cloned ammo weenie itself.
+			if (!weapon && m_Qualities.GetInt(DEFAULT_COMBAT_STYLE_INT, 0) == ThrownWeapon_CombatStyle)
+				weapon = g_pWorld->FindObject(id);
+
 			if (weapon)
 			{		
 				bool bEvaded = false;
 
-				DWORD missileDefense = 0;
+				uint32_t missileDefense = 0;
 				if (pHit->InqSkill(MISSILE_DEFENSE_SKILL, missileDefense, FALSE) && missileDefense > 0)
 				{
-					if (pHit->TryMissileEvade((DWORD)(_weaponSkillLevel * (_attackPower + 0.5f))))
+					if (pHit->TryAttackEvade((uint32_t)(_weaponSkillLevel * (_attackPower + 0.5f)), STypeSkill::MISSILE_DEFENSE_SKILL))
 					{
 						pHit->OnEvadeAttack(pSource);
 
 						// send evasion message
 						BinaryWriter attackerEvadeEvent;
-						attackerEvadeEvent.Write<DWORD>(0x01B3);
+						attackerEvadeEvent.Write<uint32_t>(0x01B3);
 						attackerEvadeEvent.WriteString(pHit->GetName());
-						pSource->SendNetMessage(&attackerEvadeEvent, PRIVATE_MSG, TRUE, FALSE);
+						if (pSource != nullptr)
+							pSource->SendNetMessage(&attackerEvadeEvent, PRIVATE_MSG, TRUE, FALSE);
+
 
 						BinaryWriter attackedEvadeEvent;
-						attackedEvadeEvent.Write<DWORD>(0x01B4);
-						attackedEvadeEvent.WriteString(pSource->GetName());
+						attackedEvadeEvent.Write<uint32_t>(0x01B4);
+						if (pSource != nullptr)
+							attackedEvadeEvent.WriteString(pSource->GetName());
+						else
+							attackedEvadeEvent.WriteString("Unknown");
 						pHit->SendNetMessage(&attackedEvadeEvent, PRIVATE_MSG, TRUE, FALSE);
 						bEvaded = true;
 					}
@@ -138,55 +156,129 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 				{
 					EmitSound(Sound_Collision, 1.0f);
 
-					// todo: do this in a better way?
-					// 50% medium, 30% low, 20% high
-					DAMAGE_QUADRANT hitQuadrant = DAMAGE_QUADRANT::DQ_UNDEF;
-					double roll = Random::RollDice(0.0, 1.0);
-					if(roll < 50.0)
-						hitQuadrant = DQ_MEDIUM;
-					else if (roll < 80.0)
-						hitQuadrant = DQ_LOW;
-					else
-						hitQuadrant = DQ_HIGH;
-
-					double angle = HeadingFrom(pHit, false);
-					if (angle <= 45)
-						hitQuadrant = (DAMAGE_QUADRANT)(hitQuadrant | DAMAGE_QUADRANT::DQ_FRONT);
-					else if (angle > 45 && angle <= 135)
-						hitQuadrant = (DAMAGE_QUADRANT)(hitQuadrant | DAMAGE_QUADRANT::DQ_RIGHT);
-					else if (angle > 135 && angle <= 225)
-						hitQuadrant = (DAMAGE_QUADRANT)(hitQuadrant | DAMAGE_QUADRANT::DQ_BACK);
-					else if (angle > 225 && angle <= 315)
-						hitQuadrant = (DAMAGE_QUADRANT)(hitQuadrant | DAMAGE_QUADRANT::DQ_LEFT);
-					else
-						hitQuadrant = (DAMAGE_QUADRANT)(hitQuadrant | DAMAGE_QUADRANT::DQ_FRONT);
-
-					preVarianceDamage = GetAttackDamage();
-					variance = InqFloatQuality(DAMAGE_VARIANCE_FLOAT, 0.0f);
+					if (pSource != nullptr && pSource && pHit && pSource->AsPlayer() && pHit->AsPlayer())
+					{
+						pSource->AsPlayer()->UpdatePKActivity();
+						pHit->AsPlayer()->UpdatePKActivity();
+					}
 
 					bool isThrownWeapon = (weapon->InqIntQuality(DEFAULT_COMBAT_STYLE_INT, 0) == ThrownWeapon_CombatStyle);
-					int weaponDamage = !isThrownWeapon ? weapon->GetAttackDamage() : 0;
-					int elementalDamageBonus = weapon->InqDamageType() == InqDamageType() ? weapon->InqIntQuality(ELEMENTAL_DAMAGE_BONUS_INT, 0) : 0;
+
+					preVarianceDamage = isThrownWeapon ? weapon->GetAttackDamage() : GetAttackDamage();
+					variance = InqFloatQuality(DAMAGE_VARIANCE_FLOAT, 0.0f);
+
+					//int elementalDamageBonus = weapon->InqDamageType() == InqDamageType() || InqDamageType() == BASE_DAMAGE_TYPE ? weapon->InqIntQuality(ELEMENTAL_DAMAGE_BONUS_INT, 0) : 0;
 					double damageMod = weapon->InqFloatQuality(DAMAGE_MOD_FLOAT, 1.0);
 
+					//preVarianceDamage += elementalDamageBonus;
 					preVarianceDamage *= damageMod;
-					preVarianceDamage += weaponDamage + elementalDamageBonus;
 
 					DamageEventData dmgEvent;
 					dmgEvent.source = pSource;
 					dmgEvent.target = pHit;
 					dmgEvent.weapon = weapon;
 					dmgEvent.damage_form = DF_MISSILE;
-					dmgEvent.damage_type = InqDamageType();
-					dmgEvent.hit_quadrant = hitQuadrant;
+
+					if (InqDamageType() != BASE_DAMAGE_TYPE)
+						dmgEvent.damage_type = InqDamageType();
+					else if (!weapon->InqDamageType())
+						dmgEvent.damage_type = PIERCE_DAMAGE_TYPE;
+					else
+						dmgEvent.damage_type = weapon->InqDamageType();
+
+					dmgEvent.hit_quadrant = (DAMAGE_QUADRANT)prof.location;
 					dmgEvent.attackSkill = _weaponSkill;
 					dmgEvent.attackSkillLevel = _weaponSkillLevel;
 					dmgEvent.preVarianceDamage = preVarianceDamage;
 					dmgEvent.baseDamage = preVarianceDamage * (1.0f - Random::GenFloat(0.0f, variance));
 
-					CalculateDamage(&dmgEvent);
+					CalculateCriticalHitData(&dmgEvent, NULL);
+					dmgEvent.wasCrit = (Random::GenFloat(0.0, 1.0) < dmgEvent.critChance) ? true : false;
+					if (dmgEvent.wasCrit)
+					{
+						dmgEvent.baseDamage = dmgEvent.preVarianceDamage;//Recalculate baseDamage with no variance (uses max dmg on weapon)
+					}
+                    
+					CalculateAttackConditions(&dmgEvent, _attackPower, HeadingFrom(pHit, false));
 
-					pSource->TryToDealDamage(dmgEvent);
+					//cast on strike
+					if (weapon->InqDIDQuality(PROC_SPELL_DID, 0))
+					{
+						double procChance = weapon->InqFloatQuality(PROC_SPELL_RATE_FLOAT, 0.0f);
+
+						bool proc = (Random::GenFloat(0.0, 1.0) < procChance) ? true : false;
+
+						if (proc && _targetID)
+						{
+							uint32_t targetid = _targetID;
+							uint32_t procspell = weapon->InqDIDQuality(PROC_SPELL_DID, 0);
+
+							weapon->TryCastSpell(targetid, procspell);
+						}
+					}
+
+					if (pSource && pSource->AsPlayer())
+						pSource->AsPlayer()->HandleAetheriaProc(pHit->GetID());
+
+					//uint32_t dirtyFighting = 0;
+					//if (pSource && pSource->AsPlayer() && pSource->InqSkill(DIRTY_FIGHTING_SKILL, dirtyFighting, FALSE) && dirtyFighting > 0)
+					//{
+					//	double skillCalc = (double)dirtyFighting / (double)dmgEvent.attackSkillLevel;
+					//	double chanceOfDfEffect = .25 * min(1.0, skillCalc);
+					//	double procRoll = Random::GenFloat(0.0, 1.0);
+					//	bool proc = (procRoll < chanceOfDfEffect) ? true : false;
+					//	SKILL_ADVANCEMENT_CLASS sac = SKILL_ADVANCEMENT_CLASS::UNTRAINED_SKILL_ADVANCEMENT_CLASS;
+					//	bool hasQuality = pSource->m_Qualities.InqSkillAdvancementClass((STypeSkill)DIRTY_FIGHTING_SKILL, sac);
+					//	uint32_t targetid = pHit->GetID();
+					//	//_weenie->AsPlayer()->SendText(csprintf("Attack Skill: %u  DF Skill: %u  Skill Calc: %f Proc %f", dmgEvent.attackSkillLevel, dirtyFighting, skillCalc, procRoll), LTT_COMBAT);
+					//	if (proc)
+					//	{
+					//		if (dmgEvent.hit_quadrant & DAMAGE_QUADRANT::DQ_HIGH)
+					//		{
+					//			if (sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
+					//			{
+					//				dmgEvent.weapon->TryCastSpell(targetid, 5938); //Blinding Assault
+					//				dmgEvent.weapon->TryCastSpell(targetid, 5941); //Traumatic Assault
+					//			}
+					//			else
+					//			{
+					//				dmgEvent.weapon->TryCastSpell(targetid, 5942); //Blinding Blow
+					//				dmgEvent.weapon->TryCastSpell(targetid, 5945); //Traumatic Blow
+					//			}
+					//		}
+					//		else if (dmgEvent.hit_quadrant & DAMAGE_QUADRANT::DQ_MEDIUM)
+					//		{
+					//			if (sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
+					//			{
+					//				dmgEvent.weapon->TryCastSpell(targetid, 5939); //Bleeding Assault
+					//			}
+					//			else
+					//			{
+					//				dmgEvent.weapon->TryCastSpell(targetid, 5943); //Bleeding Blow
+					//			}
+					//		}
+					//		else if (dmgEvent.hit_quadrant & DAMAGE_QUADRANT::DQ_LOW)
+					//		{
+					//			if (sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
+					//			{
+					//				dmgEvent.weapon->TryCastSpell(targetid, 5940); //Unbalancing Assault
+					//			}
+					//			else
+					//			{
+					//				dmgEvent.weapon->TryCastSpell(targetid, 5944); //Unbalancing Blow
+					//			}
+					//		}
+					//		else
+					//		{
+					//			SERVER_ERROR << "Unknown error on Dirty Fighting";
+					//		}
+					//	}
+					//}
+
+
+					CalculateDamage(&dmgEvent);
+					if (pSource != nullptr)
+						pSource->TryToDealDamage(dmgEvent);
 				}
 			}
 		}
@@ -206,7 +298,7 @@ BOOL CAmmunitionWeenie::DoCollision(const class ObjCollisionProfile &prof)
 	return CWeenieObject::DoCollision(prof);
 }
 
-void CAmmunitionWeenie::DoCollisionEnd(DWORD object_id)
+void CAmmunitionWeenie::DoCollisionEnd(uint32_t object_id)
 {
 	CWeenieObject::DoCollisionEnd(object_id);
 }

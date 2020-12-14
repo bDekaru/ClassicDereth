@@ -1,5 +1,4 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "WeenieObject.h"
 #include "PhysicsObj.h"
 #include "ObjectMsgs.h"
@@ -12,7 +11,7 @@
 
 #include "BinaryWriter.h"
 #include "ChatMsgs.h"
-
+#include "HouseManager.h"
 #include "Player.h"
 #include "Client.h"
 #include "ClientCommands.h"
@@ -29,13 +28,16 @@
 #include "InferredPortalData.h"
 #include "Config.h"
 #include "House.h"
+#include "Ammunition.h"
+
+
 
 CWeenieObject::CWeenieObject()
 {
 	SetID(0);
-	
+
 	SetName("Weenie");
-	
+
 	m_Qualities.SetBool(ATTACKABLE_BOOL, TRUE);
 	m_Qualities.SetBool(STUCK_BOOL, FALSE);
 
@@ -76,7 +78,8 @@ void CWeenieObject::InitPhysicsObj()
 		return;
 	}
 
-	DWORD setupID = 0;
+	uint32_t setupID = 0;
+
 	m_Qualities.InqDataID(SETUP_DID, setupID);
 
 #if 0
@@ -95,7 +98,7 @@ void CWeenieObject::InitPhysicsObj()
 
 	if (!InitObjectBegin(GetID(), TRUE))
 	{
-		LOG(Temp, Warning, "Failed creating physics object!\n");
+		SERVER_ERROR << "Failed creating physics object!";
 	}
 
 
@@ -104,7 +107,7 @@ void CWeenieObject::InitPhysicsObj()
 	BOOL bCreateParts = FALSE;
 
 #if PHATSDK_IS_SERVER
-	DWORD dataType = setupID & 0xFF000000;
+	uint32_t dataType = setupID & 0xFF000000;
 
 	if (dataType == 0x01000000)
 	{
@@ -144,24 +147,26 @@ void CWeenieObject::InitPhysicsObj()
 
 	if (!InitPartArrayObject(setupID, bCreateParts))
 	{
-		LOG(Temp, Warning, "Failed creating parts array for physics object with setup 0x%08X!\n", setupID);
+		SERVER_ERROR << "Failed creating parts array for physics object with setup" << setupID;
 	}
 
 	InitObjectEnd(); //  SetPlacementFrameInternal(0x65);
 #endif
 
-	DWORD motionTableDID = 0;
+	uint32_t motionTableDID = 0;
+
+
 	if (m_Qualities.InqDataID(MOTION_TABLE_DID, motionTableDID) && motionTableDID)
 	{
 		_phys_obj->SetMotionTableID(motionTableDID);
 	}
-	
+
 	/*
 	int physicsState = 0;
 	if (m_Qualities.InqInt(PHYSICS_STATE_INT, physicsState))
 	{
-		_phys_obj->set_state(physicsState, FALSE);
-		CacheHasPhysicsBSP();
+	_phys_obj->set_state(physicsState, FALSE);
+	CacheHasPhysicsBSP();
 	}
 	*/
 
@@ -207,7 +212,7 @@ void CWeenieObject::InitPhysicsObj()
 		_phys_obj->SetPlacementFrame(placement_id, FALSE);
 	}
 
-	if (DWORD combatTable = m_Qualities.GetDID(COMBAT_TABLE_DID, 0))
+	if (uint32_t combatTable = m_Qualities.GetDID(COMBAT_TABLE_DID, 0))
 	{
 		_combatTable = CombatManeuverTable::Get(combatTable);
 	}
@@ -224,14 +229,14 @@ double CWeenieObject::GetHealthPercent()
 
 unsigned int CWeenieObject::GetHealth()
 {
-	DWORD value = 0;
+	uint32_t value = 0;
 	m_Qualities.InqAttribute2nd(HEALTH_ATTRIBUTE_2ND, value, FALSE);
 	return value;
 }
 
 unsigned int CWeenieObject::GetMaxHealth()
 {
-	DWORD value = 0;
+	uint32_t value = 0;
 	m_Qualities.InqAttribute2nd(MAX_HEALTH_ATTRIBUTE_2ND, value, FALSE);
 	return value;
 }
@@ -249,14 +254,14 @@ void CWeenieObject::SetHealth(unsigned int value, bool bSendUpdate)
 
 unsigned int CWeenieObject::GetStamina()
 {
-	DWORD value = 0;
+	uint32_t value = 0;
 	m_Qualities.InqAttribute2nd(STAMINA_ATTRIBUTE_2ND, value, FALSE);
 	return value;
 }
 
 unsigned int CWeenieObject::GetMaxStamina()
 {
-	DWORD value = 0;
+	uint32_t value = 0;
 	m_Qualities.InqAttribute2nd(MAX_STAMINA_ATTRIBUTE_2ND, value, FALSE);
 	return value;
 }
@@ -274,14 +279,14 @@ void CWeenieObject::SetStamina(unsigned int value, bool bSendUpdate)
 
 unsigned int CWeenieObject::GetMana()
 {
-	DWORD value = 0;
+	uint32_t value = 0;
 	m_Qualities.InqAttribute2nd(MANA_ATTRIBUTE_2ND, value, FALSE);
 	return value;
 }
 
 unsigned int CWeenieObject::GetMaxMana()
 {
-	DWORD value = 0;
+	uint32_t value = 0;
 	m_Qualities.InqAttribute2nd(MAX_MANA_ATTRIBUTE_2ND, value, FALSE);
 	return value;
 }
@@ -304,8 +309,23 @@ void CWeenieObject::SetMaxVitals(bool bSendUpdate)
 	SetMana(GetMaxMana(), bSendUpdate);
 }
 
-int CWeenieObject::AdjustHealth(int amount)
+int CWeenieObject::AdjustHealth(int amount, bool useRatings)
 {
+	int ratingAdj = 0;
+	// TODO: Special cases that are not affected by ratings, such as Surge of Regeneration.
+	if (useRatings)
+	{
+		if (amount > 0) // Heals
+		{
+			ratingAdj += GetRating(HEALING_BOOST_RATING_INT);
+			ratingAdj -= GetRating(HEALING_RESIST_RATING_INT);
+		}
+		else // Drains
+			ratingAdj -= GetRating(LIFE_RESIST_RATING_INT);
+
+		amount *= GetRatingMod(ratingAdj);
+	}
+
 	// amount can be negative or positive
 	int maxHealth = GetMaxHealth();
 	int oldHealth = GetHealth();
@@ -372,10 +392,13 @@ bool CWeenieObject::IsDead()
 
 bool CWeenieObject::IsInPortalSpace()
 {
+	if (InqFloatQuality(LAST_TELEPORT_START_TIMESTAMP_FLOAT, 0))
+		return true;
+
 	return false;
 }
 
-void CWeenieObject::OnMotionDone(DWORD motion, BOOL success)
+void CWeenieObject::OnMotionDone(uint32_t motion, BOOL success)
 {
 	if (m_UseManager)
 		m_UseManager->OnMotionDone(motion, success);
@@ -394,52 +417,52 @@ void CWeenieObject::OnMotionDone(DWORD motion, BOOL success)
 		case Motion_AtlatlCombat:
 		case Motion_CrossbowCombat:
 		case Motion_BowCombat:
+		{
+			CWeenieObject *ammo;
+			if (get_minterp()->InqStyle() == Motion_ThrownWeaponCombat)
+				ammo = GetWieldedCombat(COMBAT_USE_MISSILE); //for thrown weapons the ammo is the weapon itself.
+			else
+				ammo = GetWieldedCombat(COMBAT_USE_AMMO);
+
+			if (ammo)
 			{
-				CWeenieObject *ammo;
-				if (get_minterp()->InqStyle() == Motion_ThrownWeaponCombat)
-					ammo = GetWieldedCombat(COMBAT_USE_MISSILE); //for thrown weapons the ammo is the weapon itself.
-				else
-					ammo = GetWieldedCombat(COMBAT_USE_AMMO);
-
-				if (ammo)
+				if (ammo->parent != this)
 				{
-					if (ammo->parent != this)
+					ammo->m_Qualities.SetInt(PARENT_LOCATION_INT, PARENT_ENUM::PARENT_RIGHT_HAND);
+					ammo->set_parent(this, PARENT_ENUM::PARENT_RIGHT_HAND);
+					ammo->SetPlacementFrame(Placement::RightHandCombat, FALSE);
+
+					if (m_bWorldIsAware)
 					{
-						ammo->m_Qualities.SetInt(PARENT_LOCATION_INT, PARENT_ENUM::PARENT_RIGHT_HAND);
-						ammo->set_parent(this, PARENT_ENUM::PARENT_RIGHT_HAND);
-						ammo->SetPlacementFrame(Placement::RightHandCombat, FALSE);
-
-						if (m_bWorldIsAware)
+						if (CWeenieObject *owner = GetWorldTopLevelOwner())
 						{
-							if (CWeenieObject *owner = GetWorldTopLevelOwner())
+							if (owner->GetBlock())
 							{
-								if (owner->GetBlock())
-								{
-									owner->GetBlock()->ExchangePVS(ammo, 0);
-								}
+								owner->GetBlock()->ExchangePVS(ammo, 0);
 							}
-
-							/*
-							BinaryWriter *writer = item->CreateMessage();
-							g_pWorld->BroadcastPVS(dwCell, writer->GetData(), writer->GetSize(), OBJECT_MSG, 0, FALSE);
-							delete writer;
-							*/
-
-							BinaryWriter Blah;
-							Blah.Write<DWORD>(0xF749);
-							Blah.Write<DWORD>(GetID());
-							Blah.Write<DWORD>(ammo->GetID());
-							Blah.Write<DWORD>(PARENT_ENUM::PARENT_RIGHT_HAND);
-							Blah.Write<DWORD>(Placement::RightHandCombat);
-							Blah.Write<WORD>(GetPhysicsObj()->_instance_timestamp);
-							Blah.Write<WORD>(++ammo->_position_timestamp);
-							g_pWorld->BroadcastPVS(GetLandcell(), Blah.GetData(), Blah.GetSize());
 						}
-					}	
-				}
 
-				break;
+						/*
+						BinaryWriter *writer = item->CreateMessage();
+						g_pWorld->BroadcastPVS(dwCell, writer->GetData(), writer->GetSize(), OBJECT_MSG, 0, FALSE);
+						delete writer;
+						*/
+
+						BinaryWriter Blah;
+						Blah.Write<uint32_t>(0xF749);
+						Blah.Write<uint32_t>(GetID());
+						Blah.Write<uint32_t>(ammo->GetID());
+						Blah.Write<uint32_t>(PARENT_ENUM::PARENT_RIGHT_HAND);
+						Blah.Write<uint32_t>(Placement::RightHandCombat);
+						Blah.Write<WORD>(GetPhysicsObj()->_instance_timestamp);
+						Blah.Write<WORD>(++ammo->_position_timestamp);
+						g_pWorld->BroadcastPVS(GetLandcell(), Blah.GetData(), Blah.GetSize(), OBJECT_MSG, false, false, true);
+					}
+				}
 			}
+
+			break;
+		}
 		}
 
 		DoForcedStopCompletely();
@@ -463,53 +486,53 @@ void CWeenieObject::OnMotionDone(DWORD motion, BOOL success)
 			case Motion_HandCombat:
 			case Motion_SwordShieldCombat:
 			case Motion_Magic:
+			{
+				if (ammo->parent == this)
 				{
-					if (ammo->parent == this)
+					if (m_bWorldIsAware)
 					{
-						if (m_bWorldIsAware)
-						{
-							ammo->_position_timestamp++;
+						ammo->_position_timestamp++;
 
-							BinaryWriter Blah;
-							Blah.Write<DWORD>(0xF74A);
-							Blah.Write<DWORD>(ammo->GetID());
-							Blah.Write<WORD>(ammo->_instance_timestamp);
-							Blah.Write<WORD>(ammo->_position_timestamp);
-							g_pWorld->BroadcastPVS(GetLandcell(), Blah.GetData(), Blah.GetSize());
-						}
-
-						ammo->m_Qualities.SetInt(PARENT_LOCATION_INT, 0);
-						ammo->unset_parent();
-						ammo->leave_world();
+						BinaryWriter Blah;
+						Blah.Write<uint32_t>(0xF74A);
+						Blah.Write<uint32_t>(ammo->GetID());
+						Blah.Write<WORD>(ammo->_instance_timestamp);
+						Blah.Write<WORD>(ammo->_position_timestamp);
+						g_pWorld->BroadcastPVS(GetLandcell(), Blah.GetData(), Blah.GetSize());
 					}
 
-					break;
+					ammo->m_Qualities.SetInt(PARENT_LOCATION_INT, 0);
+					ammo->unset_parent();
+					ammo->leave_world();
 				}
+
+				break;
+			}
 
 			case Motion_ThrownWeaponCombat:
 			case Motion_AtlatlCombat:
 			case Motion_CrossbowCombat:
 			case Motion_BowCombat:
+			{
+				if (ammo->parent != this)
 				{
-					if (ammo->parent != this)
-					{
-						MovementParameters params;
-						get_minterp()->DoMotion(Motion_Reload, &params);
+					MovementParameters params;
+					get_minterp()->DoMotion(Motion_Reload, &params);
 
-						_server_control_timestamp++;
-						last_move_was_autonomous = false;
+					_server_control_timestamp++;
+					last_move_was_autonomous = false;
 
-						Animation_Update();
-					}
-
-					break;
+					Animation_Update();
 				}
+
+				break;
+			}
 			}
 		}
 	}
 }
 
-void CWeenieObject::OnDeath(DWORD killer_id)
+void CWeenieObject::OnDeath(uint32_t killer_id)
 {
 	if (CWeenieObject *pKiller = g_pWorld->FindObject(killer_id))
 	{
@@ -522,30 +545,62 @@ void CWeenieObject::OnDeath(DWORD killer_id)
 	if (m_SpellcastingManager)
 		m_SpellcastingManager->OnDeath(killer_id);
 
-	if (m_EmoteManager)
-		m_EmoteManager->OnDeath(killer_id);
+	//if (m_EmoteManager)
+	//	m_EmoteManager->OnDeath(killer_id);
+	MakeEmoteManager()->OnDeath(killer_id);
 
 	if (m_AttackManager)
 		m_AttackManager->OnDeath(killer_id);
 
-	ChanceExecuteEmoteSet(killer_id, Death_EmoteCategory);
+	//ChanceExecuteEmoteSet(killer_id, Death_EmoteCategory);
+
+	m_Qualities.SetInt(NETHER_OVER_TIME_INT, 0);
+	NotifyIntStatUpdated(NETHER_OVER_TIME_INT);
+	m_Qualities.SetInt(DAMAGE_OVER_TIME_INT, 0);
+	NotifyIntStatUpdated(DAMAGE_OVER_TIME_INT);
+
+	bool isPkDeath = false;
+	CWeenieObject* killer = g_pWorld->FindPlayer(killer_id);
+	if (killer && killer->AsPlayer() && !killer->IsPKLite())
+		isPkDeath = true;
+
+	bool spellsLastBeyondDeath = m_Qualities.GetInt(AUGMENTATION_SPELLS_REMAIN_PAST_DEATH_INT, 0) > 0;
+	
 
 	if (m_Qualities._enchantment_reg)
 	{
-		PackableList<DWORD> removed;
+		PackableList<uint32_t> removed;
 
 		if (m_Qualities._enchantment_reg->_add_list)
 		{
 			for (auto it = m_Qualities._enchantment_reg->_add_list->begin(); it != m_Qualities._enchantment_reg->_add_list->end();)
 			{
-				if (it->_duration != -1.0)
+				if (it->_duration == -1.0)
 				{
-					removed.push_back(it->_id);
-					it = m_Qualities._enchantment_reg->_add_list->erase(it);
+					it++;
 				}
 				else
 				{
-					it++;
+					const CSpellBase* spellBase = MagicSystem::GetSpellTable()->GetSpellBase(it->_id);
+					if (spellBase)
+					{
+						bool isSpellBeneficial = spellBase->_bitfield & Beneficial_SpellIndex;
+						if ((it->_duration == -1.0) || (it->_duration > 0 && spellsLastBeyondDeath && isSpellBeneficial && !isPkDeath))
+						{
+							it++;
+						}
+						else
+						{
+							removed.push_back(it->_id);
+							it = m_Qualities._enchantment_reg->_add_list->erase(it);
+						}
+					}
+					else
+					{
+						SERVER_ERROR << "OnDeath: Enchantment AddList - Unable to get spell base for spell ID:" << it->_id;
+						removed.push_back(it->_id);
+						it = m_Qualities._enchantment_reg->_add_list->erase(it);
+					}
 				}
 			}
 		}
@@ -554,14 +609,32 @@ void CWeenieObject::OnDeath(DWORD killer_id)
 		{
 			for (auto it = m_Qualities._enchantment_reg->_mult_list->begin(); it != m_Qualities._enchantment_reg->_mult_list->end();)
 			{
-				if (it->_duration != -1.0)
+				if (it->_duration == -1.0)
 				{
-					removed.push_back(it->_id);
-					it = m_Qualities._enchantment_reg->_mult_list->erase(it);
+					it++;
 				}
 				else
 				{
-					it++;
+					const CSpellBase* spellBase = MagicSystem::GetSpellTable()->GetSpellBase(it->_id);
+					if (spellBase)
+					{
+						bool isSpellBeneficial = spellBase->_bitfield & Beneficial_SpellIndex;
+						if ((it->_duration == -1.0) || (it->_duration > 0 && spellsLastBeyondDeath && isSpellBeneficial && !isPkDeath))
+						{
+							it++;
+						}
+						else
+						{
+							removed.push_back(it->_id);
+							it = m_Qualities._enchantment_reg->_mult_list->erase(it);
+						}
+					}
+					else
+					{
+						SERVER_ERROR << "OnDeath: Enchantment MultiList - Unable to get spell base for spell ID:" << it->_id;
+						removed.push_back(it->_id);
+						it = m_Qualities._enchantment_reg->_mult_list->erase(it);
+					}
 				}
 			}
 		}
@@ -571,7 +644,7 @@ void CWeenieObject::OnDeath(DWORD killer_id)
 			// m_Qualities._enchantment_reg->PurgeEnchantments();
 
 			BinaryWriter expireMessage;
-			expireMessage.Write<DWORD>(0x2C8);
+			expireMessage.Write<uint32_t>(0x2C8);
 			removed.Pack(&expireMessage);
 
 			SendNetMessage(&expireMessage, PRIVATE_MSG, TRUE, FALSE);
@@ -596,9 +669,18 @@ void CWeenieObject::Revive()
 
 	Animation_Update();
 
-	SetHealth( (int)(GetMaxHealth() * InqFloatQuality(HEALTH_UPON_RESURRECTION_FLOAT, 1.0f)) );
-	SetStamina( (int)(GetMaxStamina() * InqFloatQuality(STAMINA_UPON_RESURRECTION_FLOAT, 1.0f)) );
-	SetMana( (int)(GetMaxMana() * InqFloatQuality(MANA_UPON_RESURRECTION_FLOAT, 1.0f)) );
+	SetHealth((int)(GetMaxHealth() * InqFloatQuality(HEALTH_UPON_RESURRECTION_FLOAT, 1.0f)));
+	SetStamina((int)(GetMaxStamina() * InqFloatQuality(STAMINA_UPON_RESURRECTION_FLOAT, 1.0f)));
+	SetMana((int)(GetMaxMana() * InqFloatQuality(MANA_UPON_RESURRECTION_FLOAT, 1.0f)));
+
+	m_Qualities.SetBool(UNDER_LIFESTONE_PROTECTION_BOOL, 1);
+	m_Qualities.SetFloat(LIFESTONE_PROTECTION_TIMESTAMP_FLOAT, (Timer::cur_time + 60.0));
+
+	fellowship_ptr_t fs = GetFellowship();
+	if (fs)
+	{
+		fs->VitalsUpdate(id);
+	}
 }
 
 bool CWeenieObject::TeleportToSpawn()
@@ -671,11 +753,11 @@ void CWeenieObject::TryIdentify(CWeenieObject *source)
 
 	if (!success)
 	{
-		DWORD deceptionSkill = 0;
-		
+		uint32_t deceptionSkill = 0;
+
 		if (InqType() & TYPE_ITEM)
 		{
-			deceptionSkill = (DWORD) m_Qualities.GetInt(RESIST_ITEM_APPRAISAL_INT, 0);
+			deceptionSkill = (uint32_t)m_Qualities.GetInt(RESIST_ITEM_APPRAISAL_INT, 0);
 		}
 		else
 		{
@@ -683,7 +765,7 @@ void CWeenieObject::TryIdentify(CWeenieObject *source)
 
 			if (IsCreature() && !_IsPlayer())
 			{
-				DWORD focus = 0, self = 0;
+				uint32_t focus = 0, self = 0;
 				m_Qualities.InqAttribute(FOCUS_ATTRIBUTE, focus, FALSE);
 				m_Qualities.InqAttribute(SELF_ATTRIBUTE, self, FALSE);
 				deceptionSkill += (focus + self) / 4;
@@ -700,8 +782,8 @@ void CWeenieObject::TryIdentify(CWeenieObject *source)
 		if (deceptionSkill > 0)
 		{
 			STypeSkill sourceSkillType = STypeSkill::UNDEF_SKILL;
-		
-			DWORD itemType = InqType();
+
+			uint32_t itemType = InqType();
 
 			if (_IsPlayer())
 			{
@@ -731,7 +813,7 @@ void CWeenieObject::TryIdentify(CWeenieObject *source)
 
 			if (sourceSkillType != STypeSkill::UNDEF_SKILL)
 			{
-				DWORD appraiseSkill = 0;
+				uint32_t appraiseSkill = 0;
 				source->m_Qualities.InqSkill(sourceSkillType, appraiseSkill, FALSE);
 
 				if (IsCreature())
@@ -767,7 +849,7 @@ void CWeenieObject::TryIdentify(CWeenieObject *source)
 	else
 	{
 		source->SendNetMessage(IdentifyObjectFail(this, bShowLevel), PRIVATE_MSG, TRUE, TRUE);
-		
+
 		if (AsPlayer())
 		{
 			SendText(csprintf("%s tried and failed to assess you!", source->GetName().c_str()), LTT_APPRAISAL_CHANNEL);
@@ -775,7 +857,7 @@ void CWeenieObject::TryIdentify(CWeenieObject *source)
 	}
 }
 
-void CWeenieObject::Identify(CWeenieObject *source, DWORD overrideId)
+void CWeenieObject::Identify(CWeenieObject *source, uint32_t overrideId)
 {
 	source->SendNetMessage(IdentifyObject(source, this, overrideId), PRIVATE_MSG, TRUE, TRUE);
 }
@@ -784,10 +866,10 @@ float CWeenieObject::DistanceTo(CWeenieObject *other, bool bUseSpheres)
 {
 	if (!_phys_obj || !other || !other->_phys_obj)
 		return FLT_MAX;
-	
+
 	if (this == other)
 		return 0.0;
-	
+
 	float dist = _phys_obj->DistanceTo(other->_phys_obj);
 
 	if (bUseSpheres) // && InValidCell() && other->InValidCell())
@@ -807,13 +889,13 @@ float CWeenieObject::DistanceSquared(CWeenieObject *other)
 
 	if (this == other)
 		return 0.0;
-	
+
 	return _phys_obj->DistanceSquared(other->_phys_obj);
 }
 
 float CWeenieObject::HeadingTo(CWeenieObject *target, bool relative)
 {
-	if (this == target || target->IsContained())
+	if (!target || this == target || target->IsContained())
 		return 0.0f;
 
 	float headingToTarget = m_Position.heading_diff(target->m_Position);
@@ -832,12 +914,12 @@ float CWeenieObject::HeadingTo(CWeenieObject *target, bool relative)
 
 float CWeenieObject::HeadingFrom(CWeenieObject *target, bool relative)
 {
-	if (target != NULL)
-		return target->HeadingTo(this);
+	if (target != nullptr)
+		return target->HeadingTo(this, relative);
 	return 0.0;
 }
 
-float CWeenieObject::HeadingTo(DWORD targetId, bool relative)
+float CWeenieObject::HeadingTo(uint32_t targetId, bool relative)
 {
 	if (!targetId || targetId == GetID())
 		return 0.0;
@@ -849,7 +931,7 @@ float CWeenieObject::HeadingTo(DWORD targetId, bool relative)
 	return HeadingTo(target, relative);
 }
 
-float CWeenieObject::HeadingFrom(DWORD targetId, bool relative)
+float CWeenieObject::HeadingFrom(uint32_t targetId, bool relative)
 {
 	if (!targetId || targetId == GetID())
 		return 0.0;
@@ -861,193 +943,9 @@ float CWeenieObject::HeadingFrom(DWORD targetId, bool relative)
 	return target->HeadingTo(this, relative);
 }
 
-DWORD CWeenieObject::GetLandcell()
+uint32_t CWeenieObject::GetLandcell()
 {
 	return m_Position.objcell_id; // return _phys_obj ? _phys_obj->m_Position.objcell_id : 0;
-}
-
-void CWeenieObject::EnsureLink(CWeenieObject *source)
-{
-	if (m_Qualities._generator_table)
-	{
-		source->m_Qualities.SetInstanceID(GENERATOR_IID, GetID());
-	}
-	else
-	{
-		// probably should check if it's zero or not
-		source->m_Qualities.SetInstanceID(ACTIVATION_TARGET_IID, GetID());
-	}
-}
-
-void CWeenieObject::NotifyGeneratedDeath(CWeenieObject *weenie)
-{
-	OnGeneratedDeath(weenie);
-}
-
-void CWeenieObject::OnGeneratedDeath(CWeenieObject *weenie)
-{
-	if (!weenie || !m_Qualities._generator_registry)
-		return;
-
-	DWORD weenie_id = weenie->GetID();
-
-	GeneratorRegistryNode *node = m_Qualities._generator_registry->_registry.lookup(weenie_id);
-
-	if (node)
-	{
-		GeneratorRegistryNode oldNode = *node;
-		m_Qualities._generator_registry->_registry.remove(weenie_id);
-
-		double delay = -1.0;
-		if (m_Qualities._generator_table)
-		{
-			if (InqIIDQuality(GENERATOR_IID, 0)) // we have a generator
-			{
-				std::vector<CWeenieObject *> rotList;
-				bool hasValidChildren = false;
-				if (m_Qualities._generator_registry->_registry.size() > 0)
-				{
-					for each(auto entry in m_Qualities._generator_registry->_registry)
-					{
-						CWeenieObject *weenie = g_pWorld->FindObject(entry.second.m_objectId);
-
-						if (weenie && (weenie->IsCreature() || !weenie->IsStuck())) //stuck objects(chests and decorations usually) do not prevent the generator from being finished.
-							hasValidChildren = true;
-						else if (weenie)
-							rotList.push_back(weenie);
-					}
-				}
-
-				if (!hasValidChildren)
-				{
-					//we're the child of a generator and all our children have been destroyed/picked up.
-					//so we're done and should cease to exist.
-					MarkForDestroy();
-
-					//make the leftovers rot.
-					for each (auto entry in rotList)
-					{
-						entry->m_Qualities.SetInstanceID(GENERATOR_IID, 0);
-						entry->_timeToRot = Timer::cur_time + 300.0; //in 5 minutes
-						entry->_beganRot = false;
-						entry->m_Qualities.SetFloat(TIME_TO_ROT_FLOAT, _timeToRot);
-					}
-					return;
-				}
-			}
-
-			// find this profile slot
-			for (auto &profile : m_Qualities._generator_table->_profile_list)
-			{
-				if (profile.slot == oldNode.slot &&
-					(profile.whenCreate == RegenerationType::Death_RegenerationType ||
-					 profile.whenCreate == RegenerationType::Destruction_RegenerationType))
-				{
-					delay = profile.delay * g_pConfig->RespawnTimeMultiplier();
-					break;
-				}
-			}
-		}
-
-		if (delay >= 0)
-		{
-			if (!m_Qualities._generator_queue)
-				m_Qualities._generator_queue = new GeneratorQueue();
-
-			GeneratorQueueNode queueNode;
-			queueNode.slot = oldNode.slot;
-			queueNode.when = Timer::cur_time + delay;
-			m_Qualities._generator_queue->_queue.push_back(queueNode);
-
-			if (_nextRegen < 0.0)
-				_nextRegen = Timer::cur_time + (InqFloatQuality(REGENERATION_INTERVAL_FLOAT, 0.0, TRUE) * g_pConfig->RespawnTimeMultiplier());
-		}
-	}
-}
-
-void CWeenieObject::NotifyGeneratedPickedUp(CWeenieObject *weenie)
-{
-	OnGeneratedPickedUp(weenie);
-	weenie->m_Qualities.RemoveInstanceID(GENERATOR_IID);
-}
-
-void CWeenieObject::OnGeneratedPickedUp(CWeenieObject *weenie)
-{
-	if (!weenie || !m_Qualities._generator_registry)
-		return;
-
-	DWORD weenie_id = weenie->GetID();
-
-	GeneratorRegistryNode *node = m_Qualities._generator_registry->_registry.lookup(weenie_id);
-
-	if (node)
-	{
-		GeneratorRegistryNode oldNode = *node;
-		m_Qualities._generator_registry->_registry.remove(weenie_id);
-
-		double delay = -1.0;
-		if (m_Qualities._generator_table)
-		{
-			if (InqIIDQuality(GENERATOR_IID, 0)) // we have a generator
-			{
-				std::vector<CWeenieObject *> rotList;
-				bool hasValidChildren = false;
-				if (m_Qualities._generator_registry->_registry.size() > 0)
-				{
-					for each(auto entry in m_Qualities._generator_registry->_registry)
-					{
-						CWeenieObject *weenie = g_pWorld->FindObject(entry.second.m_objectId);
-
-						if (weenie && (weenie->IsCreature() || !weenie->IsStuck())) //stuck objects(chests and decorations usually) do not prevent the generator from being finished.
-							hasValidChildren = true;
-						else if (weenie)
-							rotList.push_back(weenie);
-					}
-				}
-
-				if (!hasValidChildren)
-				{
-					//we're the child of a generator and all our children have been destroyed/picked up.
-					//so we're done and should cease to exist.
-					MarkForDestroy();
-
-					//make the leftovers rot.
-					for each (auto entry in rotList)
-					{
-						entry->m_Qualities.SetInstanceID(GENERATOR_IID, 0);
-						entry->_timeToRot = Timer::cur_time + 300.0; //in 5 minutes
-						entry->_beganRot = false;
-						entry->m_Qualities.SetFloat(TIME_TO_ROT_FLOAT, _timeToRot);
-					}
-					return;
-				}
-			}
-
-			// find this profile slot
-			for (auto &profile : m_Qualities._generator_table->_profile_list)
-			{
-				if (profile.slot == oldNode.slot && profile.whenCreate == RegenerationType::PickUp_RegenerationType || profile.whenCreate == Destruction_RegenerationType)
-				{
-					delay = profile.delay * g_pConfig->RespawnTimeMultiplier();
-					break;
-				}
-			}
-		}
-
-		if (delay >= 0)
-		{
-			if (!m_Qualities._generator_queue)
-				m_Qualities._generator_queue = new GeneratorQueue();
-
-			GeneratorQueueNode queueNode;
-			queueNode.slot = oldNode.slot;
-			queueNode.when = Timer::cur_time + delay;
-			m_Qualities._generator_queue->_queue.push_back(queueNode);
-
-			if (_nextRegen < 0.0)
-				_nextRegen = Timer::cur_time + (InqFloatQuality(REGENERATION_INTERVAL_FLOAT, 0.0, TRUE) * g_pConfig->RespawnTimeMultiplier());
-		}
-	}
 }
 
 void CWeenieObject::SpeakLocal(const char *text, LogTextType ltt)
@@ -1100,7 +998,7 @@ void CWeenieObject::ActionLocal(const char* szText)
 {
 	if (HasOwner())
 		return;
-
+	
 	extern bool g_bSilence;
 	if (g_bSilence && !IsAdmin())
 	{
@@ -1154,7 +1052,7 @@ AttackManager *CWeenieObject::MakeAttackManager()
 
 BYTE CWeenieObject::GetNextStatTimestamp(StatType statType, int statIndex)
 {
-	DWORD key = (statType << 16) | statIndex;
+	uint32_t key = (statType << 16) | statIndex;
 
 	BYTE nextStat = m_StatSequences[key] + 1;
 	m_StatSequences[key] = nextStat;
@@ -1168,7 +1066,7 @@ void CWeenieObject::NotifyObjectCreated(bool bPrivate)
 	if (CM)
 	{
 		if (bPrivate)
-			SendNetMessage(&CM, OBJECT_MSG, FALSE, FALSE);
+			SendNetMessage(CM, OBJECT_MSG, FALSE, FALSE);
 		else
 			g_pWorld->BroadcastPVS(this, CM->GetData(), CM->GetSize(), OBJECT_MSG, 0);
 		delete CM;
@@ -1181,7 +1079,7 @@ void CWeenieObject::NotifyObjectUpdated(bool bPrivate)
 	if (UM)
 	{
 		if (bPrivate)
-			SendNetMessage(&UM, OBJECT_MSG, FALSE, FALSE);
+			SendNetMessage(UM, OBJECT_MSG, FALSE, FALSE);
 		else
 			g_pWorld->BroadcastPVS(this, UM->GetData(), UM->GetSize(), OBJECT_MSG, 0);
 		delete UM;
@@ -1190,7 +1088,7 @@ void CWeenieObject::NotifyObjectUpdated(bool bPrivate)
 
 void CWeenieObject::NotifyIntStatUpdated(STypeInt key, bool bPrivate)
 {
-	if (!m_bWorldIsAware)
+	if (!m_bWorldIsAware && !bPrivate)
 		return;
 
 	BinaryWriter statNotify;
@@ -1201,40 +1099,53 @@ void CWeenieObject::NotifyIntStatUpdated(STypeInt key, bool bPrivate)
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x2CD);
+			statNotify.Write<uint32_t>(0x2CD);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(key);
 			statNotify.Write<int>(value);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x2CE);
+			statNotify.Write<uint32_t>(0x2CE);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
 			statNotify.Write<int>(value);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 	else
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x1D1);
+			statNotify.Write<uint32_t>(0x1D1);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x1D2);
+			statNotify.Write<uint32_t>(0x1D2);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
+}
+
+void CWeenieObject::NotifiyObjectIntStatUpdated(uint32_t objectId, STypeInt key, int value)
+{
+	BinaryWriter statNotify;
+	BYTE statTS = GetNextStatTimestamp(Int_StatType, key);
+
+	statNotify.Write<uint32_t>(0x2CE);
+	statNotify.Write<BYTE>(statTS);
+	statNotify.Write<uint32_t>(objectId);
+	statNotify.Write<uint32_t>(key);
+	statNotify.Write<int>(value);
+	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 }
 
 void CWeenieObject::NotifyInt64StatUpdated(STypeInt64 key, bool bPrivate)
@@ -1245,43 +1156,43 @@ void CWeenieObject::NotifyInt64StatUpdated(STypeInt64 key, bool bPrivate)
 	BinaryWriter statNotify;
 	BYTE statTS = GetNextStatTimestamp(Int64_StatType, key);
 
-	__int64 value;
+	int64_t value;
 	if (m_Qualities.InqInt64(key, value))
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x2CF);
+			statNotify.Write<uint32_t>(0x2CF);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			statNotify.Write<__int64>(value);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			statNotify.Write<int64_t>(value);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x2D0);
+			statNotify.Write<uint32_t>(0x2D0);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			statNotify.Write<__int64>(value);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			statNotify.Write<int64_t>(value);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 	else
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x2B8);
+			statNotify.Write<uint32_t>(0x2B8);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x2B9);
+			statNotify.Write<uint32_t>(0x2B9);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 }
@@ -1299,38 +1210,38 @@ void CWeenieObject::NotifyBoolStatUpdated(STypeBool key, bool bPrivate)
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x2D1);
+			statNotify.Write<uint32_t>(0x2D1);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(key);
 			statNotify.Write<int>(value);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x2D2);
+			statNotify.Write<uint32_t>(0x2D2);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
 			statNotify.Write<int>(value);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 	else
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x1D3);
+			statNotify.Write<uint32_t>(0x1D3);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x1D4);
+			statNotify.Write<uint32_t>(0x1D4);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 }
@@ -1348,38 +1259,38 @@ void CWeenieObject::NotifyFloatStatUpdated(STypeFloat key, bool bPrivate)
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x2D3);
+			statNotify.Write<uint32_t>(0x2D3);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(key);
 			statNotify.Write<double>(value);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x2D4);
+			statNotify.Write<uint32_t>(0x2D4);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
 			statNotify.Write<double>(value);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 	else
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x1D5);
+			statNotify.Write<uint32_t>(0x1D5);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x1D6);
+			statNotify.Write<uint32_t>(0x1D6);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 }
@@ -1397,38 +1308,38 @@ void CWeenieObject::NotifyStringStatUpdated(STypeString key, bool bPrivate)
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x2D5);
+			statNotify.Write<uint32_t>(0x2D5);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(key);
 			statNotify.WriteString(value);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x2D6);
+			statNotify.Write<uint32_t>(0x2D6);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
 			statNotify.WriteString(value);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 	else
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x1D7);
+			statNotify.Write<uint32_t>(0x1D7);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x1D8);
+			statNotify.Write<uint32_t>(0x1D8);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 }
@@ -1441,45 +1352,59 @@ void CWeenieObject::NotifyDIDStatUpdated(STypeDID key, bool bPrivate)
 	BinaryWriter statNotify;
 	BYTE statTS = GetNextStatTimestamp(DID_StatType, key);
 
-	DWORD value;
+	uint32_t value;
+
 	if (m_Qualities.InqDataID(key, value))
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x2D7);
+			statNotify.Write<uint32_t>(0x2D7);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			statNotify.Write<DWORD>(value);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			statNotify.Write<uint32_t>(value);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x2D8);
+			statNotify.Write<uint32_t>(0x2D8);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			statNotify.Write<DWORD>(value);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			statNotify.Write<uint32_t>(value);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 	else
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x1D9);
+			statNotify.Write<uint32_t>(0x1D9);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x1DA);
+			statNotify.Write<uint32_t>(0x1DA);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
+}
+
+void CWeenieObject::NotifyObjectDIDStatUpdated(uint32_t objectId, STypeDID key, uint32_t value)
+{
+	BinaryWriter statNotify;
+	BYTE statTS = GetNextStatTimestamp(DID_StatType, key);
+
+	statNotify.Write<uint32_t>(0x2D8);
+	statNotify.Write<BYTE>(statTS);
+	statNotify.Write<uint32_t>(objectId);
+	statNotify.Write<uint32_t>(key);
+	statNotify.Write<uint32_t>(value);
+	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 }
 
 void CWeenieObject::NotifyIIDStatUpdated(STypeIID key, bool bPrivate)
@@ -1490,43 +1415,43 @@ void CWeenieObject::NotifyIIDStatUpdated(STypeIID key, bool bPrivate)
 	BinaryWriter statNotify;
 	BYTE statTS = GetNextStatTimestamp(IID_StatType, key);
 
-	DWORD value;
+	uint32_t value;
 	if (m_Qualities.InqInstanceID(key, value))
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x2D9);
+			statNotify.Write<uint32_t>(0x2D9);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			statNotify.Write<DWORD>(value);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			statNotify.Write<uint32_t>(value);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x2DA);
+			statNotify.Write<uint32_t>(0x2DA);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			statNotify.Write<DWORD>(value);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			statNotify.Write<uint32_t>(value);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 	else
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x1DB);
+			statNotify.Write<uint32_t>(0x1DB);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x1DC);
+			statNotify.Write<uint32_t>(0x1DC);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 }
@@ -1544,38 +1469,38 @@ void CWeenieObject::NotifyPositionStatUpdated(STypePosition key, bool bPrivate)
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x2DB);
+			statNotify.Write<uint32_t>(0x2DB);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(key);
 			value.Pack(&statNotify);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x2DC);
+			statNotify.Write<uint32_t>(0x2DC);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
 			value.Pack(&statNotify);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 	else
 	{
 		if (bPrivate)
 		{
-			statNotify.Write<DWORD>(0x1DD);
+			statNotify.Write<uint32_t>(0x1DD);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(key);
-			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(key);
+			SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 		}
 		else
 		{
-			statNotify.Write<DWORD>(0x1DE);
+			statNotify.Write<uint32_t>(0x1DE);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(key);
-			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(key);
+			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 		}
 	}
 }
@@ -1586,26 +1511,26 @@ void CWeenieObject::NotifyStackSizeUpdated(bool bPrivate)
 		return;
 
 	BinaryWriter msg;
-	msg.Write<DWORD>(0x197);
+	msg.Write<uint32_t>(0x197);
 	msg.Write<BYTE>(GetNextStatTimestamp(Int_StatType, STACK_SIZE_INT));
-	msg.Write<DWORD>(GetID());
-	msg.Write<DWORD>(InqIntQuality(STACK_SIZE_INT, 1));
-	msg.Write<DWORD>(InqIntQuality(VALUE_INT, 0));
+	msg.Write<uint32_t>(GetID());
+	msg.Write<uint32_t>(InqIntQuality(STACK_SIZE_INT, 1));
+	msg.Write<uint32_t>(InqIntQuality(VALUE_INT, 0));
 
 	if (bPrivate)
-		SendNetMessage(&msg, PRIVATE_MSG, FALSE, FALSE);
+		SendNetMessage(&msg, PRIVATE_MSG, FALSE, FALSE, true);
 	else
-		g_pWorld->BroadcastPVS(this, msg.GetData(), msg.GetSize(), PRIVATE_MSG, FALSE, FALSE);
+		g_pWorld->BroadcastPVS(this, msg.GetData(), msg.GetSize(), PRIVATE_MSG, FALSE, FALSE, true);
 }
 
-void CWeenieObject::NotifyContainedItemRemoved(DWORD objectId, bool bPrivate)
+void CWeenieObject::NotifyContainedItemRemoved(uint32_t objectId, bool bPrivate)
 {
 	if (!m_bWorldIsAware)
 		return;
 
 	BinaryWriter msg;
-	msg.Write<DWORD>(0x24);
-	msg.Write<DWORD>(objectId);
+	msg.Write<uint32_t>(0x24);
+	msg.Write<uint32_t>(objectId);
 
 	if (bPrivate)
 		SendNetMessage(&msg, PRIVATE_MSG, FALSE, FALSE);
@@ -1619,9 +1544,9 @@ void CWeenieObject::NotifyObjectRemoved()
 		return;
 
 	BinaryWriter msg;
-	msg.Write<DWORD>(0xF747);
-	msg.Write<DWORD>(GetID());
-	msg.Write<DWORD>(_instance_timestamp);
+	msg.Write<uint32_t>(0xF747);
+	msg.Write<uint32_t>(GetID());
+	msg.Write<uint32_t>(_instance_timestamp);
 
 	g_pWorld->BroadcastPVS(this, msg.GetData(), msg.GetSize());
 }
@@ -1645,7 +1570,7 @@ void CWeenieObject::CopyInt64Stat(STypeInt64 key, CWeenieObject *from)
 
 void CWeenieObject::CopyInt64Stat(STypeInt64 key, CACQualities *from)
 {
-	__int64 value = 0;
+	int64_t value = 0;
 	if (from->InqInt64(key, value))
 		m_Qualities.SetInt64(key, value);
 }
@@ -1693,7 +1618,8 @@ void CWeenieObject::CopyDIDStat(STypeDID key, CWeenieObject *from)
 
 void CWeenieObject::CopyDIDStat(STypeDID key, CACQualities *from)
 {
-	DWORD value;
+	uint32_t value;
+
 	if (from->InqDataID(key, value))
 		m_Qualities.SetDataID(key, value);
 }
@@ -1713,69 +1639,71 @@ void CWeenieObject::CopyPositionStat(STypePosition key, CACQualities *from)
 void CWeenieObject::NotifyAttributeStatUpdated(STypeAttribute key)
 {
 	BinaryWriter statNotify;
-	statNotify.Write<DWORD>(0x2E3);
+	statNotify.Write<uint32_t>(0x2E3);
 	statNotify.Write<BYTE>(GetNextStatTimestamp(Attribute_StatType, key));
-	statNotify.Write<DWORD>(key);
+	statNotify.Write<uint32_t>(key);
 
 	Attribute attrib;
 	m_Qualities.InqAttribute(key, attrib);
 	statNotify.Write(&attrib);
 
-	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
+
+	updateFellowStats = true;
 }
 
 void CWeenieObject::NotifyAttribute2ndStatUpdated(STypeAttribute2nd key)
 {
 	BinaryWriter statNotify;
-	statNotify.Write<DWORD>(0x2E7);
+	statNotify.Write<uint32_t>(0x2E7);
 	statNotify.Write<BYTE>(GetNextStatTimestamp(Attribute_2nd_StatType, key));
-	statNotify.Write<DWORD>(key);
+	statNotify.Write<uint32_t>(key);
 
 	SecondaryAttribute attrib2nd;
 	m_Qualities.InqAttribute2nd(key, attrib2nd);
 	statNotify.Write(&attrib2nd);
 
-	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 }
 
 void CWeenieObject::NotifySkillStatUpdated(STypeSkill key)
 {
 	BinaryWriter statNotify;
-	statNotify.Write<DWORD>(0x2DD);
+	statNotify.Write<uint32_t>(0x2DD);
 	statNotify.Write<BYTE>(GetNextStatTimestamp(Skill_StatType, key));
-	statNotify.Write<DWORD>(key);
+	statNotify.Write<uint32_t>(key);
 
 	Skill skill;
 	m_Qualities.InqSkill(key, skill);
 	statNotify.Write(&skill);
 
-	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 }
 
 void CWeenieObject::NotifySkillAdvancementClassUpdated(STypeSkill key)
 {
 	BinaryWriter statNotify;
-	statNotify.Write<DWORD>(0x2E1);
+	statNotify.Write<uint32_t>(0x2E1);
 	statNotify.Write<BYTE>(GetNextStatTimestamp(Skill_StatType, key));
-	statNotify.Write<DWORD>(key);
+	statNotify.Write<uint32_t>(key);
 
 	SKILL_ADVANCEMENT_CLASS sac;
 	m_Qualities.InqSkillAdvancementClass(key, sac);
 	statNotify.Write<int>(sac);
 
-	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE);
+	SendNetMessage(&statNotify, PRIVATE_MSG, FALSE, FALSE, true);
 }
 
 void CWeenieObject::NotifyEnchantmentUpdated(Enchantment *enchant)
 {
 	BinaryWriter statNotify;
-	statNotify.Write<DWORD>(0x2C2);
+	statNotify.Write<uint32_t>(0x2C2);
 	enchant->Pack(&statNotify);
 
 	SendNetMessage(&statNotify, PRIVATE_MSG, TRUE, FALSE);
 }
 
-DWORD CWeenieObject::GetCostToRaiseSkill(STypeSkill key)
+uint32_t CWeenieObject::GetCostToRaiseSkill(STypeSkill key)
 {
 	Skill skill;
 	m_Qualities.InqSkill(key, skill);
@@ -1795,7 +1723,7 @@ DWORD CWeenieObject::GetCostToRaiseSkill(STypeSkill key)
 	}
 	else
 	{
-		DWORD maxLevel;
+		uint32_t maxLevel;
 
 		switch (skill._sac)
 		{
@@ -1811,7 +1739,7 @@ DWORD CWeenieObject::GetCostToRaiseSkill(STypeSkill key)
 
 		if (skill._level_from_pp < maxLevel)
 		{
-			DWORD expRequired = ExperienceSystem::ExperienceToSkillLevel(skill._sac, skill._level_from_pp + 1);
+			uint32_t expRequired = ExperienceSystem::ExperienceToSkillLevel(skill._sac, skill._level_from_pp + 1);
 			expRequired -= skill._pp;
 			return expRequired;
 		}
@@ -1847,18 +1775,18 @@ const char* CWeenieObject::GetTitleString()
 	return "[title]";
 }
 
-DWORD GetXPForKillLevel(int level)
+uint32_t CWeenieObject::GetXPForKillLevel(int level)
 {
 	double xp = 380.5804 + 63.92362*level + 3.543397*pow(level, 2) - 0.05233995*pow(level, 3) + 0.0007008949*pow(level, 4);
 
-	DWORD xpvalout;
+	uint32_t xpvalout;
 
 	if (xp < 0)
 		xpvalout = 0;
 	else if (xp >= UINT_MAX)
 		xpvalout = UINT_MAX;
 	else
-		xpvalout = (DWORD) xp;
+		xpvalout = (uint32_t)xp;
 
 	// xp /= 5.0; // normally things are way too easy, let's tone it down a bit
 
@@ -1874,110 +1802,186 @@ void CWeenieObject::GivePerksForKill(CWeenieObject *pKilled)
 	if (level <= 0)
 		return;
 
-	int xpForKill = 0;
-	
-	if (!pKilled->m_Qualities.InqInt(XP_OVERRIDE_INT, xpForKill, 0, FALSE))
-		xpForKill = (int) GetXPForKillLevel(level);
+	int baseXPForKill = 0;
+	int baseLumForKill = 0;
+	int64_t xpForKill = 0;
+	int64_t lumForKill = 0;
 
-	xpForKill = (int)(xpForKill * g_pConfig->KillXPMultiplier(level));
+	if (!pKilled->m_Qualities.InqInt(XP_OVERRIDE_INT, baseXPForKill, 0, FALSE))
+		baseXPForKill = (uint32_t)GetXPForKillLevel(level);
+
+	xpForKill = (int64_t)(baseXPForKill * g_pConfig->GetKillXPMultiplier(level));
 
 	if (xpForKill < 0)
 		xpForKill = 0;
 
+	if (pKilled->m_Qualities.InqInt(LUMINANCE_AWARD_INT, baseLumForKill, 0, FALSE))
+		lumForKill = (int64_t)(baseLumForKill * g_pConfig->GetLumXPMultiplier());
+
 	GiveSharedXP(xpForKill, false);
+	GiveSharedLum(lumForKill, false);
 }
 
-void CWeenieObject::GiveSharedXP(long long amount, bool showText)
+void CWeenieObject::GiveSharedXP(int64_t amount, bool showText)
 {
 	if (amount <= 0)
 		return;
 
-	Fellowship *f = GetFellowship();
+	EnchantedQualityDetails buffDetails;
+	GetFloatEnchantmentDetails(GLOBAL_XP_MOD_FLOAT, 0.0, &buffDetails);
 
-	if (f)
-		f->GiveXP(this, amount, showText);
+	if (buffDetails.enchantedValue > 0.0)
+		amount *= buffDetails.valueIncreasingMultiplier;
+
+	fellowship_ptr_t f = GetFellowship();
+
+	if (f && f->_share_xp)
+		f->GiveXP(this, amount, ExperienceHandlingType::DefaultXp, showText);
 	else
-		GiveXP(amount, showText, false);
+		GiveXP(amount, ExperienceHandlingType::DefaultXp, showText);
 }
 
-void CWeenieObject::GiveXP(long long amount, bool showText, bool allegianceXP)
+void CWeenieObject::GiveXP(int64_t amount, ExperienceHandlingType flags, bool showText)
 {
 	if (amount <= 0)
 		return;
 
-	OnGivenXP(amount, allegianceXP);
+	OnGivenXP(amount, flags);
+	//return; // MOROSITY - Skipping item leveling until more work done
 
-	unsigned __int64 newAvailableXP = (unsigned __int64)InqInt64Quality(AVAILABLE_EXPERIENCE_INT64, 0) + amount;
-	unsigned __int64 newTotalXP = (unsigned __int64)InqInt64Quality(TOTAL_EXPERIENCE_INT64, 0) + amount;
+	// items don't get non-direct xp
+	// if we can't share it, it was *probably* already shared
+	// must also count towards vitae
+	if (!flags_check(flags, ExperienceHandlingType::PossibleItemXp))
+		return;
 
-	int currentLevel = InqIntQuality(LEVEL_INT, 1);
+	int32_t style = InqIntQuality(ITEM_XP_STYLE_INT, 0);
+	if (style == 0)
+		return;
 
-	DWORD skillCredits = 0;
 	bool bLeveled = false;
-	DWORD64 xpToNextLevel = ExperienceSystem::ExperienceToLevel(currentLevel + 1);
-	while  (xpToNextLevel <= newTotalXP && currentLevel < ExperienceSystem::GetMaxLevel())
+	uint64_t currxp = (uint64_t)InqInt64Quality(ITEM_TOTAL_XP_INT64, 0);
+	uint64_t basexp = (uint64_t)InqInt64Quality(ITEM_BASE_XP_INT64, 0);
+	int32_t maxlvl = InqIntQuality(ITEM_MAX_LEVEL_INT, 0);
+
+	int32_t baseLevel = ExperienceSystem::ItemTotalXpToLevel(currxp, basexp, maxlvl, style);
+	int32_t currentLevel = baseLevel;
+	uint64_t xpToNextLevel = ExperienceSystem::ItemLevelToTotalXp(currentLevel + 1, basexp, maxlvl, style);
+	uint64_t maxxp = ExperienceSystem::ItemLevelToTotalXp(maxlvl, basexp, maxlvl, style);
+
+	currxp += amount;
+
+	while (xpToNextLevel <= currxp && currentLevel < maxlvl)
 	{
 		currentLevel++;
-		skillCredits += ExperienceSystem::GetCreditsForLevel(currentLevel);
 		bLeveled = true;
 
-		xpToNextLevel = ExperienceSystem::ExperienceToLevel(currentLevel + 1);
+		xpToNextLevel = ExperienceSystem::ItemLevelToTotalXp(currentLevel + 1, basexp, maxlvl, style);
 
 		if (!xpToNextLevel)
 			break;
 	}
+	if (currxp <= maxxp)
+		m_Qualities.SetInt64(ITEM_TOTAL_XP_INT64, currxp);
 
-	if (!(currentLevel == ExperienceSystem::GetMaxLevel() && g_pConfig->DisableUnassignedXPAtMaxLevel()))
-	{
-		m_Qualities.SetInt64(AVAILABLE_EXPERIENCE_INT64, newAvailableXP);
-		NotifyInt64StatUpdated(AVAILABLE_EXPERIENCE_INT64);
-	}
-
-	m_Qualities.SetInt64(TOTAL_EXPERIENCE_INT64, newTotalXP);
-	NotifyInt64StatUpdated(TOTAL_EXPERIENCE_INT64);
-
-	GiveSkillCredits(skillCredits, false);
+	if (currxp > maxxp)
+		m_Qualities.SetInt64(ITEM_TOTAL_XP_INT64, maxxp);
 
 	if (bLeveled)
 	{
-		m_Qualities.SetInt(LEVEL_INT, currentLevel);
-		NotifyIntStatUpdated(LEVEL_INT);
+		CMonsterWeenie *owner = GetWorldTopLevelOwner()->AsMonster();
+		if (!owner)	// abort, something bad happened
+			return;
 
-		EmitEffect(PS_LevelUp, 1.0f);
-
-		if (currentLevel == 275)
-		{
-			EmitEffect(PS_WeddingBliss, 1.0f);
-		}
+		owner->EmitEffect(PS_AetheriaLevelUp, 1.0f);
 
 		const char *notice = csprintf(
-			"You are now level %s! You have %s experience points and %s skill credits available to raise skills and attributes.",
-			FormatNumberString(currentLevel).c_str(),
-			FormatNumberString(newAvailableXP).c_str(),
-			FormatNumberString(InqIntQuality(AVAILABLE_SKILL_CREDITS_INT, 0)).c_str());
+			"Your %s has increased in power to level %d!",
+			GetName().c_str(),
+			currentLevel);
 
-		SendText(notice, LTT_ADVANCEMENT);
+		owner->SendText(notice, LTT_ADVANCEMENT);
 
-		// restore vitals
-		if (!IsDead())
+		int setId;
+		if (m_Qualities.InqInt(EQUIPMENT_SET_ID_INT, setId))
 		{
-			SetMaxVitals(true);
+			if(owner->AsPlayer())
+			{
+				owner->AsPlayer()->UpdateSetSpells(setId, GetID());
+				if (IsAetheria())
+				{
+					owner->AsPlayer()->UpdateSigilProcRate();
+				}
+			}
 		}
+	}
+}
+
+void CWeenieObject::UpdateSetLevel(int setId, int leveldiff, int sourceid)
+{
+	if (leveldiff == 0)
+		return;
+
+	auto sourceItem = g_pWorld->FindObject(sourceid);
+	auto owner = sourceItem->GetWorldTopLevelOwner();
+
+	if (owner->m_pendingSetChanges.count(setId))
+	{
+		owner->m_pendingSetChanges[setId].second += leveldiff;
+	}
+	else
+	{
+		owner->m_pendingSetChanges.insert(std::make_pair(setId, std::make_pair(sourceid, leveldiff)));
+	}
+}
+
+
+void CWeenieObject::GiveSharedLum(int64_t amount, bool showText)
+{
+	if (amount <= 0)
+		return;
+
+	EnchantedQualityDetails buffDetails;
+	GetFloatEnchantmentDetails(GLOBAL_XP_MOD_FLOAT, 0.0, &buffDetails);
+
+	if (buffDetails.enchantedValue > 0.0)
+		amount *= buffDetails.valueIncreasingMultiplier;
+
+	fellowship_ptr_t f = GetFellowship();
+
+	if (f)
+		f->GiveLum(this, amount, showText);
+	else
+		GiveLum(amount, showText);
+}
+
+void CWeenieObject::GiveLum(int64_t amount, bool showText)
+{
+	if (amount <= 0)
+		return;
+
+	if (m_Qualities.GetInt(AUGMENTATION_BONUS_XP_INT, 0))
+	{
+		amount = uint64_t((double)amount * 1.05);
+	}
+
+	uint64_t AvailableLum = (uint64_t)InqInt64Quality(AVAILABLE_LUMINANCE_INT64, 0);
+	uint64_t MaxLum = (uint64_t)InqInt64Quality(MAXIMUM_LUMINANCE_INT64, 0);
+	uint64_t newAvailableLum = (uint64_t)InqInt64Quality(AVAILABLE_LUMINANCE_INT64, 0) + amount;
+
+	if (AvailableLum < MaxLum) // Cant Earn Lum without flagging.
+	{
+		m_Qualities.SetInt64(AVAILABLE_LUMINANCE_INT64, min(newAvailableLum, (uint64_t)1000000)); // don't go over 1 million.
+		NotifyInt64StatUpdated(AVAILABLE_LUMINANCE_INT64);
 	}
 
 	if (showText)
 	{
 		const char *notice = csprintf(
-			"You've earned %s experience.",
+			"You've earned %s luminance.",
 			FormatNumberString(amount).c_str());
 
-		SendText(notice, LTT_ADVANCEMENT);
-	}
-
-	if (!allegianceXP)
-	{
-		// let allegiance manager pass it up
-		g_pAllegianceManager->HandleAllegiancePassup(GetID(), amount, true);
+		SendText(notice, LTT_DEFAULT);
 	}
 }
 
@@ -1988,12 +1992,12 @@ void CWeenieObject::TryToUnloadAllegianceXP(bool bShowText)
 	{
 		if (node->_cp_pool_to_unload > 0)
 		{
-			GiveXP(node->_cp_pool_to_unload, false, true);
+			GiveXP(node->_cp_pool_to_unload, ExperienceHandlingType::NoHandling, false);
 
 			if (bShowText)
 			{
 				// this was from logging in
-				SendText(csprintf("Your Vassals have produced experience points for you.\nTaking your skills as a leader into account, you gain %s xp.",
+				SendText(csprintf("Your Vassals have produced experience points for you. Taking your skills as a leader into account, you gain %s xp.",
 					FormatNumberString(node->_cp_pool_to_unload).c_str()), LTT_DEFAULT);
 			}
 
@@ -2002,36 +2006,39 @@ void CWeenieObject::TryToUnloadAllegianceXP(bool bShowText)
 	}
 }
 
-DWORD CWeenieObject::GiveAttributeXP(STypeAttribute key, DWORD amount)
+uint32_t CWeenieObject::GiveAttributeXP(STypeAttribute key, uint32_t amount)
 {
 	Attribute attribute;
 	m_Qualities.InqAttribute(key, attribute);
 	attribute._cp_spent += amount;
 
-	DWORD oldLevel = attribute._level_from_cp;
+	uint32_t oldLevel = attribute._level_from_cp;
 	attribute._level_from_cp = ExperienceSystem::AttributeLevelFromExperience(attribute._cp_spent);
 
 	m_Qualities.SetAttribute(key, attribute);
 
-	DWORD raised = attribute._level_from_cp - oldLevel;
+	uint32_t raised = attribute._level_from_cp - oldLevel;
 	if (raised)
 	{
-		DWORD newLevel;
+		uint32_t newLevel;
 		if (m_Qualities.InqAttribute(key, newLevel, TRUE))
 		{
 			if (_phys_obj)
 				_phys_obj->EmitSound(Sound_RaiseTrait, 1.0, true);
-
-			SendText(csprintf("Your base %s is now %u!", Attribute::GetAttributeName(key), newLevel), LTT_ADVANCEMENT);
+			if (attribute._level_from_cp == 190) {
+				SendText(csprintf("Your base %s is now %u and has reached its upper limit!", Attribute::GetAttributeName(key), newLevel), LTT_ADVANCEMENT);
+				EmitEffect(PS_WeddingBliss, 1.0f);
+			}
+			else
+				SendText(csprintf("Your base %s is now %u!", Attribute::GetAttributeName(key), newLevel), LTT_ADVANCEMENT);
 		}
 	}
-
 	NotifyAttributeStatUpdated(key);
 
 	return raised;
 }
 
-const char *GetAttribute2ndName(STypeAttribute2nd key)
+inline const char *GetAttribute2ndName(STypeAttribute2nd key)
 {
 	switch (key)
 	{
@@ -2052,48 +2059,60 @@ const char *GetAttribute2ndName(STypeAttribute2nd key)
 	}
 }
 
-DWORD CWeenieObject::GiveAttribute2ndXP(STypeAttribute2nd key, DWORD amount)
+uint32_t CWeenieObject::GiveAttribute2ndXP(STypeAttribute2nd key, uint32_t amount)
 {
 	SecondaryAttribute attribute2nd;
 	m_Qualities.InqAttribute2nd(key, attribute2nd);
 	attribute2nd._cp_spent += amount;
 
-	DWORD oldLevel = attribute2nd._level_from_cp;
+	uint32_t oldLevel = attribute2nd._level_from_cp;
 	attribute2nd._level_from_cp = ExperienceSystem::Attribute2ndLevelFromExperience(attribute2nd._cp_spent);
 
 	m_Qualities.SetAttribute2nd(key, attribute2nd);
 
-	DWORD raised = attribute2nd._level_from_cp - oldLevel;
+	uint32_t raised = attribute2nd._level_from_cp - oldLevel;
 	if (raised)
 	{
-		DWORD newLevel;
-		if (m_Qualities.InqAttribute2nd(key, newLevel, FALSE))
+		uint32_t newLevel;
+		if (m_Qualities.InqAttribute2nd(key, newLevel, TRUE))
 		{
 			if (_phys_obj)
 				_phys_obj->EmitSound(Sound_RaiseTrait, 1.0, true);
 
-			SendText(csprintf("Your base %s is now %u!", GetAttribute2ndName(key), newLevel), LTT_ADVANCEMENT);
+			if (attribute2nd._level_from_cp == 196) {
+				SendText(csprintf("Your base %s is now %u and has reached its upper limit!", GetAttribute2ndName(key), newLevel), LTT_ADVANCEMENT);
+				EmitEffect(PS_WeddingBliss, 1.0f);
+			}
+			else
+				SendText(csprintf("Your base %s is now %u!", GetAttribute2ndName(key), newLevel), LTT_ADVANCEMENT);
 		}
 	}
-
 	NotifyAttribute2ndStatUpdated(key);
 	return raised;
 }
 
-DWORD CWeenieObject::GiveSkillAdvancementClass(STypeSkill key, SKILL_ADVANCEMENT_CLASS sac)
+uint32_t CWeenieObject::GiveSkillAdvancementClass(STypeSkill key, SKILL_ADVANCEMENT_CLASS sac)
 {
 	Skill skill;
 	m_Qualities.InqSkill(key, skill);
 
 	// before
-	DWORD oldLevel = 0;
+	uint32_t oldLevel = 0;
 	m_Qualities.InqSkill(key, oldLevel, TRUE);
 
-	skill._sac = sac;
+	bool skillSpecByAug = IsSkillAugmented(key);
+	if (skillSpecByAug) //If skill has been augmented for sac (tinkering skills), than we should immediately jump to specialized.
+	{
+		skill._sac = SPECIALIZED_SKILL_ADVANCEMENT_CLASS;
+		skill._init_level = 10;
+	}
+	else
+		skill._sac = sac;
+
 	skill._level_from_pp = ExperienceSystem::SkillLevelFromExperience(skill._sac, skill._pp);
 
 	// after
-	DWORD newLevel;
+	uint32_t newLevel;
 	m_Qualities.InqSkill(key, newLevel, TRUE);
 
 	m_Qualities.SetSkill(key, skill);
@@ -2110,10 +2129,12 @@ DWORD CWeenieObject::GiveSkillAdvancementClass(STypeSkill key, SKILL_ADVANCEMENT
 			skillName = pSkillBase->_name;
 		}
 	}
+	if (skillSpecByAug)
+		SendText(csprintf("You are now specialized in %s!", skillName.c_str()), LTT_ADVANCEMENT);
+	else
+		SendText(csprintf("You are now trained in %s!", skillName.c_str()), LTT_ADVANCEMENT);
 
-	SendText(csprintf("You are now trained in %s!", skillName.c_str()), LTT_ADVANCEMENT);
-
-	DWORD raised = newLevel - oldLevel;
+	uint32_t raised = newLevel - oldLevel;
 	if (raised)
 	{
 		SendText(csprintf("Your base %s is now %u!", skillName.c_str(), newLevel), LTT_ADVANCEMENT);
@@ -2123,7 +2144,43 @@ DWORD CWeenieObject::GiveSkillAdvancementClass(STypeSkill key, SKILL_ADVANCEMENT
 	return raised;
 }
 
-DWORD CWeenieObject::GiveSkillXP(STypeSkill key, DWORD amount, bool silent)
+bool CWeenieObject::IsSkillAugmented(STypeSkill key)
+{
+	STypeInt augskillint = UNDEF_INT;
+	switch (key)
+	{
+	case ARMOR_APPRAISAL_SKILL:
+	{
+		augskillint = AUGMENTATION_SPECIALIZE_ARMOR_TINKERING_INT;
+		break;
+	}
+	case ITEM_APPRAISAL_SKILL:
+	{
+		augskillint = AUGMENTATION_SPECIALIZE_ITEM_TINKERING_INT;
+		break;
+	}
+	case MAGIC_ITEM_APPRAISAL_SKILL:
+	{
+		augskillint = AUGMENTATION_SPECIALIZE_MAGIC_ITEM_TINKERING_INT;
+		break;
+	}
+	case WEAPON_APPRAISAL_SKILL:
+	{
+		augskillint = AUGMENTATION_SPECIALIZE_WEAPON_TINKERING_INT;
+		break;
+	}
+	//salvaging is never unspecialized so it isn't needed here as we will never be advancing it again once spec'd.
+	default:
+		return false;
+	}
+
+	if (InqIntQuality(augskillint, 0) == 1)
+		return true;
+	else
+		return false;
+}
+
+uint32_t CWeenieObject::GiveSkillXP(STypeSkill key, uint32_t amount, bool silent)
 {
 	if (amount <= 0)
 		return 0;
@@ -2136,10 +2193,8 @@ DWORD CWeenieObject::GiveSkillXP(STypeSkill key, DWORD amount, bool silent)
 
 	skill._pp += amount;
 
-	DWORD oldLevel = skill._level_from_pp;
+	uint32_t oldLevel = skill._level_from_pp;
 	skill._level_from_pp = ExperienceSystem::SkillLevelFromExperience(skill._sac, skill._pp);
-
-	m_Qualities.SetSkill(key, skill);
 
 	std::string skillName = "Unknown";
 
@@ -2161,19 +2216,30 @@ DWORD CWeenieObject::GiveSkillXP(STypeSkill key, DWORD amount, bool silent)
 		SendText(notice, LTT_ADVANCEMENT);
 	}
 
-	DWORD raised = skill._level_from_pp - oldLevel;
+	//if ((skill._sac == TRAINED_SKILL_ADVANCEMENT_CLASS && oldLevel == 208) || (skill._sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS && oldLevel == 226))
+		//return 0; //We already check if the skill is maxed before entering the function.
+
+	m_Qualities.SetSkill(key, skill);
+
+	uint32_t raised = skill._level_from_pp - oldLevel;
 	if (raised)
 	{
 		// Your base Melee Defense is now 123! color: 13
 
-		DWORD newLevel;
+		uint32_t newLevel;
 		if (m_Qualities.InqSkill(key, newLevel, TRUE))
 		{
 			if (_phys_obj)
 				_phys_obj->EmitSound(Sound_RaiseTrait, 1.0, true);
 
-			SendText(csprintf("Your base %s is now %u!", skillName.c_str(), newLevel), LTT_ADVANCEMENT);
+			if ((skill._sac == TRAINED_SKILL_ADVANCEMENT_CLASS && skill._level_from_pp == 208) || (skill._sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS && skill._level_from_pp == 226)) {
+				SendText(csprintf("Your base %s is now %u and has reached its upper limit!", skillName.c_str(), newLevel), LTT_ADVANCEMENT);
+				EmitEffect(PS_WeddingBliss, 1.0f);
+			}
+			else
+				SendText(csprintf("Your base %s is now %u!", skillName.c_str(), newLevel), LTT_ADVANCEMENT);
 		}
+
 	}
 
 	NotifySkillStatUpdated(key);
@@ -2188,7 +2254,7 @@ DWORD CWeenieObject::GiveSkillXP(STypeSkill key, DWORD amount, bool silent)
 	return raised;
 }
 
-DWORD CWeenieObject::GiveSkillPoints(STypeSkill key, DWORD amount)
+uint32_t CWeenieObject::GiveSkillPoints(STypeSkill key, uint32_t amount)
 {
 	if (amount <= 0)
 		return 0;
@@ -2207,7 +2273,7 @@ DWORD CWeenieObject::GiveSkillPoints(STypeSkill key, DWORD amount)
 
 	// Your base Melee Defense is now 123! color: 13
 
-	DWORD newLevel;
+	uint32_t newLevel;
 	if (m_Qualities.InqSkill(key, newLevel, TRUE))
 	{
 		std::string skillName = "Unknown";
@@ -2224,7 +2290,12 @@ DWORD CWeenieObject::GiveSkillPoints(STypeSkill key, DWORD amount)
 		if (_phys_obj)
 			_phys_obj->EmitSound(Sound_RaiseTrait, 1.0, true);
 
-		SendText(csprintf("Your base %s is now %u!", skillName.c_str(), newLevel), LTT_ADVANCEMENT);
+		if ((skill._sac == TRAINED_SKILL_ADVANCEMENT_CLASS && skill._level_from_pp == 208) || (skill._sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS && skill._level_from_pp == 226)) {
+			SendText(csprintf("Your base %s is now %u and has reached its upper limit!", skillName.c_str(), newLevel), LTT_ADVANCEMENT);
+			EmitEffect(PS_WeddingBliss, 1.0f);
+		}
+		else
+			SendText(csprintf("Your base %s is now %u!", skillName.c_str(), newLevel), LTT_ADVANCEMENT);
 	}
 
 	NotifySkillStatUpdated(key);
@@ -2239,31 +2310,56 @@ DWORD CWeenieObject::GiveSkillPoints(STypeSkill key, DWORD amount)
 	return amount;
 }
 
-void CWeenieObject::GiveSkillCredits(DWORD amount, bool showText)
+void CWeenieObject::GiveSkillCredit(int amount)
 {
-	if (amount <= 0)
-		return;
-
-	if (!amount)
-		return;
-
-	DWORD unassignedCredits = 0;
-	m_Qualities.InqInt(AVAILABLE_SKILL_CREDITS_INT, *(int *)&unassignedCredits);	
-	m_Qualities.SetInt(AVAILABLE_SKILL_CREDITS_INT, unassignedCredits + amount);
-	NotifyIntStatUpdated(AVAILABLE_SKILL_CREDITS_INT);
-
-	if (showText)
+	if (amount > 0)
 	{
-		if (_phys_obj)
-			_phys_obj->EmitSound(Sound_RaiseTrait, 1.0, true);
-
-		SendText(csprintf("You have earned %u skill %s!", amount, amount == 1 ? "credit" : "credits"), LTT_ADVANCEMENT);
+		int newAmount = (int)(GetSkillCredits()) + amount;
+		SetAvailSkillsAndNotifyPlayer(newAmount);
+		SendText(csprintf("You have gained %d skill %s!", amount, amount == 1 ? "credit" : "credits"), LTT_ADVANCEMENT);
 	}
 }
 
-void CWeenieObject::SendText(const char* szText, long lColor)
+void CWeenieObject::SetAvailSkillsAndNotifyPlayer(int amount)
+{
+	m_Qualities.SetInt(AVAILABLE_SKILL_CREDITS_INT, amount);
+	NotifyIntStatUpdated(AVAILABLE_SKILL_CREDITS_INT);
+}
+
+void CWeenieObject::AdjustSkillCredits(int expected, int current, bool showText)
+{
+	int amount = expected - current;
+	if (amount == 0)
+		return;
+
+	std::string creditChange = "earned";
+	if (amount < 0)
+	{
+		creditChange = "lost";
+	}
+
+	if (!showText)
+		creditChange = "";
+
+	SetAvailSkillsAndNotifyPlayer(max((int)(GetSkillCredits()) + amount, 0));
+	SendText(csprintf("You have %s %d skill %s!", creditChange.c_str(), abs(amount), amount == 1 ? "credit" : "credits"), LTT_ADVANCEMENT);
+}
+
+uint32_t CWeenieObject::GetSkillCredits()
+{
+	uint32_t unassignedCredits = 0;
+	m_Qualities.InqInt(AVAILABLE_SKILL_CREDITS_INT, *(int *)&unassignedCredits);
+	return unassignedCredits;
+}
+
+void CWeenieObject::SendText(const char* szText, int32_t lColor)
 {
 	SendNetMessage(ServerText(szText, lColor), PRIVATE_MSG, FALSE, TRUE);
+}
+
+void CWeenieObject::SendTextToOverlay(const char* szText)
+{
+	SendNetMessage(OverlayText(szText), PRIVATE_MSG, FALSE, TRUE);
 }
 
 float Calc_BurdenMod(float flBurden)
@@ -2277,7 +2373,7 @@ float Calc_BurdenMod(float flBurden)
 	return 0.0f;
 }
 
-float Calc_AnimSpeed(DWORD runSkill, float fBurden)
+float Calc_AnimSpeed(uint32_t runSkill, float fBurden)
 {
 	float fBurdenMod = Calc_BurdenMod(fBurden);
 	float fSpeed = (float)runSkill;
@@ -2329,7 +2425,7 @@ bool CWeenieObject::CanJump(float extent)
 	return !!m_Qualities.CanJump(extent);
 }
 
-bool CWeenieObject::JumpStaminaCost(float extent, long &cost)
+bool CWeenieObject::JumpStaminaCost(float extent, int32_t &cost)
 {
 	// Client does this..but we are the server!
 	//if (IsThePlayer())
@@ -2340,7 +2436,7 @@ bool CWeenieObject::JumpStaminaCost(float extent, long &cost)
 	return !!m_Qualities.JumpStaminaCost(extent, cost);
 }
 
-void CWeenieObject::EmitEffect(DWORD effect, float mod)
+void CWeenieObject::EmitEffect(uint32_t effect, float mod)
 {
 	if (_phys_obj)
 		_phys_obj->EmitEffect(effect, mod);
@@ -2362,7 +2458,7 @@ bool CWeenieObject::TeleportToHouse()
 {
 	if (CPlayerWeenie *player = AsPlayer())
 	{
-		DWORD houseId = player->GetAccountHouseId();
+		uint32_t houseId = player->GetAccountHouseId();
 		if (houseId)
 		{
 			CHouseData *houseData = g_pHouseManager->GetHouseData(houseId);
@@ -2386,7 +2482,7 @@ bool CWeenieObject::TeleportToMansion()
 	if (!allegianceNode)
 		return false;
 
-	DWORD allegianceHouseId;
+	uint32_t allegianceHouseId;
 
 	CWeenieObject *monarch = g_pWorld->FindObject(allegianceNode->_monarchID);
 	if (!monarch)
@@ -2403,7 +2499,7 @@ bool CWeenieObject::TeleportToMansion()
 	if (allegianceHouseId)
 	{
 		CHouseData *houseData = g_pHouseManager->GetHouseData(allegianceHouseId);
-		if (houseData && houseData->_ownerId == allegianceNode->_monarchID && (houseData->_houseType == 2 || houseData->_houseType == 3)) //2 = villa, 3 = mansion
+		if (houseData && houseData->_ownerId == allegianceNode->_monarchID && (houseData->_houseType == Villa_HouseType || houseData->_houseType == Mansion_HouseType)) //2 = villa, 3 = mansion
 		{
 			if (houseData->_position.objcell_id)
 			{
@@ -2442,22 +2538,34 @@ void CWeenieObject::SendUseMessage(CWeenieObject *other, unsigned int channel)
 
 void CWeenieObject::ExecuteUseEvent(CUseEventData *useEvent)
 {
-	if (m_UseManager && m_UseManager->IsUsing())
-	{
-		NotifyWeenieError(WERROR_ACTIONS_LOCKED);
-		return;
-	}
+	MakeUseManager();
+
+	bool busy = false;
+	int error = WERROR_NONE;
+
+	CWeenieObject *target = g_pWorld->FindObject(useEvent->_target_id);
 
 	if (IsBusyOrInAction())
 	{
-		NotifyWeenieError(WERROR_ACTIONS_LOCKED);
-		NotifyUseDone(WERROR_NONE);
-		return;
+		busy = true;
+		error = WERROR_ACTIONS_LOCKED;
 	}
 
-	if (!m_UseManager)
+	if (target && target->m_EmoteManager && target->m_EmoteManager->HasQueue())
 	{
-		m_UseManager = new UseManager(this);
+		busy = true;
+		error = WERROR_EXTERNAL_ACTIONS_LOCKED;
+		SendText(csprintf("%s is busy.", target->GetName().c_str()), LTT_DEFAULT);
+	}
+
+	if (busy)
+	{
+		NotifyUseDone(error);
+		if (useEvent->_give_event)
+			NotifyInventoryFailedEvent(useEvent->_source_item_id, WERROR_NONE);
+
+		delete useEvent;
+		return;
 	}
 
 	useEvent->_manager = m_UseManager;
@@ -2497,8 +2605,8 @@ const Position &CWeenieObject::GetPosition()
 	/*
 	if (!_phys_obj)
 	{
-		static Position emptyPosition;
-		return emptyPosition;
+	static Position emptyPosition;
+	return emptyPosition;
 	}
 
 	return _phys_obj->m_Position;
@@ -2507,11 +2615,148 @@ const Position &CWeenieObject::GetPosition()
 	return m_Position;
 }
 
+void CWeenieObject::CheckForTickingDots()
+{
+	if (m_Qualities._enchantment_reg && m_Qualities._enchantment_reg->_add_list && m_Qualities._enchantment_reg->_add_list->size() > 0)
+	{
+		CWeenieObject* dfSource = nullptr;
+		CWeenieObject* voidSource = nullptr;
+		std::vector<std::string> dotspellNames;
+		std::vector<std::string> voidspellNames;
+		for (auto it = m_Qualities._enchantment_reg->_add_list->begin(); it != m_Qualities._enchantment_reg->_add_list->end(); ++it)
+		{
+			CSpellTable *pSpellTable = MagicSystem::GetSpellTable();
+			const CSpellBase *pSpellBase = pSpellTable->GetSpellBase(it->_id);
+			if (pSpellBase && (pSpellBase->_bitfield & DamageOverTime_SpellIndex))
+			{
+				if (it->_spell_category == DF_Bleed_Damage_SpellCategory)
+				{
+					dfSource = g_pWorld->FindObject(it->_caster);
+					if (g_pConfig->ShowDotSpells())
+						dotspellNames.push_back(pSpellBase->_name);
+				}
+				else if (it->_spell_category == NetherDamageOverTime_Raising_SpellCategory || it->_spell_category == NetherDamageOverTime_Raising2_SpellCategory ||
+					it->_spell_category == NetherDamageOverTime_Raising3_SpellCategory)
+				{
+					voidSource = g_pWorld->FindObject(it->_caster);
+					if (g_pConfig->ShowDotSpells())
+						voidspellNames.push_back(pSpellBase->_name);
+				}
+			}
+			if(pSpellBase && it->_spell_category == AetheriaProcDamageOverTime_Raising_SpellCategory)
+			{
+				if (g_pConfig->ShowDotSpells())
+				{
+					dfSource = g_pWorld->FindObject(it->_caster);
+					if (dfSource)
+					{
+						CWeenieObject* owner = dfSource->GetWorldTopLevelOwner();
+						dotspellNames.push_back(pSpellBase->_name);
+					}
+				}
+			}
+		}
+
+		int dfValue = 0;
+		//if (dfValue > 0 && AsPlayer())
+		//	AsPlayer()->SendText(csprintf("DOT: %u", dfValue), LTT_COMBAT);
+		if (m_Qualities.EnchantInt(DAMAGE_OVER_TIME_INT, dfValue, false))
+		{
+			DamageEventData dfDamage;
+			dfDamage.baseDamage = (double)dfValue;
+			dfDamage.damage_type = BASE_DAMAGE_TYPE;
+			dfDamage.source = dfSource;
+			dfDamage.target = this;
+			dfDamage.outputDamageFinal = dfValue;
+			TakeDamage(dfDamage);
+			_phys_obj->EmitEffect(PS_DirtyFightingDamageOverTime, 1.0);
+			if (!dfDamage.killingBlow && AsPlayer())
+			{
+				if (g_pConfig->ShowDotSpells())
+				{
+					std::string s;
+					bool first = true;
+					for (const auto &sname : dotspellNames)
+					{
+						if (!first)
+							s += " and ";
+						else
+							first = false;
+						s += sname;
+					}
+					AsPlayer()->SendText(csprintf("You take %u points of periodic damage from %s.", dfValue, s.c_str()), LTT_COMBAT);
+				}
+				else
+				{
+					AsPlayer()->SendText(csprintf("You take %u points of periodic damage.", dfValue), LTT_COMBAT);
+				}
+			}
+		}
+
+		int voidDotValue = 0;
+		//if (voidDotValue > 0 && AsPlayer())
+		//	AsPlayer()->SendText(csprintf("NOT: %u", voidDotValue), LTT_COMBAT);
+		if (m_Qualities.EnchantInt(NETHER_OVER_TIME_INT, voidDotValue, false))
+		{
+			DamageEventData vdDamage;
+			vdDamage.baseDamage = (double)voidDotValue;
+			vdDamage.damage_type = NETHER_DAMAGE_TYPE;
+			vdDamage.source = voidSource;
+			vdDamage.isDot = true;
+			vdDamage.target = this;
+			vdDamage.outputDamageFinal = voidDotValue;
+			TakeDamage(vdDamage);
+			_phys_obj->EmitEffect(PS_HealthDownVoid, 1.0);
+			if (!vdDamage.killingBlow && AsPlayer())
+			{
+				if (g_pConfig->ShowDotSpells())
+				{
+					std::string s;
+					bool first = true;
+					for (const auto &sname : voidspellNames)
+					{
+						if (!first)
+							s += " and ";
+						else
+							first = false;
+						s += sname;
+					}
+					AsPlayer()->SendText(csprintf("You take %u points of periodic nether damage from %s.", (uint32_t)((double)voidDotValue * g_pConfig->VoidDamageReduction()), s.c_str()), LTT_COMBAT);
+				}
+				else
+				{
+					AsPlayer()->SendText(csprintf("You take %u points of periodic nether damage.", (uint32_t)((double)voidDotValue * g_pConfig->VoidDamageReduction())), LTT_COMBAT);
+				}
+			}
+		}
+	}
+}
+
+void CWeenieObject::CheckForTickingHots()
+{
+	if (m_Qualities._enchantment_reg && m_Qualities._enchantment_reg->_add_list && m_Qualities._enchantment_reg->_add_list->size() > 0)
+	{
+		for (auto it = m_Qualities._enchantment_reg->_add_list->begin(); it != m_Qualities._enchantment_reg->_add_list->end(); ++it)
+		{
+			CSpellTable *pSpellTable = MagicSystem::GetSpellTable();
+			const CSpellBase *pSpellBase = pSpellTable->GetSpellBase(it->_id);
+			if (pSpellBase && ((pSpellBase->_category == HealOverTime_Raising_SpellCategory) || (pSpellBase->_category == AetheriaProcHealthOverTime_Raising_SpellCategory)))
+			{
+				int hValue = 0;
+				if (m_Qualities.EnchantInt(HEAL_OVER_TIME_INT, hValue, false))
+				{
+					AdjustHealth(hValue, false);
+				}
+			}
+		}
+	}
+}
+
 void CWeenieObject::CheckForExpiredEnchantments()
 {
 	if (m_Qualities._enchantment_reg)
 	{
-		PackableListWithJson<DWORD> expired;
+		PackableListWithJson<uint32_t> expired;
 		m_Qualities._enchantment_reg->GetExpiredEnchantments(&expired);
 
 		if (expired.size())
@@ -2521,30 +2766,13 @@ void CWeenieObject::CheckForExpiredEnchantments()
 			if (AsPlayer())
 			{
 				BinaryWriter expireMessage;
-				expireMessage.Write<DWORD>(0x2C5);
+				expireMessage.Write<uint32_t>(0x2C5);
 				expired.Pack(&expireMessage);
 
 				SendNetMessage(&expireMessage, PRIVATE_MSG, TRUE, FALSE);
 				EmitSound(Sound_SpellExpire, 1.0f, true);
 			}
-			else if (CWeenieObject *topMostOwner = GetWorldTopLevelOwner())
-			{
-				if (topMostOwner->AsPlayer())
-				{
-					for (auto spellExpired : expired)
-					{
-						const CSpellBase *spellBase = MagicSystem::GetSpellTable()->_spellBaseHash.lookup(spellExpired);
-
-						if (spellBase)
-						{
-							topMostOwner->SendText(csprintf("The spell %s on %s has expired.", spellBase->_name.c_str(), GetName().c_str()), LTT_MAGIC);
-						}
-					}
-
-					topMostOwner->EmitSound(Sound_SpellExpire, 1.0f, true);
-				}
-			}
-
+	
 			CheckVitalRanges();
 		}
 	}
@@ -2657,7 +2885,10 @@ void CWeenieObject::WieldedTick()
 							wielder->SendText(csprintf("The %s will run out of mana soon.", GetName().c_str()), LTT_MAGIC); //todo: made up message, confirm if it's correct
 					}
 
-					_nextManaUse = Timer::cur_time + (-manaRate * 1000);
+					if (wielder->AsPlayer())
+						manaRate *= wielder->m_Qualities.GetNegativeRating(LUM_AUG_ITEM_MANA_USAGE_INT, false);
+
+					_nextManaUse = Timer::cur_time + (1 / -manaRate);
 				}
 				else
 				{
@@ -2675,7 +2906,7 @@ void CWeenieObject::WieldedTick()
 						// remove any enchantments
 						if (wielder->m_Qualities._enchantment_reg)
 						{
-							PackableListWithJson<DWORD> spells_to_remove;
+							PackableListWithJson<uint32_t> spells_to_remove;
 
 							if (wielder->m_Qualities._enchantment_reg->_add_list)
 							{
@@ -2717,7 +2948,7 @@ void CWeenieObject::WieldedTick()
 								if (wielder->AsPlayer())
 								{
 									BinaryWriter silentRemoveMessage;
-									silentRemoveMessage.Write<DWORD>(0x2C8);
+									silentRemoveMessage.Write<uint32_t>(0x2C8);
 									spells_to_remove.Pack(&silentRemoveMessage);
 
 									wielder->SendNetMessage(&silentRemoveMessage, PRIVATE_MSG, TRUE, FALSE);
@@ -2729,7 +2960,7 @@ void CWeenieObject::WieldedTick()
 
 						if (m_Qualities._enchantment_reg)
 						{
-							PackableListWithJson<DWORD> spells_to_remove;
+							PackableListWithJson<uint32_t> spells_to_remove;
 
 							if (m_Qualities._enchantment_reg->_add_list)
 							{
@@ -2786,6 +3017,8 @@ void CWeenieObject::InventoryTick()
 		m_EmoteManager->Tick();
 
 	CheckForExpiredEnchantments();
+
+	Tick();
 }
 
 void CWeenieObject::Tick()
@@ -2799,100 +3032,161 @@ void CWeenieObject::Tick()
 	if (m_EmoteManager)
 		m_EmoteManager->Tick();
 
-	CheckForExpiredEnchantments();
+	if (m_UseManager)
+		m_UseManager->Update();
 
-	if (_nextRegen >= 0 && _nextRegen <= Timer::cur_time)
+	if (AsPlayer() && IsMovingTo(MovementTypes::MoveToObject))
 	{
-		if (m_Qualities._generator_queue)
-		{
-			PackableList<GeneratorQueueNode> &queue = m_Qualities._generator_queue->_queue;
-			for (auto entry = queue.begin(); entry != queue.end();)
-			{
-				if (entry->when <= Timer::cur_time)
-				{
-					double regenInterval = 0.0;
-					if (m_Qualities.InqFloat(REGENERATION_INTERVAL_FLOAT, regenInterval) && regenInterval > 0.0)
-					{
-						if (m_Qualities._generator_table)
-						{
-							for (auto &profile : m_Qualities._generator_table->_profile_list)
-							{
-								if (profile.slot == entry->slot)
-								{
-									g_pWeenieFactory->GenerateFromTypeOrWcid(this, &profile);
-									break;
-								}
-							}
-						}
-					}
-
-					//ChanceCreateGeneratorSlot(entry->slot);
-					entry = queue.erase(entry);
-					continue;
-				}
-
-				entry++;
-			}
-		}
-
-		g_pWeenieFactory->AddFromGeneratorTable(this, false);
-
-		int numSpawned = m_Qualities._generator_registry ? (DWORD)m_Qualities._generator_registry->_registry.size() : 0;
-		if ((!m_Qualities._generator_queue || m_Qualities._generator_queue->_queue.empty()) && numSpawned >= InqIntQuality(MAX_GENERATED_OBJECTS_INT, 0, TRUE))
-			_nextRegen = -1.0;
-		else
-			_nextRegen = Timer::cur_time + (InqFloatQuality(REGENERATION_INTERVAL_FLOAT, -1.0, TRUE) * g_pConfig->RespawnTimeMultiplier());
+		CWeenieObject *target = g_pWorld->FindWithinPVS(this, movement_manager->moveto_manager->top_level_object_id);
+		if (!target)
+			movement_manager->CancelMoveTo(WERROR_OBJECT_GONE);
 	}
+
+	if (AsPlayer())
+	{
+		int allegUpdate;
+		m_Qualities.InqBool(ALLEGIANCE_UPDATE_REQUEST_BOOL, allegUpdate);
+		if (allegUpdate)
+		{
+			g_pAllegianceManager->SendAllegianceProfile(this->AsPlayer());
+			m_Qualities.SetBool(ALLEGIANCE_UPDATE_REQUEST_BOOL, false);
+		}
+	}
+
+	UpdateGenerator();
 
 	if (_nextHeartBeat != -1.0 && _nextHeartBeat <= Timer::cur_time)
 	{
 		if (!IsDead() && !IsInPortalSpace())
 		{
-			if (_nextHeartBeatEmote != -1.0 && _nextHeartBeatEmote <= Timer::cur_time)
+			if (IsCompletelyIdle()) // Don't perform idle emotes unless you are completely idle, but allow vital regeneration.
 			{
-				_nextHeartBeatEmote = Timer::cur_time + Random::GenUInt(2, 15); //add a little variation to avoid synchronization.
-
-				//_last_update_pos is the time of the last attack/movement/action, basically we don't want to do heartBeat emotes if we're active.
-				if (Timer::cur_time > _last_update_pos + 10.0 && m_Qualities._emote_table)
+				if (_nextHeartBeatEmote != -1.0 && _nextHeartBeatEmote <= Timer::cur_time)
 				{
-					PackableList<EmoteSet> *emoteSetList = m_Qualities._emote_table->_emote_table.lookup(HeartBeat_EmoteCategory);
-			
-					if (emoteSetList)
+					_nextHeartBeatEmote = Timer::cur_time + Random::GenUInt(2, 15); //add a little variation to avoid synchronization.
+
+					//_last_update_pos is the time of the last attack/movement/action, basically we don't want to do heartBeat emotes if we're active.
+					if (Timer::cur_time > _last_update_pos + 30.0 && m_Qualities._emote_table)
 					{
-						double dice = Random::GenFloat(0.0, 1.0);
+						PackableList<EmoteSet> *emoteSetList = m_Qualities._emote_table->_emote_table.lookup(HeartBeat_EmoteCategory);
 
-						for (auto &emoteSet : *emoteSetList)
+						if (emoteSetList)
 						{
-							if (dice < emoteSet.probability)
-							{
-								if (movement_manager && movement_manager->motion_interpreter)
-								{
-									if (emoteSet.style == movement_manager->motion_interpreter->interpreted_state.current_style &&
-										emoteSet.substyle == movement_manager->motion_interpreter->interpreted_state.forward_command &&
-										!movement_manager->motion_interpreter->interpreted_state.turn_command &&
-										!movement_manager->motion_interpreter->interpreted_state.sidestep_command)
-									{
-										MakeEmoteManager()->ExecuteEmoteSet(emoteSet, 0);
-									}
-								}
+							double dice = Random::GenFloat(0.0, 1.0);
 
-								break;
+							for (auto &emoteSet : *emoteSetList)
+							{
+								if (dice < emoteSet.probability)
+								{
+									if (movement_manager && movement_manager->motion_interpreter)
+									{
+										if (emoteSet.style == movement_manager->motion_interpreter->interpreted_state.current_style &&
+											emoteSet.substyle == movement_manager->motion_interpreter->interpreted_state.forward_command &&
+											!movement_manager->motion_interpreter->interpreted_state.turn_command &&
+											!movement_manager->motion_interpreter->interpreted_state.sidestep_command)
+										{
+											MakeEmoteManager()->ExecuteEmoteSet(emoteSet, 0);
+										}
+									}
+
+									break;
+								}
 							}
 						}
 					}
 				}
 			}
+			else
+				_nextHeartBeatEmote = Timer::cur_time + 30.0;
 
 			CheckRegeneration(InqFloatQuality(HEALTH_RATE_FLOAT, 0.0), HEALTH_ATTRIBUTE_2ND, MAX_HEALTH_ATTRIBUTE_2ND);
 			CheckRegeneration(InqFloatQuality(STAMINA_RATE_FLOAT, 0.0), STAMINA_ATTRIBUTE_2ND, MAX_STAMINA_ATTRIBUTE_2ND);
 			CheckRegeneration(InqFloatQuality(MANA_RATE_FLOAT, 0.0), MANA_ATTRIBUTE_2ND, MAX_MANA_ATTRIBUTE_2ND);
+
+
+		}
+		CheckForTickingDots();
+		CheckForTickingHots();
+		CheckForExpiredEnchantments();
+
+		bool serverGagCheck = false;
+		int isSGagged = 0;
+		if (m_Qualities.InqBool(IS_GAGGED_BOOL, isSGagged) && isSGagged && !serverGagCheck)
+		{
+			double gagDuration;
+			if (m_Qualities.InqFloat(GAG_DURATION_FLOAT, gagDuration) && gagDuration > 0)
+			{
+				double gagTS;
+				if (m_Qualities.InqFloat(GAG_TIMESTAMP_FLOAT, gagTS))
+				{
+					double currenTime = Time::GetTimeCurrent();
+					if (currenTime > (gagTS + gagDuration))
+					{
+						serverGagCheck = true;
+						g_pDBIO->RemoveServerGag(GetID());
+						m_Qualities.SetBool(IS_GAGGED_BOOL, false);
+					}
+				}
+			}
 		}
 
-		double heartbeatInterval;
-		if (m_Qualities.InqFloat(HEARTBEAT_INTERVAL_FLOAT, heartbeatInterval, TRUE))
-			_nextHeartBeat = Timer::cur_time + heartbeatInterval;
-		else
-			_nextHeartBeat = -1.0;
+		bool allegGagCheck = false;
+		int isAGagged = 0;
+		if (m_Qualities.InqBool(IS_ALLEGIANCE_GAGGED_BOOL, isAGagged) && isAGagged && !allegGagCheck)
+		{
+			double gagDuration;
+			if (m_Qualities.InqFloat(ALLEGIANCE_GAG_DURATION_FLOAT, gagDuration) && gagDuration > 0)
+			{
+				double gagTS;
+				if (m_Qualities.InqFloat(ALLEGIANCE_GAG_TIMESTAMP_FLOAT, gagTS))
+				{
+					double currenTime = Time::GetTimeCurrent();
+					if (currenTime > (gagTS + gagDuration))
+					{
+						allegGagCheck = true;
+						m_Qualities.SetBool(IS_ALLEGIANCE_GAGGED_BOOL, false);
+					}
+				}
+			}
+		}
+
+		int lifespan = 0;
+		if (m_Qualities.InqInt(LIFESPAN_INT, lifespan))
+		{
+			if (lifespan > 0)
+			{
+				int lsRemain = 0;
+				if (m_Qualities.InqInt(REMAINING_LIFESPAN_INT, lsRemain) && lsRemain > 0)
+				{
+					m_Qualities.AdjInt(REMAINING_LIFESPAN_INT, -m_Qualities.GetFloat(HEARTBEAT_INTERVAL_FLOAT, DEFAULT_HEARTBEAT_INTERVAL));
+					NotifyIntStatUpdated(REMAINING_LIFESPAN_INT);
+				}
+				else
+				{
+					CWeenieObject *owner = GetWorldTopLevelOwner();
+
+					if (owner)
+					{
+						if (IsWielded())
+						{
+							if (owner->id == GetWielderID())
+							{
+								owner->DoForcedStopCompletely();
+								owner->ChangeCombatMode(NONCOMBAT_COMBAT_MODE, false);
+							}
+						}
+						Remove();
+						owner->RecalculateEncumbrance();
+						owner->SendText(csprintf("Its lifespan finished, your %s crumbles to dust.", GetName().c_str()), LTT_DEFAULT);
+						if ((AsClothing() || IsWielded()) && m_bWorldIsAware)
+							owner->UpdateModel();
+					}
+				}
+			}
+		}
+
+
+		_nextHeartBeat = Timer::cur_time + m_Qualities.GetFloat(HEARTBEAT_INTERVAL_FLOAT, DEFAULT_HEARTBEAT_INTERVAL);
 
 		m_Qualities.SetFloat(HEARTBEAT_TIMESTAMP_FLOAT, Timer::cur_time);
 	}
@@ -2908,7 +3202,8 @@ void CWeenieObject::Tick()
 
 	if (_timeToRot >= 0 && _timeToRot <= Timer::cur_time)
 	{
-		if (!HasOwner())
+		// Allow items to rot if they have a predetermined lifespan.
+		if (!HasOwner() || m_Qualities.GetInt(REMAINING_LIFESPAN_INT, 0) <= 0)
 		{
 			if (_beganRot)
 			{
@@ -2919,11 +3214,16 @@ void CWeenieObject::Tick()
 			}
 			else
 			{
-				EmitEffect(PS_Destroy, 1.0f);
+				if(!IsContained())
+					EmitEffect(PS_Destroy, 1.0f);
 				_beganRot = true;
 			}
 		}
 	}
+
+	
+
+	TaskRun();
 }
 
 void CWeenieObject::CheckRegeneration(double rate, STypeAttribute2nd currentAttrib, STypeAttribute2nd maxAttrib)
@@ -2936,15 +3236,15 @@ void CWeenieObject::CheckRegeneration(double rate, STypeAttribute2nd currentAttr
 		//some combination of strength and endurance(with endurance being more important) allows one to regenerate hit points at a 
 		//faster rate the higher one's endurance is. This bonus is in addition to any regeneration spells one may have placed upon themselves. 
 		//This regeneration bonus caps at around 110%. 
-		if(currentAttrib == HEALTH_ATTRIBUTE_2ND)
+		if (currentAttrib == HEALTH_ATTRIBUTE_2ND)
 		{
-			DWORD strength = 0;
-			DWORD endurance = 0;
+			uint32_t strength = 0;
+			uint32_t endurance = 0;
 			m_Qualities.InqAttribute(STRENGTH_ATTRIBUTE, strength, true);
 			m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
 			float strAndEnd = (float)(strength + (endurance * 2));
 			float regenMod = 1.0 + (0.0494 * pow(strAndEnd, 1.179) / 100.0f); //formula deduced from values present in the client pdb.
-			regenMod = min(max(regenMod, 1.0), 2.1);
+			regenMod = min(max(regenMod, 1.0f), 2.1f);
 
 			rate *= regenMod;
 		}
@@ -2966,11 +3266,24 @@ void CWeenieObject::CheckRegeneration(double rate, STypeAttribute2nd currentAttr
 					break;
 				case Motion_Sleeping:
 					rate *= 3;
+
+					if (m_Qualities.GetInt(AUGMENTATION_FASTER_REGEN_INT, 0))
+						rate *= 2;
+
 					break;
 				}
 			}
 			else
 				rate *= 0.5; //in combat regen
+		}
+	}
+	else if (AsMonster() && !InqBoolQuality(AI_IMMOBILE_BOOL, FALSE))
+	{
+		// boosted out of combat regen
+		// avoid if the AI is immobile (doors, crystals, etc)
+		if (get_minterp()->interpreted_state.current_style == Motion_NonCombat)
+		{
+			rate *= 100;
 		}
 	}
 
@@ -3005,26 +3318,21 @@ void CWeenieObject::CheckRegeneration(double rate, STypeAttribute2nd currentAttr
 
 	if (regenAmount > 0)
 	{
-		DWORD currentVital = 0, maxVital = 0;
+		uint32_t currentVital = 0, maxVital = 0;
 		if (m_Qualities.InqAttribute2nd(currentAttrib, currentVital, FALSE) && m_Qualities.InqAttribute2nd(maxAttrib, maxVital, FALSE))
 		{
 			if (currentVital < maxVital)
 			{
 				currentVital += regenAmount;
 
-				//currentVital += (DWORD)(ceil(rate) + F_EPSILON); //previously
+				//currentVital += (uint32_t)(ceil(rate) + F_EPSILON); //previously
 
 				if (currentVital > maxVital)
 				{
 					currentVital = maxVital;
 				}
 
-				m_Qualities.SetAttribute2nd(currentAttrib, currentVital);
-
-				if (AsPlayer())
-				{
-					NotifyAttribute2ndStatUpdated(currentAttrib);
-				}
+				OnRegen(currentAttrib, currentVital);
 			}
 		}
 	}
@@ -3032,28 +3340,28 @@ void CWeenieObject::CheckRegeneration(double rate, STypeAttribute2nd currentAttr
 
 void CWeenieObject::SetupWeenie()
 {
-	// correct the icon
-	DWORD clothing_table_id = InqDIDQuality(CLOTHINGBASE_DID, 0);
-	DWORD palette_template_key = InqIntQuality(PALETTE_TEMPLATE_INT, 0);
+	//// correct the icon
+	//uint32_t clothing_table_id = InqDIDQuality(CLOTHINGBASE_DID, 0);
+	//uint32_t palette_template_key = InqIntQuality(PALETTE_TEMPLATE_INT, 0);
 
-	if (clothing_table_id && palette_template_key)
-	{
-		if (!InqBoolQuality(IGNORE_CLO_ICONS_BOOL, FALSE))
-		{
-			if (ClothingTable *clothingTable = ClothingTable::Get(clothing_table_id))
-			{
-				if (const CloPaletteTemplate *pPaletteTemplate = clothingTable->_paletteTemplatesHash.lookup(palette_template_key))
-				{
-					if (pPaletteTemplate->iconID)
-					{
-						SetIcon(pPaletteTemplate->iconID);
-					}
-				}
+	//if (clothing_table_id && palette_template_key)
+	//{
+	//	if (!InqBoolQuality(IGNORE_CLO_ICONS_BOOL, FALSE))
+	//	{
+	//		if (ClothingTable *clothingTable = ClothingTable::Get(clothing_table_id))
+	//		{
+	//			if (const CloPaletteTemplate *pPaletteTemplate = clothingTable->_paletteTemplatesHash.lookup(palette_template_key))
+	//			{
+	//				if (pPaletteTemplate->iconID)
+	//				{
+	//					SetIcon(pPaletteTemplate->iconID);
+	//				}
+	//			}
 
-				ClothingTable::Release(clothingTable);
-			}
-		}
-	}
+	//			ClothingTable::Release(clothingTable);
+	//		}
+	//	}
+	//}
 }
 
 void CWeenieObject::PostSpawn()
@@ -3063,59 +3371,26 @@ void CWeenieObject::PostSpawn()
 		SetLocked(FALSE);
 	}
 
-	InitCreateGenerator();
-
 	double heartbeatInterval;
 	if (m_Qualities.InqFloat(HEARTBEAT_INTERVAL_FLOAT, heartbeatInterval, TRUE))
 		_nextHeartBeat = Timer::cur_time + heartbeatInterval;
+	else
+	{
+		m_Qualities.SetFloat(HEARTBEAT_INTERVAL_FLOAT, DEFAULT_HEARTBEAT_INTERVAL);
+		NotifyFloatStatUpdated(HEARTBEAT_INTERVAL_FLOAT);
+		_nextHeartBeat = Timer::cur_time + DEFAULT_HEARTBEAT_INTERVAL;
+	}
 
 	if (m_Qualities._emote_table && m_Qualities._emote_table->_emote_table.lookup(HeartBeat_EmoteCategory))
 		_nextHeartBeatEmote = Timer::cur_time + Random::GenUInt(2, 15); //We have heartBeat emotes so schedule them.
-}
-
-bool CWeenieObject::IsGeneratorSlotReady(int slot)
-{
-	if (m_Qualities._generator_registry)
-	{
-		for (auto &entry : m_Qualities._generator_registry->_registry)
-		{
-			if (entry.second.slot == slot)
-			{
-				return false;
-			}
-		}
-	}
-
-	if (m_Qualities._generator_queue)
-	{
-		for (auto &entry : m_Qualities._generator_queue->_queue)
-		{
-			if (entry.slot == slot && entry.when > Timer::cur_time)
-			{
-				return false;
-			}
-		}
-	}
-
-	return true;
-}
-
-void CWeenieObject::InitCreateGenerator()
-{
-	std::string eventString;
-	if (m_Qualities.InqString(GENERATOR_EVENT_STRING, eventString))
-	{
-		if(g_pGameEventManager->IsEventStarted(eventString.c_str()))
-			g_pWeenieFactory->AddFromGeneratorTable(this, true);
-	}
-	else
-		g_pWeenieFactory->AddFromGeneratorTable(this, true);
 }
 
 bool CWeenieObject::IsStorage()
 {
 	return (m_Qualities.id == W_STORAGE_CLASS) ? true : false; // "STORAGE"
 }
+
+
 
 bool CWeenieObject::CanPickup()
 {
@@ -3145,9 +3420,9 @@ void CWeenieObject::RemovePreviousInstance()
 
 	BinaryWriter message;
 
-	message.Write<DWORD>(0xF747);
-	message.Write<DWORD>(GetID());
-	message.Write<DWORD>(_instance_timestamp - 1);
+	message.Write<uint32_t>(0xF747);
+	message.Write<uint32_t>(GetID());
+	message.Write<uint32_t>(_instance_timestamp - 1);
 
 	g_pWorld->BroadcastPVS(this, message.GetData(), message.GetSize());
 }
@@ -3159,8 +3434,8 @@ void CWeenieObject::UpdateModel()
 
 	BinaryWriter MU;
 
-	MU.Write<DWORD>(0xF625);
-	MU.Write<DWORD>(GetID());
+	MU.Write<uint32_t>(0xF625);
+	MU.Write<uint32_t>(GetID());
 
 	ObjDesc objDesc;
 	GetObjDesc(objDesc);
@@ -3169,21 +3444,24 @@ void CWeenieObject::UpdateModel()
 	MU.Write<WORD>(_instance_timestamp);
 	MU.Write<WORD>(++_objdesc_timestamp);
 
-	g_pWorld->BroadcastPVS(this, MU.GetData(), MU.GetSize());
+	g_pWorld->BroadcastPVS(this, MU.GetData(), MU.GetSize(), OBJECT_MSG, false, false, true);
 }
 
 void CWeenieObject::GetObjDesc(ObjDesc &objDesc)
 {
 	// Generate 
 	objDesc.Wipe();
-	
-	if (m_bObjDescOverride)
-	{
-		objDesc = m_ObjDescOverride;
-		return;
-	}
 
-	DWORD basePaletteID;
+	objDesc = m_ObjDescOverride;
+
+	//if (m_bObjDescOverride)
+	//{
+	//	objDesc = m_ObjDescOverride;
+	//	return;
+	//}
+
+	uint32_t basePaletteID;
+
 	if (m_Qualities.InqDataID(PALETTE_BASE_DID, basePaletteID))
 		objDesc.paletteID = basePaletteID;
 	else
@@ -3192,7 +3470,8 @@ void CWeenieObject::GetObjDesc(ObjDesc &objDesc)
 	if (objDesc.paletteID == 0x04000B75)
 		objDesc.paletteID = 0x0400007E; // shadows are messed up
 
-	DWORD clothingBaseID;
+	uint32_t clothingBaseID;
+
 	if (m_Qualities.InqDataID(CLOTHINGBASE_DID, clothingBaseID))
 	{
 		ClothingTable *clothingTable = ClothingTable::Get(clothingBaseID);
@@ -3209,7 +3488,19 @@ void CWeenieObject::GetObjDesc(ObjDesc &objDesc)
 			if (m_Qualities.InqFloat(SHADE4_FLOAT, shade))
 				shades._val[3] = shade;
 
-			clothingTable->BuildObjDesc(GetSetupID(), InqIntQuality(PALETTE_TEMPLATE_INT, 0), &shades, &objDesc);
+
+
+			uint32_t paletteTemplateID = InqIntQuality(PALETTE_TEMPLATE_INT, 0);
+			uint32_t iconId = 0;
+			
+			clothingTable->BuildObjDesc(GetSetupID(), paletteTemplateID, &shades, &objDesc, &iconId);
+
+			// correct the icon
+			if (!InqBoolQuality(IGNORE_CLO_ICONS_BOOL, FALSE) && iconId)
+			{
+				SetIcon(iconId);
+			}
+
 			ClothingTable::Release(clothingTable);
 		}
 	}
@@ -3217,33 +3508,32 @@ void CWeenieObject::GetObjDesc(ObjDesc &objDesc)
 	{
 		// if not using a clothing base, start objDesc from model itself
 		// TODO: fix this later, quick fix to handle unequipping resetting the model parts
-		if (_IsPlayer() && part_array && part_array->setup)
+		if (_IsPlayer() && part_array && part_array->setup && part_array->setup->parts)
 		{
-			for (DWORD i = 0; i < part_array->setup->num_parts; i++)
+			for (uint32_t i = 0; i < part_array->setup->num_parts; i++)
 			{
-				if (part_array->setup && part_array->setup->parts && part_array->setup->num_parts > 0)
-					objDesc.AddAnimPartChange(new AnimPartChange(i, part_array->setup->parts[i]));
+				objDesc.AddAnimPartChange(new AnimPartChange(i, part_array->setup->parts[i]));
 			}
 		}
 	}
 }
 
-void CWeenieObject::SetMotionTableID(DWORD motion_table_did)
+void CWeenieObject::SetMotionTableID(uint32_t motion_table_did)
 {
 	m_Qualities.SetDataID(MOTION_TABLE_DID, motion_table_did);
 }
 
-void CWeenieObject::SetSetupID(DWORD setup_did)
+void CWeenieObject::SetSetupID(uint32_t setup_did)
 {
 	m_Qualities.SetDataID(SETUP_DID, setup_did);
 }
 
-void CWeenieObject::SetSoundTableID(DWORD sound_table_did)
+void CWeenieObject::SetSoundTableID(uint32_t sound_table_did)
 {
 	m_Qualities.SetDataID(SOUND_TABLE_DID, sound_table_did);
 }
 
-void CWeenieObject::SetPETableID(DWORD pe_table_did)
+void CWeenieObject::SetPETableID(uint32_t pe_table_did)
 {
 	m_Qualities.SetDataID(PHYSICS_EFFECT_TABLE_DID, pe_table_did);
 }
@@ -3253,7 +3543,7 @@ void CWeenieObject::SetScale(float value)
 	m_Qualities.SetFloat(DEFAULT_SCALE_FLOAT, value);
 }
 
-void CWeenieObject::SetIcon(DWORD icon_did)
+void CWeenieObject::SetIcon(uint32_t icon_did)
 {
 	m_Qualities.SetDataID(ICON_DID, icon_did);
 }
@@ -3292,10 +3582,10 @@ void CWeenieObject::SetRadarBlipColor(RadarBlipEnum color)
 	9 = Envoy Light Blue
 	10 = Fellowship Bright Green?
 	*/
-	m_Qualities.SetInt(RADARBLIP_COLOR_INT, (int) color);
+	m_Qualities.SetInt(RADARBLIP_COLOR_INT, (int)color);
 }
 
-void CWeenieObject::SetInitialPhysicsState(DWORD physics_state)
+void CWeenieObject::SetInitialPhysicsState(uint32_t physics_state)
 {
 	m_Qualities.SetInt(PHYSICS_STATE_INT, physics_state);
 }
@@ -3305,45 +3595,48 @@ void CWeenieObject::SetInitialPosition(const Position &position)
 	m_Qualities.SetPosition(INSTANTIATION_POSITION, position);
 }
 
-void CWeenieObject::SetSpellID(DWORD spell_id)
+void CWeenieObject::SetSpellID(uint32_t spell_id)
 {
 	m_Qualities.SetDataID(SPELL_DID, spell_id);
 }
 
 
-DWORD CWeenieObject::GetValue()
+uint32_t CWeenieObject::GetValue()
 {
 	return m_Qualities.GetInt(VALUE_INT, 0);
 }
 
-void CWeenieObject::SetValue(DWORD amount)
+void CWeenieObject::SetValue(uint32_t amount)
 {
 	m_Qualities.SetInt(VALUE_INT, amount);
 }
 
-DWORD CWeenieObject::GetSpellID()
+uint32_t CWeenieObject::GetSpellID()
 {
 	return m_Qualities.GetDID(SPELL_DID, 0);
 }
 
-DWORD CWeenieObject::GetIcon()
+uint32_t CWeenieObject::GetIcon()
 {
-	DWORD icon = 0;
+	uint32_t icon = 0;
 	m_Qualities.InqDataID(ICON_DID, icon);
 	return icon;
 }
 
 std::string CWeenieObject::GetName()
 {
-	if (MaterialType type = (MaterialType)InqIntQuality(MATERIAL_TYPE_INT, 0))
+	if (!_IsPlayer())
 	{
-		if (type != MaterialType::Leather_MaterialType)
+		if (MaterialType type = (MaterialType)InqIntQuality(MATERIAL_TYPE_INT, 0))
 		{
-			std::string name;
-			MaterialTypeEnumMapper::MaterialTypeToString(type, name);
-			name.append(" ");
-			name.append(InqStringQuality(NAME_STRING, ""));
-			return name;
+			if (type != MaterialType::Leather_MaterialType)
+			{
+				std::string name;
+				MaterialTypeEnumMapper::MaterialTypeToString(type, name);
+				name.append(" ");
+				name.append(InqStringQuality(NAME_STRING, ""));
+				return name;
+			}
 		}
 	}
 	std::string name;
@@ -3433,7 +3726,7 @@ BOOL CWeenieObject::DoCollision(const class ObjCollisionProfile &prof)
 	return 1;
 }
 
-void CWeenieObject::DoCollisionEnd(DWORD object_id)
+void CWeenieObject::DoCollisionEnd(uint32_t object_id)
 {
 }
 
@@ -3451,9 +3744,9 @@ int CWeenieObject::InqIntQuality(STypeInt key, int defaultValue, BOOL raw)
 	return value;
 }
 
-long long CWeenieObject::InqInt64Quality(STypeInt64 key, long long defaultValue)
+int64_t CWeenieObject::InqInt64Quality(STypeInt64 key, int64_t defaultValue)
 {
-	long long value = defaultValue;
+	int64_t value = (int64_t)defaultValue;
 	m_Qualities.InqInt64(key, value);
 	return value;
 }
@@ -3479,16 +3772,16 @@ std::string CWeenieObject::InqStringQuality(STypeString key, std::string default
 	return value;
 }
 
-DWORD CWeenieObject::InqDIDQuality(STypeDID key, DWORD defaultValue)
+uint32_t CWeenieObject::InqDIDQuality(STypeDID key, uint32_t defaultValue)
 {
-	DWORD value = defaultValue;
+	uint32_t value = defaultValue;
 	m_Qualities.InqDataID(key, value);
 	return value;
 }
 
-DWORD CWeenieObject::InqIIDQuality(STypeIID key, DWORD defaultValue)
+uint32_t CWeenieObject::InqIIDQuality(STypeIID key, uint32_t defaultValue)
 {
-	DWORD value = defaultValue;
+	uint32_t value = defaultValue;
 	m_Qualities.InqInstanceID(key, value);
 	return value;
 }
@@ -3530,8 +3823,15 @@ bool CWeenieObject::GetBodyArmorEnchantmentDetails(unsigned int bodyPart, DAMAGE
 
 void CWeenieObject::TryCancelAttack()
 {
+	int mode;
+	if (m_Qualities.InqInt(COMBAT_MODE_INT, mode) && (COMBAT_MODE)mode == MAGIC_COMBAT_MODE)
+		return;
+
 	if (m_AttackManager)
 		m_AttackManager->Cancel();
+
+	if (_IsPlayer() && !IsInPeaceMode())
+		AsPlayer()->m_bCancelAttack = true;
 }
 
 void CWeenieObject::HandleAttackHook(const AttackCone &cone)
@@ -3562,7 +3862,7 @@ void CWeenieObject::HitGround(float fallVelocity)
 {
 	/*
 	if (!_IsPlayer())
-		return;
+	return;
 
 	float jumpVelocity = 0.0f;
 	weenie_obj->InqJumpVelocity(1.0, jumpVelocity);
@@ -3572,29 +3872,49 @@ void CWeenieObject::HitGround(float fallVelocity)
 
 	if (overSpeedRatio > 0.00)
 	{
-		int damage = overSpeedRatio * 40.0; // (int)(-overSpeed * 5.0);
+	int damage = overSpeedRatio * 40.0; // (int)(-overSpeed * 5.0);
 
-		if (damage <= 0)
-			return;
+	if (damage <= 0)
+	return;
 
-		DamageEventData damageEvent;
-		damageEvent.damage_type = DAMAGE_TYPE::BLUDGEON_DAMAGE_TYPE;
-		damageEvent.damage_form = DAMAGE_FORM::DF_IMPACT;
-		damageEvent.outputDamage = damageEvent.inputDamage = damage;
-		damageEvent.target = this;
+	DamageEventData damageEvent;
+	damageEvent.damage_type = DAMAGE_TYPE::BLUDGEON_DAMAGE_TYPE;
+	damageEvent.damage_form = DAMAGE_FORM::DF_IMPACT;
+	damageEvent.outputDamage = damageEvent.inputDamage = damage;
+	damageEvent.target = this;
 
-		// LOG(Temp, Normal, "%f %f HitGround overSpeed: %f overSpeedRatio: %f damage: %d\n",jumpVelocity, fallVelocity, overSpeed, overSpeedRatio, damage);
-		if (ImmuneToDamage(NULL))
-			return;
-		
-		TakeDamage(damageEvent);
+	// LOG(Temp, Normal, "%f %f HitGround overSpeed: %f overSpeedRatio: %f damage: %d\n",jumpVelocity, fallVelocity, overSpeed, overSpeedRatio, damage);
+	if (ImmuneToDamage(NULL))
+	return;
+
+	TakeDamage(damageEvent);
 	}
 	*/
 }
 
-void CWeenieObject::TryCastSpell(DWORD target_id, DWORD spell_id)
+void CWeenieObject::TryCastSpell(uint32_t target_id, uint32_t spell_id)
 {
-	int error = MakeSpellcastingManager()->TryBeginCast(target_id, spell_id);
+	int error = 0;
+	SchoolOfMagic skillNeeded = (SchoolOfMagic)MagicSystem::GetSpellTable()->GetSpellBase(spell_id)->_school;
+	if ((skillNeeded == War_Magic || skillNeeded == Void_Magic) &&
+		(lastUsedMagicSkill != Life_Magic && lastUsedMagicSkill != ItemEnchantment_Magic && lastUsedMagicSkill != CreatureEnchantment_Magic))
+	{
+		if (skillNeeded != lastUsedMagicSkill && lastUsedMagicSkill != Undef_Magic)
+		{
+			if (double time = m_Qualities.InqFloat(NEXT_SPELLCAST_TIMESTAMP_FLOAT, time) && time > Timer::cur_time)
+			{
+				error = WERROR_INTERRUPTED;
+			}
+			else
+			{
+				lastUsedMagicSkill = skillNeeded;
+				m_Qualities.SetFloat(NEXT_SPELLCAST_TIMESTAMP_FLOAT, Timer::cur_time + Random::RollDice(3.0, 5.0));
+			}
+		}
+	}
+
+	if (!error)
+		error = MakeSpellcastingManager()->TryBeginCast(target_id, spell_id);
 
 	if (error)
 	{
@@ -3612,11 +3932,11 @@ void CWeenieObject::DoForcedStopCompletely()
 	Animation_Update();
 }
 
-DWORD CWeenieObject::DoAutonomousMotion(DWORD motion, MovementParameters *params)
+uint32_t CWeenieObject::DoAutonomousMotion(uint32_t motion, MovementParameters *params)
 {
 	MakeMovementManager(TRUE);
 
-	DWORD err;
+	uint32_t err;
 
 	if (params)
 	{
@@ -3626,7 +3946,7 @@ DWORD CWeenieObject::DoAutonomousMotion(DWORD motion, MovementParameters *params
 	{
 		MovementParameters defaultParams;
 		defaultParams.action_stamp = ++m_wAnimSequence; // maybe check if motion is & 0x10000000
- 		err = get_minterp()->DoMotion(motion, &defaultParams);
+		err = get_minterp()->DoMotion(motion, &defaultParams);
 	}
 
 	if (!err)
@@ -3639,11 +3959,11 @@ DWORD CWeenieObject::DoAutonomousMotion(DWORD motion, MovementParameters *params
 	return err;
 }
 
-DWORD CWeenieObject::DoForcedMotion(DWORD motion, MovementParameters *params)
+uint32_t CWeenieObject::DoForcedMotion(uint32_t motion, MovementParameters *params)
 {
 	MakeMovementManager(TRUE);
 
-	DWORD err;
+	uint32_t err;
 
 	if (params)
 	{
@@ -3678,14 +3998,15 @@ bool CWeenieObject::IsCompletelyIdle()
 			if (movement_manager->moveto_manager->movement_type != MovementTypes::Invalid)
 				return false;
 		}
-	}
 
-	if (movement_manager->motion_interpreter)
-	{
-		if (movement_manager->motion_interpreter->interpreted_state.sidestep_command ||
-			movement_manager->motion_interpreter->interpreted_state.turn_command ||
-			movement_manager->motion_interpreter->interpreted_state.forward_command != 0x41000003)
-			return false;
+
+		if (movement_manager->motion_interpreter)
+		{
+			if (movement_manager->motion_interpreter->interpreted_state.sidestep_command ||
+				movement_manager->motion_interpreter->interpreted_state.turn_command ||
+				movement_manager->motion_interpreter->interpreted_state.forward_command != 0x41000003)
+				return false;
+		}
 	}
 
 	return true;
@@ -3702,12 +4023,15 @@ bool CWeenieObject::IsBusy()
 	return false;
 }
 
-bool CWeenieObject::IsMovingTo()
+bool CWeenieObject::IsMovingTo(MovementTypes key)
 {
 	if (!movement_manager || !movement_manager->moveto_manager)
 		return false;
 
-	return movement_manager->moveto_manager->movement_type != MovementTypes::Invalid;
+	if (key == Invalid)
+		return movement_manager->moveto_manager->movement_type != MovementTypes::Invalid; //default returns true if we are doing any type of positional movement.
+	else
+		return movement_manager->moveto_manager->movement_type == key; //are we doing a specific movement type?
 }
 
 bool CWeenieObject::IsBusyOrInAction()
@@ -3728,10 +4052,13 @@ bool CWeenieObject::HasInterpActions()
 
 bool CWeenieObject::ImmuneToDamage(CWeenieObject *other)
 {
-	if (m_PhysicsState & (HIDDEN_PS|PARTICLE_EMITTER_PS|MISSILE_PS))
+	if (m_PhysicsState & (HIDDEN_PS | PARTICLE_EMITTER_PS | MISSILE_PS))
 		return true;
 
 	if (!IsCreature())
+		return true;
+
+	if (IsCreature() && !IsAttackable()) //no aoe spell collision damage on unattackable creatures (players, etc.)
 		return true;
 
 	if (IsDead())
@@ -3743,58 +4070,45 @@ bool CWeenieObject::ImmuneToDamage(CWeenieObject *other)
 BODY_PART_ENUM GetRandomBodyPartByDamageQuadrant(DAMAGE_QUADRANT dq)
 {
 	BODY_PART_ENUM result = BP_UNDEF;
+	float hitLoc = Random::RollDice(0.0, 1.0);
 
 	// do damage processing here...
 	if (dq & DQ_LOW)
 	{
-		switch (Random::GenInt(0, 4))
-		{
-		case 0: result = BP_FOOT; break;
-		case 1: result = BP_LOWER_LEG; break;
-		case 2: result = BP_UPPER_LEG; break;
-		case 3: result = BP_HAND; break;
-		case 4: result = BP_ABDOMEN; break;
-		}
+		if (hitLoc <= 0.18)
+			result = BP_UPPER_LEG;
+		else if (hitLoc <= 0.78)
+			result = BP_LOWER_LEG;
+		else
+			result = BP_FOOT;
 	}
 	else if (dq & DQ_MEDIUM)
 	{
-		switch (Random::GenInt(0, 6))
-		{
-		case 0: result = BP_UPPER_LEG; break;
-		case 1: result = BP_ABDOMEN; break;
-		case 2: result = BP_CHEST; break;
-		case 3: result = BP_HAND; break;
-		case 5: result = BP_LOWER_ARM; break;
-		case 6: result = BP_UPPER_ARM; break;
-		}
+		if (hitLoc <= 0.17)
+			result = BP_CHEST;
+		else if (hitLoc <= 0.34)
+			result = BP_ABDOMEN;
+		else if (hitLoc <= 0.37)
+			result = BP_UPPER_ARM;
+		else if (hitLoc <= 0.67)
+			result = BP_LOWER_ARM;
+		else if (hitLoc <= 0.87)
+			result = BP_HAND;
+		else
+			result = BP_UPPER_LEG;
 	}
 	else if (dq & DQ_HIGH)
 	{
-		switch (Random::GenInt(0, 5))
-		{
-		case 0: result = BP_CHEST; break;
-		case 1: result = BP_HAND; break;
-		case 2: result = BP_CHEST; break;
-		case 3: result = BP_LOWER_ARM; break;
-		case 4: result = BP_UPPER_ARM; break;
-		case 5: result = BP_HEAD; break;
-		}
+		if (hitLoc <= 0.33)
+			result = BP_HEAD;
+		else if (hitLoc <= 0.77)
+			result = BP_CHEST;
+		else
+			result = BP_UPPER_ARM;
 	}
 	else
 	{
-		switch (Random::GenInt(0, 9))
-		{
-		case 0: result = BP_CHEST; break;
-		case 1: result = BP_HAND; break;
-		case 2: result = BP_CHEST; break;
-		case 3: result = BP_LOWER_ARM; break;
-		case 4: result = BP_UPPER_ARM; break;
-		case 5: result = BP_HEAD; break;
-		case 6: result = BP_UPPER_LEG; break;
-		case 7: result = BP_LOWER_LEG; break;
-		case 8: result = BP_FOOT; break;
-		case 9: result = BP_ABDOMEN; break;
-		}
+		result = BP_CHEST;
 	}
 
 	return result;
@@ -3813,38 +4127,86 @@ void CWeenieObject::TryToDealDamage(DamageEventData &data)
 			return;
 	}
 
+	if (data.target->AsPlayer() && data.target->AsPlayer()->m_Qualities.GetBool(UNDER_LIFESTONE_PROTECTION_BOOL, 0))
+	{
+		data.target->EmitEffect(PS_ShieldUpBlue, 1.0);
+		data.target->NotifyWeenieError(WERROR_LIFESTONE_PROTECTION);
+		return;
+	}
+
+	if (data.target->AsPlayer() && data.source->AsPlayer())
+	{
+		WErrorType attackerError = WERROR_NONE;
+		WErrorType defenderError = WERROR_NONE;
+		if ( !IsValidPkAction(false, (PKStatusEnum)m_Qualities.GetInt(PLAYER_KILLER_STATUS_INT, 1),
+			(PKStatusEnum)data.target->m_Qualities.GetInt(PLAYER_KILLER_STATUS_INT, 1), attackerError, defenderError))
+		{
+			data.source->AsPlayer()->NotifyWeenieErrorWithString(attackerError, data.target->GetName().c_str());
+			data.target->NotifyWeenieErrorWithString(defenderError, GetName().c_str());
+			return;
+		}
+	}
+	
 	if (data.damage_form & DF_PHYSICAL)
 	{
-		std::list<long> bodyParts;
+		std::map<int32_t, float> bodyParts;
 		if (data.target->m_Qualities._body)
 		{
-			int hitHeight;
-			if (data.hit_quadrant & DQ_HIGH)
-				hitHeight = BODY_HEIGHT::HIGH_BODY_HEIGHT;
-			else if (data.hit_quadrant & DQ_MEDIUM)
-				hitHeight = BODY_HEIGHT::MEDIUM_BODY_HEIGHT;
-			else if (data.hit_quadrant & DQ_LOW)
-				hitHeight = BODY_HEIGHT::LOW_BODY_HEIGHT;
-			else
-				hitHeight = BODY_HEIGHT::MEDIUM_BODY_HEIGHT;
-
 			//todo: taking into account the rest of the quadrant data(front/sides/etc)
-
 			for (auto &bp : data.target->m_Qualities._body->_body_part_table)
 			{
-				if (bp.second._bh == hitHeight)
-					bodyParts.push_back(bp.first);
+				if (data.hit_quadrant == DQ_HLF && bp.second._bpsd->HLF > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->HLF);
+				else if (data.hit_quadrant == DQ_HLB && bp.second._bpsd->HLB > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->HLB);
+				else if (data.hit_quadrant == DQ_HRF && bp.second._bpsd->HRF > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->HRF);
+				else if (data.hit_quadrant == DQ_HRB && bp.second._bpsd->HRB > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->HRB);
+				else if (data.hit_quadrant == DQ_MLF && bp.second._bpsd->MLF > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->MLF);
+				else if (data.hit_quadrant == DQ_MLB && bp.second._bpsd->MLB > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->MLB);
+				else if (data.hit_quadrant == DQ_MRF && bp.second._bpsd->MRF > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->MRF);
+				else if (data.hit_quadrant == DQ_MRB && bp.second._bpsd->MRB > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->MRB);
+				else if (data.hit_quadrant == DQ_LLF && bp.second._bpsd->LLF > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->LLF);
+				else if (data.hit_quadrant == DQ_LLB && bp.second._bpsd->LLB > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->LLB);
+				else if (data.hit_quadrant == DQ_LRF && bp.second._bpsd->LRF > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->LRF);
+				else if (data.hit_quadrant == DQ_LRB && bp.second._bpsd->LRB > 0)
+					bodyParts.emplace(bp.first, bp.second._bpsd->LRB);
 			}
 		}
 
+		data.hitPart = (BODY_PART_ENUM)BP_UNDEF;
 		if (bodyParts.size())
 		{
-			std::list<long>::iterator randomBodyPartIterator = bodyParts.begin();
-			std::advance(randomBodyPartIterator, Random::GenInt(0, (int)(bodyParts.size() - 1)));
-			data.hitPart = (BODY_PART_ENUM)*randomBodyPartIterator;
+			float bodyPartSum = 0;
+			float bodyPartHitRoll = Random::RollDice(0.0, 1.0);
+			for (std::map<int32_t, float >::iterator it = bodyParts.begin(); it != bodyParts.end(); ++it)
+			{
+				if (bodyPartHitRoll <= (it->second + bodyPartSum))
+				{
+					data.hitPart = (BODY_PART_ENUM)it->first;
+					break;
+				}
+				else
+					bodyPartSum += it->second;
+			}
+			if (data.hitPart == (BODY_PART_ENUM)BP_UNDEF)
+			{
+				SERVER_ERROR << "Unknown body part for " << data.target->GetName();
+				data.hitPart = (BODY_PART_ENUM)BP_HEAD;
+			}
 		}
 		else
+		{
 			data.hitPart = GetRandomBodyPartByDamageQuadrant(data.hit_quadrant);
+		}
 	}
 
 	data.target->TakeDamage(data);
@@ -3989,9 +4351,9 @@ void GetDeathMessage(DAMAGE_TYPE dt, const std::string &killerName, const std::s
 			otherMessage = victimName + "'s last strength dissolves before " + killerName + "!";
 			break;
 		case 2:
-			killerMessage = victimName + "is liquified by your attack!";
+			killerMessage = victimName + " is liquified by your attack!";
 			victimMessage = "You are liquified by " + killerName + "'s attack!";
-			otherMessage = victimName + "is liquified by " + killerName + "'s attack!";
+			otherMessage = victimName + " is liquified by " + killerName + "'s attack!";
 			break;
 		}
 		break;
@@ -4026,7 +4388,7 @@ void GetDeathMessage(DAMAGE_TYPE dt, const std::string &killerName, const std::s
 			otherMessage = killerName + "'s lightning coruscates over " + victimName + "'s mortal remains!";
 			break;
 			/*
-		case 1:
+			case 1:
 			killerMessage = "Blistered by lightning, " + victimName + " falls!";
 			break;
 			*/
@@ -4038,11 +4400,11 @@ void GetDeathMessage(DAMAGE_TYPE dt, const std::string &killerName, const std::s
 		}
 		break;
 	default:
-		{
-			killerMessage = "You killed " + victimName + "!";
-			victimMessage = "You were killed by " + killerName + "!";
-			otherMessage = killerName + " slayed " + victimName + "!";
-		}
+	{
+		killerMessage = "You killed " + victimName + "!";
+		victimMessage = "You were killed by " + killerName + "!";
+		otherMessage = killerName + " slayed " + victimName + "!";
+	}
 	}
 }
 
@@ -4067,38 +4429,61 @@ float CWeenieObject::GetEffectiveArmorLevel(DamageEventData &damageData, bool bI
 {
 	float armorLevel = 0.0f;
 
-	bool isShield = InqIntQuality(COMBAT_USE_INT, 0, TRUE) == COMBAT_USE::COMBAT_USE_SHIELD;
+	bool isShield = InqIntQuality(COMBAT_USE_INT, 0, TRUE) == COMBAT_USE::COMBAT_USE_SHIELD &&
+		InqIntQuality(SHIELD_VALUE_INT, 0, false) > 0;
 	if (isShield && (damageData.hit_quadrant & DQ_FRONT) == 0)
 		return 0.0f; //shield only works if the attack was from the front.
 
+	//bool isShieldSpeced = false;
+	//SKILL_ADVANCEMENT_CLASS sac = SKILL_ADVANCEMENT_CLASS::UNTRAINED_SKILL_ADVANCEMENT_CLASS;
+	//if (damageData.target->m_Qualities.InqSkillAdvancementClass(SHIELD_SKILL, sac))
+	//	isShieldSpeced = sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS;
+
+
 	EnchantedQualityDetails buffDetails;
-	GetIntEnchantmentDetails(ARMOR_LEVEL_INT, 0, &buffDetails);
+	if (!isShield)
+		GetIntEnchantmentDetails(ARMOR_LEVEL_INT, 0, &buffDetails);
+	else
+		GetIntEnchantmentDetails(SHIELD_VALUE_INT, 0, &buffDetails);
 
 	if (bIgnoreMagicArmor)
-		armorLevel = buffDetails.rawValue;
+		armorLevel = buffDetails.rawValue; //take the Raw armor value for Hollows. Debuffs should not count
 	else
 		armorLevel = buffDetails.enchantedValue;
 
-	switch (damageData.damage_type)
-	{
-	case DAMAGE_TYPE::SLASH_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_SLASH_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0f)); break;
-	case DAMAGE_TYPE::PIERCE_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_PIERCE_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0f)); break;
-	case DAMAGE_TYPE::BLUDGEON_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_BLUDGEON_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0f)); break;
-	case DAMAGE_TYPE::FIRE_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_FIRE_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0f)); break;
-	case DAMAGE_TYPE::COLD_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_COLD_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0f)); break;
-	case DAMAGE_TYPE::ACID_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_ACID_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0f)); break;
-	case DAMAGE_TYPE::ELECTRIC_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_ELECTRIC_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0f)); break;
-	case DAMAGE_TYPE::NETHER_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_NETHER_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0f)); break;
-	}
-
-	//todo: what about IGNORE_SHIELDS_BY_SKILL_BOOL?
 	if (isShield)
 	{
+		//uint32_t shieldSkill;
+		//damageData.target->m_Qualities.InqSkill(SHIELD_SKILL, shieldSkill, false);
+		
+		//if (!isShieldSpeced)
+		//{
+		//	if (armorLevel >= shieldSkill / 2)
+		//	{
+		//		armorLevel = shieldSkill / 2;
+		//	}
+		//}
+		//else
+		//{
+		//	armorLevel = min((float)shieldSkill, armorLevel);
+		//}
 		double ignoreShieldMod = 0.0f;
 		if (damageData.source)
 			damageData.source->m_Qualities.InqFloat(IGNORE_SHIELD_FLOAT, ignoreShieldMod, FALSE);
 
 		armorLevel *= (1.0 - ignoreShieldMod);
+	}
+
+	switch (damageData.damage_type)
+	{
+	case DAMAGE_TYPE::SLASH_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_SLASH_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0)); break;
+	case DAMAGE_TYPE::PIERCE_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_PIERCE_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0)); break;
+	case DAMAGE_TYPE::BLUDGEON_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_BLUDGEON_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0)); break;
+	case DAMAGE_TYPE::FIRE_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_FIRE_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0)); break;
+	case DAMAGE_TYPE::COLD_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_COLD_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0)); break;
+	case DAMAGE_TYPE::ACID_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_ACID_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0)); break;
+	case DAMAGE_TYPE::ELECTRIC_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_ELECTRIC_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0)); break;
+	case DAMAGE_TYPE::NETHER_DAMAGE_TYPE: armorLevel *= max(0.0, min(InqFloatQuality(ARMOR_MOD_VS_NETHER_FLOAT, 1.0f, bIgnoreMagicArmor), 2.0)); break;
 	}
 
 	return armorLevel;
@@ -4132,8 +4517,11 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 	case ELECTRIC_DAMAGE_TYPE:
 		isEnchanted = GetFloatEnchantmentDetails(RESIST_ELECTRIC_FLOAT, 1.0, &buffDetails);
 		break;
+	case NETHER_DAMAGE_TYPE:
+		isEnchanted = GetFloatEnchantmentDetails(RESIST_NETHER_FLOAT, 1.0, &buffDetails);
+		break;
 	case HEALTH_DAMAGE_TYPE:
-		if(damageData.damageAfterMitigation > 0)
+		if (damageData.damageAfterMitigation > 0)
 			isEnchanted = GetFloatEnchantmentDetails(RESIST_HEALTH_DRAIN_FLOAT, 1.0, &buffDetails);
 		else
 			isEnchanted = GetFloatEnchantmentDetails(RESIST_HEALTH_BOOST_FLOAT, 1.0, &buffDetails);
@@ -4150,6 +4538,8 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 		else
 			isEnchanted = GetFloatEnchantmentDetails(RESIST_MANA_BOOST_FLOAT, 1.0, &buffDetails);
 		break;
+	case BASE_DAMAGE_TYPE:
+		break;
 	}
 
 	if (damageData.isElementalRending && damageData.rendingMultiplier > buffDetails.valueIncreasingMultiplier)
@@ -4161,16 +4551,22 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 		buffDetails.CalculateEnchantedValue();
 	}
 
-	float resistanceRegular;
-	if (damageData.ignoreMagicResist)
-		resistanceRegular = buffDetails.rawValue;
-	else
-		resistanceRegular = buffDetails.enchantedValue;
+	float resistanceRegular = 0;
+	if (damageData.damage_type != BASE_DAMAGE_TYPE)
+	{
+		if (damageData.ignoreMagicResist)
+			resistanceRegular = buffDetails.rawValue; //take the Raw resistance value for Hollows. Debuffs should not count
+		else
+			resistanceRegular = buffDetails.enchantedValue;
+	}
 
 	if (damageData.damageAfterMitigation > 0 || damageData.damage_type == HEALTH_DAMAGE_TYPE || damageData.damage_type == STAMINA_DAMAGE_TYPE || damageData.damage_type == MANA_DAMAGE_TYPE)
 	{
 		if (!AsPlayer() || damageData.ignoreMagicResist)
-			damageData.damageAfterMitigation *= resistanceRegular;
+		{
+			if (resistanceRegular != 0.f)
+				damageData.damageAfterMitigation *= resistanceRegular;
+		}
 		else //only players have natural resistances.
 		{
 			//Some combination of strength and endurance allows one to have a level of "natural resistances" to the 7 damage types.This caps out at a 50 % resistance(the equivalent to level 5 life prots) to these damage types.This resistance is not additive to life protections : higher level life protections will overwrite these natural resistances, although life vulns will take these natural resistances into account, if the player does not have a higher level life protection cast upon them.
@@ -4179,8 +4575,8 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 			//drain resistances(same formula as natural resistances) allows one to partially resist drain health/stamina/mana and harm attacks, up to a maximum of roughly 50%. 
 
 			//todo: natural resistances only change when base strength or endurance changes so we could potentially pre-calculate this somewhere else.
-			DWORD strength = 0;
-			DWORD endurance = 0;
+			uint32_t strength = 0;
+			uint32_t endurance = 0;
 			m_Qualities.InqAttribute(STRENGTH_ATTRIBUTE, strength, true);
 			m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
 			float strAndEnd = (float)(strength + endurance);
@@ -4190,7 +4586,7 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 			else
 				resistanceNatural = 1.0f - (((0.1666667 * strAndEnd) - 23.33333) / 100.f);
 
-			resistanceNatural = max(resistanceNatural, 0.5);
+			resistanceNatural = max(resistanceNatural, 0.5f);
 
 			//natural resistances only work if they beat the buffed value before any debuffs are applied.
 			if (resistanceNatural < buffDetails.enchantedValue_DecreasingOnly)
@@ -4226,30 +4622,107 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 		if (!shieldOrMissileWeapon)
 			shieldOrMissileWeapon = GetWieldedCombat(COMBAT_USE::COMBAT_USE_MISSILE);
 
-		if (shieldOrMissileWeapon)
+		if (shieldOrMissileWeapon && shieldOrMissileWeapon->GetImbueEffects() & ImbuedEffectType::IgnoreSomeMagicProjectileDamage_ImbuedEffectType)
 		{
-			if (shieldOrMissileWeapon->GetImbueEffects() & ImbuedEffectType::IgnoreSomeMagicProjectileDamage_ImbuedEffectType)
+			double reduction = (0.25 * GetMagicDefense() * 0.003) - (0.25 * 0.3);
+
+			if (reduction > 0.0)
 			{
-				// not worrying about if trained or specailized or using shield skill vs magic defense skill for now
-				// RED = 100 % * ((CAP * ST * SKILL * 0.0030) - (CAP * ST *.3))
+				if (reduction > 0.25)
+					reduction = 0.25;
 
-				double reduction = (0.25 * GetMagicDefense() * 0.003) - (0.25 * 0.3);
-
-				if (reduction > 0.0)
+				if (damageData.source && damageData.target)
 				{
-					if (reduction > 0.25)
-						reduction = 0.25;
+					bool isPvP = damageData.source->AsPlayer() && damageData.target->AsPlayer();
+
+					if (isPvP)
+						reduction *= 0.72;
 
 					damageData.damageAfterMitigation *= 1.0 - reduction;
 				}
 			}
 		}
+
+		//CWeenieObject *shield = GetWieldedCombat(COMBAT_USE::COMBAT_USE_SHIELD);
+
+		//if (shield && !IsInPeaceMode())
+		//{
+		//	SKILL_ADVANCEMENT_CLASS sac = SKILL_ADVANCEMENT_CLASS::UNTRAINED_SKILL_ADVANCEMENT_CLASS;
+		//	damageData.target->m_Qualities.InqSkillAdvancementClass(SHIELD_SKILL, sac);
+		//	float cap = shield->InqFloatQuality(ABSORB_MAGIC_DAMAGE_FLOAT, 0.0);
+		//	uint32_t shieldSkill;
+		//	damageData.target->m_Qualities.InqSkill(SHIELD_SKILL, shieldSkill, true);
+		//	if (cap > 0.0 && shieldSkill >= 100)
+		//	{
+		//		float st = sac != SPECIALIZED_SKILL_ADVANCEMENT_CLASS ? .8 : 1;
+
+		//		float reduction = max(min(float(1 * ((cap * st * shieldSkill * 0.0030) - (cap * st * .3))), cap * st), 0.0f);
+
+		//		damageData.damageAfterMitigation *= 1.0 - reduction;
+		//	}
+		//}
+	}
+
+	if (damageData.damageAfterMitigation > 0 && (damageData.damage_type < 0x80 || damageData.damage_type == NETHER_DAMAGE_TYPE)) // elemental damage types only
+	{
+		// calculate augmentation resistances
+		if (damageData.target->InqIntQuality(AUGMENTATION_RESISTANCE_FAMILY_INT, 0) > 0)
+		{
+			double reduction = 0.0;
+
+			switch (damageData.damage_type)
+			{
+			case BLUDGEON_DAMAGE_TYPE:
+				reduction = 0.1 * damageData.target->InqIntQuality(AUGMENTATION_RESISTANCE_BLUNT_INT, 0); break;
+			case SLASH_DAMAGE_TYPE:
+				reduction = 0.1 * damageData.target->InqIntQuality(AUGMENTATION_RESISTANCE_SLASH_INT, 0); break;
+			case PIERCE_DAMAGE_TYPE:
+				reduction = 0.1 * damageData.target->InqIntQuality(AUGMENTATION_RESISTANCE_PIERCE_INT, 0); break;
+			case ACID_DAMAGE_TYPE:
+				reduction = 0.1 * damageData.target->InqIntQuality(AUGMENTATION_RESISTANCE_ACID_INT, 0); break;
+			case FIRE_DAMAGE_TYPE:
+				reduction = 0.1 * damageData.target->InqIntQuality(AUGMENTATION_RESISTANCE_FIRE_INT, 0); break;
+			case COLD_DAMAGE_TYPE:
+				reduction = 0.1 * damageData.target->InqIntQuality(AUGMENTATION_RESISTANCE_FROST_INT, 0); break;
+			case ELECTRIC_DAMAGE_TYPE:
+				reduction = 0.1 * damageData.target->InqIntQuality(AUGMENTATION_RESISTANCE_LIGHTNING_INT, 0); break;
+			case NETHER_DAMAGE_TYPE:
+				reduction = 0.1 * damageData.target->InqIntQuality(AUGMENTATION_RESISTANCE_NETHER_INT, 0); break;
+			default:
+				break;
+			}
+
+			damageData.damageAfterMitigation *= 1.0 - reduction;
+		}
+	}
+
+	if (damageData.damage_type == BASE_DAMAGE_TYPE)
+		damageData.damageAfterMitigation = damageData.baseDamage;
+
+	if (damageData.damage_type == NETHER_DAMAGE_TYPE && damageData.isDot)
+	{
+		int ratingTotal = 0;
+		int rating = 0;
+		if (damageData.target->m_Qualities.InqInt(AUGMENTATION_DAMAGE_REDUCTION_INT, rating))
+		{
+			ratingTotal += rating;
+		}
+		if (damageData.target->m_Qualities.InqInt(DOT_RESIST_RATING_INT, rating))
+		{
+			ratingTotal += rating;
+		}
+		damageData.damageAfterMitigation = damageData.baseDamage * (100.0f / (100.0f + (double)ratingTotal));
+	}
+
+	if (damageData.damage_type == NETHER_DAMAGE_TYPE && damageData.target->AsPlayer() && damageData.isDot)
+	{
+		damageData.damageAfterMitigation *= g_pConfig->VoidDamageReduction();
 	}
 
 	if (damageData.damageAfterMitigation < 0)
 	{
 		//todo: can't all damage types heal? Like hitting a fire elemental with fire should heal it instead of damage it?
-		if (damageData.damage_type & (HEALTH_DAMAGE_TYPE|STAMINA_DAMAGE_TYPE|MANA_DAMAGE_TYPE))
+		if (damageData.damage_type & (HEALTH_DAMAGE_TYPE | STAMINA_DAMAGE_TYPE | MANA_DAMAGE_TYPE))
 		{
 			// these types can heal
 			damageData.outputDamageFinal = (int)ceil(damageData.damageAfterMitigation - F_EPSILON);
@@ -4264,6 +4737,88 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 		damageData.outputDamageFinal = (int)floor(damageData.damageAfterMitigation + F_EPSILON);
 	}
 
+	if (_IsPlayer())
+	{
+		CWeenieObject* cloak = GetWielded(CLOAK_LOC);
+		if (cloak)
+		{
+			double baseProcRate = g_pConfig->GetCloakBaseProcRate();
+			uint32_t maxHealth;
+			m_Qualities.InqAttribute2nd(HEALTH_ATTRIBUTE_2ND, maxHealth, false);
+			if (damageData.outputDamageFinal / maxHealth >= .50)
+			{
+				baseProcRate += g_pConfig->GetCloakHalfHealthProcRate();
+			}
+			else if (damageData.outputDamageFinal / maxHealth >= .25)
+			{
+				baseProcRate += g_pConfig->GetCloakQuarterHealthProcRate();
+			}
+			else if (damageData.outputDamageFinal / maxHealth >= .10)
+			{
+				baseProcRate += g_pConfig->GetCloakTenthHealthProcRate();
+			}
+
+			int cloakLevel = cloak->GetLevel();
+			if (cloakLevel > 1)
+			{
+				baseProcRate += (cloakLevel - 1) * g_pConfig->GetCloakPerLevelProcRate();
+			}
+
+			double luck = Random::RollDice(0.0, 1.0);
+			if (luck <= baseProcRate)
+			{
+				int procType;
+				if (cloak->m_Qualities.InqInt(CLOAK_WEAVE_PROC_INT, procType))
+				{
+					if (procType == 2)
+					{
+						int originalDamage = damageData.outputDamageFinal;
+						if(damageData.isPvP)
+							damageData.outputDamageFinal -= min(damageData.outputDamageFinal, 100);
+						else
+							damageData.outputDamageFinal -= min(damageData.outputDamageFinal, 200);
+						SendText(csprintf("Your cloak reduced the damage from %u down to %u!", originalDamage, damageData.outputDamageFinal), LTT_MAGIC);
+					}
+					else if (procType == 1)
+					{
+						uint32_t procSpell = cloak->m_Qualities.GetDID(PROC_SPELL_DID, 0);
+						if (procSpell)
+						{
+							bool spellCast = false;
+							// if shroud, get current combat target and cast spell
+							if (procSpell == 5754 || procSpell == 5755 || procSpell == 5756)
+							{
+								uint32_t target;
+								if (m_Qualities.InqInstanceID(CURRENT_ENEMY_IID, target))
+								{
+									cloak->MakeSpellcastingManager()->CastSpellInstant(target, procSpell);
+									spellCast = true;
+								}
+							}
+							else
+							{
+								cloak->MakeSpellcastingManager()->CastSpellInstant(GetID(), procSpell);
+								spellCast = true;
+							}
+
+							CSpellTable *spellTable = MagicSystem::GetSpellTable();
+							if (spellTable && spellCast)
+							{
+								const CSpellBase* spell = spellTable->GetSpellBase(procSpell);
+								if (spell)
+								{
+									SendText(csprintf("The cloak of %s weaves the magic of %s!", GetName().c_str(), spell->_name.c_str()), LTT_MAGIC_CASTING_CHANNEL);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+	}
+
+
 	STypeAttribute2nd vitalAffected;
 	switch (damageData.damage_type)
 	{
@@ -4272,9 +4827,9 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 	case MANA_DAMAGE_TYPE: vitalAffected = MANA_ATTRIBUTE_2ND; break;
 	}
 
-	DWORD vitalStartValue = 0;
-	DWORD vitalMinValue = 0;
-	DWORD vitalMaxValue = 0;
+	uint32_t vitalStartValue = 0;
+	uint32_t vitalMinValue = 0;
+	uint32_t vitalMaxValue = 0;
 	m_Qualities.InqAttribute2nd(vitalAffected, vitalStartValue, FALSE);
 	m_Qualities.InqAttribute2nd((STypeAttribute2nd)((int)vitalAffected - 1), vitalMaxValue, FALSE);
 
@@ -4283,6 +4838,12 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 
 	damageData.outputDamageFinal = (int)vitalStartValue - (int)vitalNewValue;
 	damageData.outputDamageFinalPercent = damageData.outputDamageFinal / (double)vitalMaxValue;
+
+	if (AsMonster())
+	{
+		// add to list of attackers
+		AsMonster()->UpdateDamageList(damageData);
+	}
 
 	if (vitalNewValue != vitalStartValue)
 	{
@@ -4334,40 +4895,6 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 		}
 	}
 
-	/*
-	if (damageData.outputDamageFinal >= 0)
-	{
-		switch (damageData.damage_type)
-		{
-		default:
-			{
-				if (damageData.outputDamageFinal >= GetHealth())
-				{
-					damageData.killingBlow = true;
-					damageData.outputDamageFinal = GetHealth();
-					damageData.outputDamageFinalPercent = ((float)damageData.outputDamageFinal / GetMaxHealth());
-					SetHealth(0);
-					OnDeath(damageData.source ? damageData.source->GetID() : 0);
-				}
-				else
-				{
-					damageData.outputDamageFinalPercent = ((float)damageData.outputDamageFinal / GetMaxHealth());
-					SetHealth(GetHealth() - damageData.outputDamageFinal);
-
-					if (damageData.outputDamageFinalPercent >= 0.1f)
-					{
-						if (_IsPlayer())
-						{
-							EmitSound(Random::GenInt(12, 14), 1.0f);
-						}
-					}
-				}
-				break;
-			}
-		}
-	}
-	*/
-
 	if (damageData.killingBlow && (damageData.source && damageData.source->IsCreature()))
 	{
 		std::string kmsg, vmsg, omsg;
@@ -4394,10 +4921,11 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 	{
 		damageData.source->OnDealtDamage(damageData);
 
-		if (damageData.killingBlow)
-		{
-			damageData.source->GivePerksForKill(this);
-		}
+		// Monster::OnDeath grants Xp
+		//if (damageData.killingBlow)
+		//{
+		//	damageData.source->GivePerksForKill(this);
+		//}
 	}
 }
 
@@ -4451,13 +4979,13 @@ std::string DamageEventData::GetTargetName()
 	return target ? target->GetName() : "A mysterious victim";
 }
 
-void CWeenieObject::NotifyDeathMessage(DWORD killer_id, const char *message)
+void CWeenieObject::NotifyDeathMessage(uint32_t killer_id, const char *message)
 {
 	BinaryWriter deathMsg;
-	deathMsg.Write<DWORD>(0x19E);
+	deathMsg.Write<uint32_t>(0x19E);
 	deathMsg.WriteString(message);
-	deathMsg.Write<DWORD>(GetID());
-	deathMsg.Write<DWORD>(killer_id);
+	deathMsg.Write<uint32_t>(GetID());
+	deathMsg.Write<uint32_t>(killer_id);
 
 	if (_IsPlayer() && (g_pConfig->ShowDeathMessagesGlobally() || (g_pConfig->ShowPlayerDeathMessagesGlobally() && g_pWorld->FindPlayer(killer_id) != NULL)))
 	{
@@ -4469,18 +4997,99 @@ void CWeenieObject::NotifyDeathMessage(DWORD killer_id, const char *message)
 	}
 }
 
+PScriptType CWeenieObject::GetScriptByHitLoc(DamageEventData &damageData)
+{
+	PScriptType ps = PS_Invalid;
+	switch (damageData.hit_quadrant)
+	{
+	case DQ_HLF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterUpLeftFront : PS_SparkUpLeftFront; break;
+	case DQ_MLF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterMidLeftFront : PS_SparkMidLeftFront; break;
+	case DQ_LLF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterLowLeftFront : PS_SparkLowLeftFront; break;
+	case DQ_HRF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterUpRightFront : PS_SparkUpRightFront; break;
+	case DQ_MRF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterMidRightFront : PS_SparkMidRightFront; break;
+	case DQ_LRF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterLowRightFront : PS_SparkLowRightFront; break;
+	case DQ_HLB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterUpLeftBack : PS_SparkUpLeftBack; break;
+	case DQ_MLB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterMidLeftBack : PS_SparkMidLeftBack; break;
+	case DQ_LLB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterLowLeftBack : PS_SparkLowLeftBack; break;
+	case DQ_HRB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterUpRightBack : PS_SparkUpRightBack; break;
+	case DQ_MRB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterMidRightBack : PS_SparkMidRightBack; break;
+	case DQ_LRB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterLowRightBack : PS_SparkLowRightBack; break;
+	}
+	return ps;
+}
+
+bool CWeenieObject::IsValidPkAction(bool helpful, PKStatusEnum attacker, PKStatusEnum defender, WErrorType & attackerError, WErrorType & defenderError)
+{
+	bool validAction = false;
+	if (!helpful)
+	{
+		if (attacker == Protected_PKStatus)
+		{
+			attackerError = WERROR_PK_PROTECTED_ATTACKER;
+			defenderError = WERROR_PK_PROTECTED_ATTACKER_PASSIVE;
+		}
+		else if (attacker == NPK_PKStatus && defender == PK_PKStatus)
+		{
+			attackerError = WERROR_PK_NPK_ATTACKER;
+			defenderError = WERROR_PK_NPK_ATTACKER_PASSIVE;
+		}
+		else if (attacker == PK_PKStatus && defender == NPK_PKStatus)
+		{
+			attackerError = WERROR_PK_NPK_TARGET;
+			defenderError = WERROR_PK_NPK_TARGET_PASSIVE;
+		}
+		else if ((attacker == PK_PKStatus && defender == PKLite_PKStatus) || (attacker == PKLite_PKStatus && defender == PK_PKStatus))
+		{
+			attackerError = WERROR_PK_WRONG_KIND;
+			defenderError = WERROR_PK_WRONG_KIND_PASSIVE;
+		}
+		else if (attacker == PKLite_PKStatus && defender == NPK_PKStatus)
+		{
+			attackerError = WERROR_PK_NPK_TARGET;
+			defenderError = WERROR_PK_NPK_TARGET_PASSIVE;
+		}
+		else if (attacker == NPK_PKStatus && defender == PKLite_PKStatus)
+		{
+			attackerError = WERROR_PK_NPK_ATTACKER;
+			defenderError = WERROR_PK_NPK_TARGET;
+		}
+		else
+			validAction = true;
+	}
+	else
+	{
+		if (attacker == NPK_PKStatus && defender == PK_PKStatus)
+		{
+			attackerError = WERROR_PK_NPK_ATTACKER;
+			defenderError = WERROR_PK_NPK_ATTACKER_PASSIVE;
+		}
+		else if (attacker == PK_PKStatus && defender == NPK_PKStatus)
+		{
+			attackerError = WERROR_PK_NPK_TARGET;
+			defenderError = WERROR_PK_NPK_TARGET_PASSIVE;
+		}
+		else if ((attacker == PK_PKStatus && defender == PKLite_PKStatus) || (attacker == PKLite_PKStatus && defender == PK_PKStatus))
+		{
+			attackerError = WERROR_PK_WRONG_KIND;
+			defenderError = WERROR_PK_WRONG_KIND_PASSIVE;
+		}
+		else if (attacker == NPK_PKStatus && defender == PKLite_PKStatus)
+		{
+			attackerError = WERROR_PK_NPK_ATTACKER;
+			defenderError = WERROR_PK_NPK_ATTACKER_PASSIVE;
+		}
+		else
+			validAction = true;
+	}
+
+	return validAction;
+}
+
 void CWeenieObject::OnTookDamage(DamageEventData &data)
 {
 	if (data.damage_form & DF_PHYSICAL && data.outputDamageFinal >= 0)
 	{
-		if (data.hit_quadrant & DQ_LOW)
-			EmitEffect(Random::GenInt(91, 94), 1.0f);
-
-		if (!(data.hit_quadrant & DQ_HEIGHT_MASK) || data.hit_quadrant & DQ_MEDIUM)
-			EmitEffect(Random::GenInt(95, 98), 1.0f);
-
-		if (data.hit_quadrant & DQ_HIGH)
-			EmitEffect(Random::GenInt(99, 102), 1.0f);
+		EmitEffect(GetScriptByHitLoc(data), data.outputDamageFinalPercent);
 	}
 
 	if (data.killingBlow)
@@ -4517,7 +5126,7 @@ void CWeenieObject::OnTookDamage(DamageEventData &data)
 		{
 			std::string single_adj, plural_adj;
 			if (CombatSystem::InqCombatHitAdjectives(data.damage_type, data.outputDamageFinalPercent, single_adj, plural_adj))
-			{				
+			{
 				// Killer Phyntos Soldier sears you for 46 points with Incantation of Acid Stream.
 				// You chill Killer Phyntos Swarm for 212 points with Halo of Frost II.
 				switch (data.damage_type)
@@ -4568,9 +5177,11 @@ void CWeenieObject::OnTookDamage(DamageEventData &data)
 				std::string activationTalkString;
 				if (data.source->m_Qualities.InqString(ACTIVATION_TALK_STRING, activationTalkString))
 				{
-					char damageNumText[32];
-					_itoa(abs(data.outputDamageFinal), damageNumText, 10);
-					ReplaceString(activationTalkString, "%i", damageNumText);
+					//char damageNumText[32];
+					//itoa(abs(data.outputDamageFinal), damageNumText, 10);
+					//ReplaceString(activationTalkString, "%i", damageNumText);
+					std::string damageNum = std::to_string(abs(data.outputDamageFinal));
+					ReplaceString(activationTalkString, "%i", damageNum);
 					SendText(activationTalkString.c_str(), LTT_DEFAULT);
 				}
 			}
@@ -4598,13 +5209,25 @@ void CWeenieObject::OnDealtDamage(DamageEventData &data)
 	{
 		if (data.damage_form & DF_PHYSICAL)
 		{
-			NotifyAttackerEvent(
-				data.GetTargetName().c_str(),
-				data.damage_type,
-				data.outputDamageFinalPercent,
-				data.outputDamageFinal,
-				data.wasCrit,
-				data.attackConditions);
+			if (m_Qualities.m_WeenieType == WeenieType::CombatPet_WeenieType && AsMonster()->ShowCombatDamage())
+			{
+				CPlayerWeenie* owner = g_pWorld->FindPlayer(m_Qualities.GetIID(PET_OWNER_IID, 0));
+				if (owner && owner->AsPlayer())
+				{
+					owner->AsPlayer()->SendText(csprintf("Your pet attacked %s for %u damage.", data.GetTargetName().c_str(),
+						data.outputDamageFinal), LTT_COMBAT);
+				}
+			}
+			else
+			{
+				NotifyAttackerEvent(
+					data.GetTargetName().c_str(),
+					data.damage_type,
+					data.outputDamageFinalPercent,
+					data.outputDamageFinal,
+					data.wasCrit,
+					data.attackConditions);
+			}
 		}
 		else if (data.damage_form & DF_MAGIC)
 		{
@@ -4616,7 +5239,7 @@ void CWeenieObject::OnDealtDamage(DamageEventData &data)
 				switch (data.damage_type)
 				{
 				default:
-					SendText(csprintf("%sYou %s %s for %d points with %s.", data.wasCrit ? "Critical hit! " : "", single_adj.c_str(), data.GetTargetName().c_str(), data.outputDamageFinal, data.spell_name.c_str()), LTT_MAGIC);
+					SendText(csprintf("%s%sYou %s %s for %d points with %s.", data.wasCrit ? "Critical hit! " : "", data.isSneakAttack ? "Sneak Attack! " : "", single_adj.c_str(), data.GetTargetName().c_str(), data.outputDamageFinal, data.spell_name.c_str()), LTT_MAGIC);
 					break;
 				case DAMAGE_TYPE::HEALTH_DAMAGE_TYPE:
 				case DAMAGE_TYPE::STAMINA_DAMAGE_TYPE:
@@ -4635,7 +5258,7 @@ void CWeenieObject::OnDealtDamage(DamageEventData &data)
 						break;
 					}
 					bool isRestore = (data.outputDamageFinal < 0);
-					if(data.target == data.source)
+					if (data.target == data.source)
 						SendText(csprintf("%sYou cast %s and %s %d points of your %s.", data.wasCrit ? "Critical hit! " : "", data.spell_name.c_str(), isRestore ? "restore" : "drain", abs(data.outputDamageFinal), vitalName.c_str()), LTT_MAGIC);
 					else
 						SendText(csprintf("%sWith %s you %s %d points of %s %s %s.", data.wasCrit ? "Critical hit! " : "", data.spell_name.c_str(), isRestore ? "restore" : "drain", abs(data.outputDamageFinal), vitalName.c_str(), isRestore ? "to" : "from", data.GetTargetName().c_str()), LTT_MAGIC);
@@ -4652,7 +5275,13 @@ void CWeenieObject::OnDealtDamage(DamageEventData &data)
 	}
 }
 
-bool CWeenieObject::IsContainedWithinViewable(DWORD object_id)
+void CWeenieObject::OnRegen(STypeAttribute2nd currentAttrib, int newAmount)
+{
+
+	m_Qualities.SetAttribute2nd(currentAttrib, newAmount);
+}
+
+bool CWeenieObject::IsContainedWithinViewable(uint32_t object_id)
 {
 	// local container
 	if (FindContained(object_id))
@@ -4678,7 +5307,7 @@ bool CWeenieObject::ShouldSave()
 	if (_IsPlayer())
 		return true;
 
-	return false;
+	return m_bSaveMe;
 }
 
 bool CWeenieObject::Save()
@@ -4695,12 +5324,14 @@ bool CWeenieObject::Save()
 
 	BinaryWriter writer;
 	save.Pack(&writer);
-	bool result = g_pDBIO->CreateOrUpdateWeenie(GetID(), GetTopLevelID(), m_Position.objcell_id >> 16, writer.GetData(), writer.GetSize()); 
+	bool result = g_pDBIO->CreateOrUpdateWeenie(GetID(), GetTopLevelID(), m_Position.objcell_id >> 16, writer.GetData(), writer.GetSize());
+	if (!result)
+		SERVER_ERROR << "Failed to save Weenie:" << id << " Owner:" << GetTopLevelID() << " At:" << (m_Position.objcell_id >> 16);
 
 	double elapsed = watch.GetElapsed();
 	if (elapsed >= 0.1)
 	{
-		LOG_PRIVATE(Temp, Warning, "Took %f seconds to save %s\n", elapsed, GetName().c_str());
+		SERVER_WARN << csprintf("Took %f seconds to save %s\n", elapsed, GetName().c_str());
 	}
 
 	return result;
@@ -4740,7 +5371,10 @@ bool CWeenieObject::Load()
 		if (save.UnPack(&reader) && !reader.GetLastError())
 		{
 			LoadEx(save);
-			
+			AllegianceTreeNode *node = g_pAllegianceManager->GetTreeNode(GetID());
+			if (node)
+				node->_level = m_Qualities.GetInt(LEVEL_INT, 1);
+
 #ifndef PUBLIC_BUILD
 			double elapsed = watch.GetElapsed();
 			if (elapsed >= 0.1)
@@ -4764,7 +5398,7 @@ bool CWeenieObject::Load()
 	return false;
 }
 
-CWeenieObject *CWeenieObject::Load(DWORD weenie_id)
+CWeenieObject *CWeenieObject::Load(uint32_t weenie_id)
 {
 #ifndef PUBLIC_BUILD
 	CStopWatch watch;
@@ -4817,9 +5451,9 @@ CWeenieObject *CWeenieObject::Load(DWORD weenie_id)
 	return NULL;
 }
 
-DWORD CWeenieObject::GetTopLevelID()
+uint32_t CWeenieObject::GetTopLevelID()
 {
-	DWORD container_id = InqIIDQuality(CONTAINER_IID, 0);
+	uint32_t container_id = InqIIDQuality(CONTAINER_IID, 0);
 	if (container_id)
 	{
 		if (CWeenieObject *pContainer = g_pWorld->FindObject(container_id))
@@ -4828,11 +5462,11 @@ DWORD CWeenieObject::GetTopLevelID()
 		}
 		else
 		{
-			LOG(Temp, Error, "Could not find parent container weenie 0x%08X for 0x%08X in GetTopLevelID()\n", container_id, GetID());
+			SERVER_ERROR << "Could not find parent container weenie" << container_id << "for" << id << "in GetTopLevelID()";
 		}
 	}
 
-	DWORD wielder_id = InqIIDQuality(WIELDER_IID, 0);
+	uint32_t wielder_id = InqIIDQuality(WIELDER_IID, 0);
 	if (wielder_id)
 	{
 		if (CWeenieObject *pWielder = g_pWorld->FindObject(wielder_id))
@@ -4841,7 +5475,20 @@ DWORD CWeenieObject::GetTopLevelID()
 		}
 		else
 		{
-			LOG(Temp, Error, "Could not find parent wielder weenie 0x%08X for 0x%08X in GetTopLevelID()\n", wielder_id, GetID());
+			SERVER_ERROR << "Could not find parent wielder weenie" << wielder_id << "for" << id << "in GetTopLevelID()"; ;
+		}
+	}
+
+	uint32_t owner_id = InqIIDQuality(OWNER_IID, 0);
+	if (owner_id)
+	{
+		if (CWeenieObject *pOwner = g_pWorld->FindObject(owner_id))
+		{
+			return pOwner->GetTopLevelID();
+		}
+		else
+		{
+			SERVER_ERROR << "Could not find parent wielder weenie" << owner_id << "for" << id << "in GetTopLevelID()"; ;
 		}
 	}
 
@@ -4852,6 +5499,40 @@ int CWeenieObject::UseChecked(CPlayerWeenie *other)
 {
 	if (IsBusyOrInAction() || IsDead())
 		return WERROR_ACTIONS_LOCKED;
+
+	// check restrictions
+	int32_t level = 0;
+	int32_t level_req = 0;
+	int32_t skill = 0;
+
+	if (m_Qualities.InqInt(USE_REQUIRES_LEVEL_INT, level_req, TRUE)
+		&& other->InqIntQuality(LEVEL_INT, 0, TRUE) < level_req)
+		return WERROR_ITEM_INTERACTION_RESTRICTED;
+
+	if (m_Qualities.InqInt(USE_REQUIRES_SKILL_INT, skill))
+	{
+		uint32_t skillLevel = 0;
+		m_Qualities.InqInt(USE_REQUIRES_SKILL_LEVEL_INT, level_req);
+		other->InqSkill((STypeSkill)skill, skillLevel, FALSE);
+
+		if (skillLevel < (uint32_t)level_req)
+			return WERROR_ITEM_INTERACTION_RESTRICTED;
+	}
+
+	int32_t cooldownId = 0;
+	if (m_Qualities.InqInt(SHARED_COOLDOWN_INT, cooldownId, TRUE))
+	{
+		if (other->m_Qualities.InqCooldown(cooldownId))
+			return WERROR_ACTIONS_LOCKED;
+
+		double duration = 0.0;
+		if (m_Qualities.InqFloat(COOLDOWN_DURATION_FLOAT, duration, TRUE))
+		{
+			Enchantment *enchant = other->m_Qualities.AddCooldown(cooldownId, duration);
+			if (enchant)
+				other->NotifyEnchantmentUpdated(enchant);
+		}
+	}
 
 	return Use(other);
 }
@@ -4877,52 +5558,62 @@ void CWeenieObject::SetLocked(BOOL locked)
 	NotifyBoolStatUpdated(LOCKED_BOOL, false);
 }
 
-int CWeenieObject::Activate(DWORD activator_id)
+int CWeenieObject::Activate(uint32_t activator_id)
 {
-	if (m_Qualities._generator_registry)
+	GeneratorRemoveNode(activator_id, (RegenerationType)0xf);
+
+	//activation code copied from CSwitchWeenie::Activate() seems to fix the generators not spawning mobs on Activate_EmoteType used on mobs like Scold that spawn more mobs on death.
+	if (get_minterp()->interpreted_state.GetNumActions())
+		return WERROR_NONE;
+
+	int activationResponse = InqIntQuality(ACTIVATION_RESPONSE_INT, 0);
+
+	if (uint32_t activation_target_id = InqIIDQuality(ACTIVATION_TARGET_IID, 0))
 	{
-		GeneratorRegistryNode *node = m_Qualities._generator_registry->_registry.lookup(activator_id);
+		CWeenieObject *activation_target = g_pWorld->FindObject(activation_target_id);
+		if (activation_target)
+			activation_target->Activate(activator_id);
+	}
 
-		if (node)
+	//if (activationResponse & Activation_CastSpell)
+	{
+		if (uint32_t spell_did = InqDIDQuality(SPELL_DID, 0))
 		{
-			m_Qualities._generator_registry->_registry.remove(activator_id);
-
-			// find this profile slot
-			double delay = -1.0;
-			if (m_Qualities._generator_table)
-			{
-				for (auto &profile : m_Qualities._generator_table->_profile_list)
-				{
-					if (profile.slot == node->slot)
-					{
-						delay = profile.delay * g_pConfig->RespawnTimeMultiplier();;
-						break;
-					}
-				}
-			}
-
-			if (delay >= 0)
-			{
-				if (!m_Qualities._generator_queue)
-					m_Qualities._generator_queue = new GeneratorQueue();
-
-				GeneratorQueueNode queueNode;
-				queueNode.slot = node->slot;
-				queueNode.when = Timer::cur_time + delay;
-				m_Qualities._generator_queue->_queue.push_back(queueNode);
-
-				if (_nextRegen < 0.0)
-					_nextRegen = Timer::cur_time + (InqFloatQuality(REGENERATION_INTERVAL_FLOAT, 0.0, TRUE) * g_pConfig->RespawnTimeMultiplier());
-			}
+			MakeSpellcastingManager()->CastSpellInstant(activator_id, spell_did);
 		}
 	}
+
+	if (activationResponse & Generate_ActivationResponse)
+	{
+		g_pWeenieFactory->AddFromGeneratorTable(this, false);
+	}
+
+	if (activationResponse & Talk_ActivationResponse)
+	{
+		std::string talkText;
+		if (m_Qualities.InqString(ACTIVATION_TALK_STRING, talkText))
+		{
+			CPlayerWeenie *player = g_pWorld->FindPlayer(activator_id);
+			if (player)
+				player->SendText(talkText.c_str(), LTT_DEFAULT);
+		}
+	}
+
+	DoActivationEmote(activator_id);
+
+	return WERROR_NONE;
+}
+
+int CWeenieObject::DoUseResponse(CWeenieObject *player)
+{
+	DoLocalSignal();
 
 	return WERROR_NONE;
 }
 
 int CWeenieObject::DoUseWithResponse(CWeenieObject *player, CWeenieObject *with)
 {
-	if (CPlayerWeenie *player_weenie = player->AsPlayer()) 
+	if (CPlayerWeenie *player_weenie = player->AsPlayer())
 	{
 		return player_weenie->UseEx(this, with);
 	}
@@ -4932,7 +5623,8 @@ int CWeenieObject::DoUseWithResponse(CWeenieObject *player, CWeenieObject *with)
 
 bool CWeenieObject::IsExecutingEmote()
 {
-	if (m_EmoteManager && m_EmoteManager->IsExecutingAlready())
+	if (m_EmoteManager &&
+		(m_EmoteManager->IsExecutingAlready() || m_EmoteManager->HasQueue()))
 	{
 		return true;
 	}
@@ -4940,7 +5632,25 @@ bool CWeenieObject::IsExecutingEmote()
 	return false;
 }
 
-void CWeenieObject::ChanceExecuteEmoteSet(DWORD other_id, EmoteCategory category)
+bool CWeenieObject::HasEmoteForID(EmoteCategory emoteCategory, uint32_t item_id)
+{
+	// check emote item acceptance for category
+	PackableList<EmoteSet> *emoteCategoryResult = m_Qualities._emote_table->_emote_table.lookup(emoteCategory);
+
+	if (emoteCategoryResult)
+	{
+		for (auto &emoteSet : *emoteCategoryResult)
+		{
+			if (emoteSet.classID == item_id)
+			{
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+void CWeenieObject::ChanceExecuteEmoteSet(uint32_t other_id, EmoteCategory category)
 {
 	//if (IsExecutingEmote())
 	//{
@@ -4985,9 +5695,49 @@ void CWeenieObject::DoUseEmote(CWeenieObject *other)
 	ChanceExecuteEmoteSet(other->GetID(), Use_EmoteCategory);
 }
 
-void CWeenieObject::DoActivationEmote(DWORD activator_id)
+void CWeenieObject::DoActivationEmote(uint32_t activator_id)
 {
 	ChanceExecuteEmoteSet(activator_id, Activation_EmoteCategory);
+}
+
+void CWeenieObject::DoLocalSignal()
+{
+	std::string signal;
+	if (m_Qualities.InqString(USE_SENDS_SIGNAL_STRING, signal))
+	{
+		DoLocalSignal(signal);
+	}
+}
+
+void CWeenieObject::DoLocalSignal(const std::string &signal)
+{
+	CWeenieObject *source = this;
+	if (IsContained())
+		source = GetWorldTopLevelContainer();
+
+	std::list<CWeenieObject*> nearby;
+	g_pWorld->EnumNearby(source, 24.0f, &nearby);
+	for (CWeenieObject* target : nearby)
+	{
+		target->NotifyLocalSignal(signal, source);
+	}
+}
+
+void CWeenieObject::NotifyLocalSignal(const std::string &signal, CWeenieObject *sender)
+{
+	if (InqIntQuality(HEAR_LOCAL_SIGNALS_INT, 0, TRUE))
+	{
+		bool inrange = true;
+		int radius = 0;
+		if (m_Qualities.InqInt(HEAR_LOCAL_SIGNALS_RADIUS_INT, radius, TRUE))
+		{
+			float distance = DistanceTo(sender);
+			inrange = (int)distance <= radius;
+		}
+
+		if (inrange)
+			MakeEmoteManager()->ChanceExecuteEmoteSet(ReceiveLocalSignal_EmoteCategory, signal, sender->GetID());
+	}
 }
 
 int CWeenieObject::Use(CPlayerWeenie *player)
@@ -5016,12 +5766,12 @@ int CWeenieObject::UseWith(CPlayerWeenie *player, CWeenieObject *with)
 	return WERROR_NONE;
 }
 
-void CWeenieObject::HandleMoveToDone(DWORD error)
+void CWeenieObject::HandleMoveToDone(uint32_t error)
 {
-	if (m_UseManager)
+	/*if (m_UseManager)
 	{
 		m_UseManager->HandleMoveToDone(error);
-	}
+	}*/
 	if (m_AttackManager)
 	{
 		m_AttackManager->HandleMoveToDone(error);
@@ -5043,38 +5793,32 @@ BOOL CWeenieObject::IsImpenetrable()
 	return (InqIntQuality(PLAYER_KILLER_STATUS_INT, 0) & Free_PKStatus) ? true : false;
 }
 
-bool CWeenieObject::HasFellowship()
-{
-	std::string dummy;
-	if (m_Qualities.InqString(FELLOWSHIP_STRING, dummy))
-		return true;
-
-	return false;
-}
-
 void CWeenieObject::LeaveFellowship()
 {
-	std::string fellowshipName;
-	if (m_Qualities.InqString(FELLOWSHIP_STRING, fellowshipName))
+	if (HasFellowship())
 	{
-		g_pFellowshipManager->Quit(fellowshipName, GetID());
+		//_fellowship->Quit(GetID());
+		_fellowship = nullptr;
+
 		m_Qualities.RemoveString(FELLOWSHIP_STRING);
 	}
 }
 
-Fellowship *CWeenieObject::GetFellowship()
+void CWeenieObject::JoinFellowship(const fellowship_ptr_t &fellowship)
 {
-	std::string fellowshipName;
-	if (m_Qualities.InqString(FELLOWSHIP_STRING, fellowshipName))
-	{
-		return g_pFellowshipManager->GetFellowship(fellowshipName);
-	}
+	// check behavior for already being in a fellow
+	// just part existing until
+	LeaveFellowship();
 
-	return NULL;
+	if (fellowship)
+	{
+		_fellowship = fellowship;
+		m_Qualities.SetString(FELLOWSHIP_STRING, _fellowship->_name);
+	}
 }
 
 COMBAT_MODE CWeenieObject::GetEquippedCombatMode()
-{	
+{
 	switch (InqIntQuality(COMBAT_USE_INT, COMBAT_USE::COMBAT_USE_NONE))
 	{
 	case COMBAT_USE_SHIELD:
@@ -5084,7 +5828,7 @@ COMBAT_MODE CWeenieObject::GetEquippedCombatMode()
 	case COMBAT_USE_MISSILE:
 		return COMBAT_MODE::MISSILE_COMBAT_MODE;
 	default:
-		if(InqIntQuality(DEFAULT_COMBAT_STYLE_INT, CombatStyle::Undef_CombatStyle) & Magic_CombatStyle)
+		if (InqIntQuality(DEFAULT_COMBAT_STYLE_INT, CombatStyle::Undef_CombatStyle) & Magic_CombatStyle)
 			return COMBAT_MODE::MAGIC_COMBAT_MODE;
 		return COMBAT_MODE::UNDEF_COMBAT_MODE;
 	}
@@ -5101,7 +5845,7 @@ CWeenieObject *CWeenieObject::GetWorldWielder()
 }
 
 CWeenieObject *CWeenieObject::GetWorldOwner()
-{	
+{
 	if (IsContained())
 	{
 		if (CWeenieObject *owner = GetWorldContainer())
@@ -5124,7 +5868,7 @@ CWeenieObject *CWeenieObject::GetWorldTopLevelOwner()
 
 CContainerWeenie *CWeenieObject::GetWorldTopLevelContainer()
 {
-	DWORD top_level_id = GetTopLevelID();
+	uint32_t top_level_id = GetTopLevelID();
 
 	if (top_level_id != GetID())
 	{
@@ -5148,11 +5892,11 @@ void CWeenieObject::ReleaseFromAnyWeenieParent(bool bBroadcastContainerChange, b
 		{
 			BinaryWriter statNotify;
 			BYTE statTS = GetNextStatTimestamp(IID_StatType, CONTAINER_IID);
-			statNotify.Write<DWORD>(0x2DA);
+			statNotify.Write<uint32_t>(0x2DA);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(CONTAINER_IID);
-			statNotify.Write<DWORD>(0);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(CONTAINER_IID);
+			statNotify.Write<uint32_t>(0);
 			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
 		}
 
@@ -5167,13 +5911,6 @@ void CWeenieObject::ReleaseFromAnyWeenieParent(bool bBroadcastContainerChange, b
 		}
 
 		m_Qualities.SetInstanceID(CONTAINER_IID, 0);
-
-		/*
-		if (bBroadcastContainerChange)
-		{
-			NotifyIIDStatUpdated(CONTAINER_IID, false);
-		}
-		*/
 	}
 
 	if (IsWielded())
@@ -5182,11 +5919,11 @@ void CWeenieObject::ReleaseFromAnyWeenieParent(bool bBroadcastContainerChange, b
 		{
 			BinaryWriter statNotify;
 			BYTE statTS = GetNextStatTimestamp(IID_StatType, WIELDER_IID);
-			statNotify.Write<DWORD>(0x2DA);
+			statNotify.Write<uint32_t>(0x2DA);
 			statNotify.Write<BYTE>(statTS);
-			statNotify.Write<DWORD>(GetID());
-			statNotify.Write<DWORD>(WIELDER_IID);
-			statNotify.Write<DWORD>(0);
+			statNotify.Write<uint32_t>(GetID());
+			statNotify.Write<uint32_t>(WIELDER_IID);
+			statNotify.Write<uint32_t>(0);
 			g_pWorld->BroadcastPVS(this, statNotify.GetData(), statNotify.GetSize(), PRIVATE_MSG, FALSE, FALSE);
 		}
 
@@ -5206,7 +5943,7 @@ void CWeenieObject::ReleaseFromAnyWeenieParent(bool bBroadcastContainerChange, b
 			// remove any enchantments
 			if (wielderObj->m_Qualities._enchantment_reg)
 			{
-				PackableListWithJson<DWORD> spells_to_remove;
+				PackableListWithJson<uint32_t> spells_to_remove;
 
 				if (wielderObj->m_Qualities._enchantment_reg->_add_list)
 				{
@@ -5248,7 +5985,7 @@ void CWeenieObject::ReleaseFromAnyWeenieParent(bool bBroadcastContainerChange, b
 					if (wielderObj->AsPlayer())
 					{
 						BinaryWriter silentRemoveMessage;
-						silentRemoveMessage.Write<DWORD>(0x2C8);
+						silentRemoveMessage.Write<uint32_t>(0x2C8);
 						spells_to_remove.Pack(&silentRemoveMessage);
 
 						wielderObj->SendNetMessage(&silentRemoveMessage, PRIVATE_MSG, TRUE, FALSE);
@@ -5256,11 +5993,13 @@ void CWeenieObject::ReleaseFromAnyWeenieParent(bool bBroadcastContainerChange, b
 
 					wielderObj->CheckVitalRanges();
 				}
+
+
 			}
 
 			if (m_Qualities._enchantment_reg)
 			{
-				PackableListWithJson<DWORD> spells_to_remove;
+				PackableListWithJson<uint32_t> spells_to_remove;
 
 				if (m_Qualities._enchantment_reg->_add_list)
 				{
@@ -5302,25 +6041,44 @@ void CWeenieObject::ReleaseFromAnyWeenieParent(bool bBroadcastContainerChange, b
 					CheckVitalRanges();
 				}
 			}
+
+
+
+			int gearRating;
+			for (int i = 370; i < 380; i++)
+			{
+				if (m_Qualities.InqInt((STypeInt)i, gearRating) && gearRating > 0)
+				{
+					wielderObj->AsMonster()->UpdateRatingFromGear((STypeInt)i, -gearRating);
+				}
+			}
+
+			// Remove Damage Rating for Weapon Mastery.
+			if (m_Qualities.GetInt(WEAPON_TYPE_INT, 0))
+			{
+				int rating;
+				if (wielderObj->m_Qualities.InqInt(DAMAGE_RATING_INT, rating, true))
+				{
+					wielderObj->m_Qualities.SetInt(DAMAGE_RATING_INT, max(rating - 5, 0));
+					wielderObj->NotifyIntStatUpdated(DAMAGE_RATING_INT);
+				}
+			}
+				
+
 		}
-	
-		/*
-		if (bBroadcastEquipmentChange)
-		{
-			NotifyIIDStatUpdated(WIELDER_IID, false);
-		}
-		*/
 	}
+
+	m_Qualities.SetInstanceID(OWNER_IID, 0);
 
 	_cachedHasOwner = false;
 }
 
-CWeenieObject *CWeenieObject::FindContained(DWORD object_id)
+CWeenieObject *CWeenieObject::FindContained(uint32_t object_id)
 {
 	return NULL;
 }
 
-void CWeenieObject::SetWeenieContainer(DWORD container_id)
+void CWeenieObject::SetWeenieContainer(uint32_t container_id)
 {
 	m_Qualities.SetInstanceID(CONTAINER_IID, container_id);
 	NotifyIIDStatUpdated(CONTAINER_IID, false);
@@ -5328,7 +6086,7 @@ void CWeenieObject::SetWeenieContainer(DWORD container_id)
 	RecacheHasOwner();
 }
 
-void CWeenieObject::SetWielderID(DWORD wielder_id)
+void CWeenieObject::SetWielderID(uint32_t wielder_id)
 {
 	m_Qualities.SetInstanceID(WIELDER_IID, wielder_id);
 	NotifyIIDStatUpdated(WIELDER_IID, false);
@@ -5352,13 +6110,13 @@ void CWeenieObject::RecacheHasOwner()
 	_cachedHasOwner = (IsContained() || IsWielded()) ? true : false;
 }
 
-void CWeenieObject::SetWieldedLocation(DWORD inv_loc)
+void CWeenieObject::SetWieldedLocation(uint32_t inv_loc)
 {
 	m_Qualities.SetInt(CURRENT_WIELDED_LOCATION_INT, inv_loc);
 	NotifyIntStatUpdated(CURRENT_WIELDED_LOCATION_INT, false);
 }
 
-bool CWeenieObject::IsValidWieldLocation(DWORD location)
+bool CWeenieObject::IsValidWieldLocation(uint32_t location)
 {
 	if (InqIntQuality(LOCATIONS_INT, 0, TRUE) & location)
 		return true;
@@ -5366,11 +6124,32 @@ bool CWeenieObject::IsValidWieldLocation(DWORD location)
 	return false;
 }
 
-bool CWeenieObject::CanEquipWith(CWeenieObject *other, DWORD otherLocation)
+bool CWeenieObject::CanEquipWith(CWeenieObject *other, uint32_t otherLocation)
 {
-	if (InqIntQuality(CURRENT_WIELDED_LOCATION_INT, 0, TRUE) & otherLocation)
+	int loc = InqIntQuality(CURRENT_WIELDED_LOCATION_INT, 0, TRUE);
+	//int allLoc = InqIntQuality(LOCATIONS_INT, 0, TRUE);
+
+	//int otherAllLoc = other->InqIntQuality(LOCATIONS_INT, 0, TRUE);
+	//int otherLoc = other->InqIntQuality(CURRENT_WIELDED_LOCATION_INT, 0, TRUE);
+
+	//WINLOG(Object, Normal, "Can Equip %s => %s || %08x %08x => %08x %08x (%08x)\n",
+	//	GetName().c_str(), other->GetName().c_str(),
+	//	allLoc, loc, otherAllLoc, otherLoc, otherLocation);
+
+	// if this object covers other location, no
+	if (loc & otherLocation)
 	{
 		return false;
+	}
+
+	// if the other item wants to be in the left hand slot
+	if (otherLocation == SHIELD_LOC)
+	{
+		// if this object is a bow/thrown item or two-hander
+		if (loc & (HELD_LOC | MISSILE_WEAPON_LOC | TWO_HANDED_LOC))
+		{
+			return false;
+		}
 	}
 
 	return true;
@@ -5398,15 +6177,23 @@ int CWeenieObject::SimulateGiveObject(CContainerWeenie *target_container, CWeeni
 		if (IsCreature())
 		{
 			int amount = object_weenie->InqIntQuality(STACK_SIZE_INT, 1);
-			if (amount > 1)
+			if (amount > 1 && !(m_Qualities._emote_table && HasEmoteForID(Refuse_EmoteCategory, object_weenie->m_Qualities.id)))
 			{
 				SendText(csprintf("You give %s %s %s.", target_container->GetName().c_str(), FormatNumberString(amount).c_str(), object_weenie->GetPluralName().c_str()), LTT_DEFAULT);
 				target_container->SendText(csprintf("%s gives you %s %s.", GetName().c_str(), FormatNumberString(amount).c_str(), object_weenie->GetPluralName().c_str()), LTT_DEFAULT);
 			}
 			else
 			{
-				SendText(csprintf("You give %s %s.", target_container->GetName().c_str(), object_weenie->GetName().c_str()), LTT_DEFAULT);
-				target_container->SendText(csprintf("%s gives you %s.", GetName().c_str(), object_weenie->GetName().c_str()), LTT_DEFAULT);
+				// check emote Refusal here to avoid the extra "%s gives you %s." text on Refuse Emotes.
+				if (m_Qualities._emote_table && HasEmoteForID(Refuse_EmoteCategory, object_weenie->m_Qualities.id))
+				{
+					SendText(csprintf("You allow %s to examine your %s.", target_container->GetName().c_str(), object_weenie->GetName().c_str()), LTT_DEFAULT);
+				}
+				else
+				{
+					SendText(csprintf("You give %s %s.", target_container->GetName().c_str(), object_weenie->GetName().c_str()), LTT_DEFAULT);
+					target_container->SendText(csprintf("%s gives you %s.", GetName().c_str(), object_weenie->GetName().c_str()), LTT_DEFAULT);
+				}
 			}
 		}
 	}
@@ -5417,7 +6204,7 @@ int CWeenieObject::SimulateGiveObject(CContainerWeenie *target_container, CWeeni
 	return WERROR_NONE;
 }
 
-void CWeenieObject::SimulateGiveObject(class CContainerWeenie *target_container, DWORD wcid, int amount, int ptid, float shade, int bondedType)
+void CWeenieObject::SimulateGiveObject(class CContainerWeenie *target_container, uint32_t wcid, int amount, int ptid, float shade, int bondedType)
 {
 	CWeenieObject *object_weenie = g_pWeenieFactory->CreateWeenieByClassID(wcid, NULL, false);
 
@@ -5432,7 +6219,7 @@ void CWeenieObject::SimulateGiveObject(class CContainerWeenie *target_container,
 			object_weenie->m_Qualities.SetFloat(SHADE_FLOAT, shade);
 	}
 
-	if(bondedType != 0)
+	if (bondedType != 0)
 		object_weenie->m_Qualities.SetInt(BONDED_INT, bondedType);
 
 	if (amount > 1)
@@ -5484,7 +6271,7 @@ void CWeenieObject::SimulateGiveObject(class CContainerWeenie *target_container,
 		if (IsCreature())
 		{
 			int amount = object_weenie->InqIntQuality(STACK_SIZE_INT, 1);
-			if (amount > 1)
+			if (amount > 1 && !(m_Qualities._emote_table && HasEmoteForID(Refuse_EmoteCategory, object_weenie->m_Qualities.id)))
 			{
 				SendText(csprintf("You give %s %s %s.", target_container->GetName().c_str(), FormatNumberString(amount).c_str(), object_weenie->GetPluralName().c_str()), LTT_DEFAULT);
 				target_container->SendText(csprintf("%s gives you %s %s.", GetName().c_str(), FormatNumberString(amount).c_str(), object_weenie->GetPluralName().c_str()), LTT_DEFAULT);
@@ -5501,11 +6288,11 @@ void CWeenieObject::SimulateGiveObject(class CContainerWeenie *target_container,
 	DebugValidate();
 }
 
-void CWeenieObject::SendNetMessage(void *_data, DWORD _len, WORD _group, BOOL _event)
+void CWeenieObject::SendNetMessage(void *_data, uint32_t _len, WORD _group, BOOL _event, bool ephemeral)
 {
 }
 
-void CWeenieObject::SendNetMessage(BinaryWriter *_food, WORD _group, BOOL _event, BOOL should_delete)
+void CWeenieObject::SendNetMessage(BinaryWriter *_food, WORD _group, BOOL _event, BOOL should_delete, bool ephemeral)
 {
 	if (should_delete)
 	{
@@ -5513,36 +6300,36 @@ void CWeenieObject::SendNetMessage(BinaryWriter *_food, WORD _group, BOOL _event
 	}
 }
 
-void CWeenieObject::SendNetMessageToTopMost(void *_data, DWORD _len, WORD _group, BOOL _event)
+void CWeenieObject::SendNetMessageToTopMost(void *_data, uint32_t _len, WORD _group, BOOL _event, bool ephemeral)
 {
 	if (AsPlayer())
 	{
 		// obviously we are the top most
-		SendNetMessage(_data, _len, _group, _event);
+		SendNetMessage(_data, _len, _group, _event, ephemeral);
 		return;
 	}
 
 	if (CWeenieObject *topMost = GetWorldTopLevelOwner())
 	{
 		// we are wielded or contained, send to topmost owner
-		topMost->SendNetMessage(_data, _len, _group, _event);
+		topMost->SendNetMessage(_data, _len, _group, _event, ephemeral);
 		return;
 	}
 }
 
-void CWeenieObject::SendNetMessageToTopMost(BinaryWriter *_food, WORD _group, BOOL _event, BOOL should_delete)
+void CWeenieObject::SendNetMessageToTopMost(BinaryWriter *_food, WORD _group, BOOL _event, BOOL should_delete, bool ephemeral)
 {
 	if (AsPlayer())
 	{
 		// obviously we are the top most
-		SendNetMessage(_food, _group, _event, should_delete);
+		SendNetMessage(_food, _group, _event, should_delete, ephemeral);
 		return;
 	}
 
 	if (CWeenieObject *topMost = GetWorldTopLevelOwner())
 	{
 		// we are wielded or contained, send to topmost owner
-		topMost->SendNetMessage(_food, _group, _event, should_delete);
+		topMost->SendNetMessage(_food, _group, _event, should_delete, ephemeral);
 		return;
 	}
 
@@ -5599,16 +6386,16 @@ void CWeenieObject::CheckDeath(CWeenieObject *source, DAMAGE_TYPE dt)
 	}
 }
 
-DWORD CWeenieObject::GetMagicDefense()
+uint32_t CWeenieObject::GetMagicDefense()
 {
-	DWORD defenseSkill = 0;
+	uint32_t defenseSkill = 0;
 	InqSkill(MAGIC_DEFENSE_SKILL, defenseSkill, FALSE);
 	return defenseSkill;
 }
 
-bool CWeenieObject::TryMagicResist(DWORD magicSkill)
+bool CWeenieObject::TryMagicResist(uint32_t magicSkill)
 {
-	DWORD defenseSkill = GetMagicDefense();
+	uint32_t defenseSkill = GetMagicDefense();
 
 	double defenseMod = GetMagicDefenseModUsingWielded();
 	if (AsContainer())
@@ -5616,7 +6403,7 @@ bool CWeenieObject::TryMagicResist(DWORD magicSkill)
 		for (auto item : AsContainer()->m_Wielded)
 		{
 			if (item->GetImbueEffects() & MagicDefense_ImbuedEffectType)
-				defenseMod += 0.01;
+				defenseSkill += 1;
 		}
 	}
 	defenseSkill = (int)round((double)defenseSkill * defenseMod);
@@ -5631,17 +6418,29 @@ double CWeenieObject::GetMeleeDefenseModUsingWielded()
 
 double CWeenieObject::GetMeleeDefenseMod()
 {
-	double mod = InqFloatQuality(WEAPON_DEFENSE_FLOAT, 1.0, FALSE);
+	// Don't enchant Ammunition
+	if (m_Qualities.m_WeenieType == Ammunition_WeenieType)
+		return 1.0;
+
+	double mod = InqFloatQuality(WEAPON_DEFENSE_FLOAT, 0.0, TRUE);
 
 	if (m_Qualities._enchantment_reg)
 		m_Qualities._enchantment_reg->EnchantFloat(WEAPON_DEFENSE_FLOAT, &mod);
 
+	if (_IsPlayer())
+	{
+		double mod = 0.0;
+		if (m_Qualities._enchantment_reg && m_Qualities._enchantment_reg->EnchantFloat(WEAPON_AURA_DEFENSE_FLOAT, &mod))
+		{
+			return mod;
+		}
+	}
+
 	CWeenieObject *wielder = GetWorldWielder();
 	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
 	{
-		mod *= wielder->GetMeleeDefenseMod();
+		mod += (wielder->GetMeleeDefenseMod());
 	}
-
 	return mod;
 }
 
@@ -5652,7 +6451,11 @@ double CWeenieObject::GetMissileDefenseModUsingWielded()
 
 double CWeenieObject::GetMissileDefenseMod()
 {
-	double mod = InqFloatQuality(WEAPON_MISSILE_DEFENSE_FLOAT, 1.0, FALSE);
+	double mod = InqFloatQuality(WEAPON_MISSILE_DEFENSE_FLOAT, 1.0, TRUE);
+
+	// Don't enchant Ammunition
+	if (m_Qualities.m_WeenieType == Ammunition_WeenieType)
+		return mod;
 
 	if (m_Qualities._enchantment_reg)
 		m_Qualities._enchantment_reg->EnchantFloat(WEAPON_MISSILE_DEFENSE_FLOAT, &mod);
@@ -5660,7 +6463,7 @@ double CWeenieObject::GetMissileDefenseMod()
 	CWeenieObject *wielder = GetWorldWielder();
 	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
 	{
-		mod *= wielder->GetMissileDefenseMod();
+		mod += (wielder->GetMissileDefenseMod()) - 1.0;
 	}
 
 	return mod;
@@ -5673,7 +6476,11 @@ double CWeenieObject::GetMagicDefenseModUsingWielded()
 
 double CWeenieObject::GetMagicDefenseMod()
 {
-	double mod = InqFloatQuality(WEAPON_MAGIC_DEFENSE_FLOAT, 1.0, FALSE);
+	double mod = InqFloatQuality(WEAPON_MAGIC_DEFENSE_FLOAT, 1.0, TRUE);
+
+	// Don't enchant Ammunition
+	if (m_Qualities.m_WeenieType == Ammunition_WeenieType)
+		return mod;
 
 	if (m_Qualities._enchantment_reg)
 		m_Qualities._enchantment_reg->EnchantFloat(WEAPON_MAGIC_DEFENSE_FLOAT, &mod);
@@ -5681,7 +6488,7 @@ double CWeenieObject::GetMagicDefenseMod()
 	CWeenieObject *wielder = GetWorldWielder();
 	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
 	{
-		mod *= wielder->GetMagicDefenseMod();
+		mod += (wielder->GetMagicDefenseMod()) - 1.0;
 	}
 
 	return mod;
@@ -5689,15 +6496,28 @@ double CWeenieObject::GetMagicDefenseMod()
 
 double CWeenieObject::GetOffenseMod()
 {
-	double mod = InqFloatQuality(WEAPON_OFFENSE_FLOAT, 1.0, FALSE);
+	double mod = InqFloatQuality(WEAPON_OFFENSE_FLOAT, 0.0, TRUE);
+
+	// Don't enchant Ammunition
+	if (m_Qualities.m_WeenieType == Ammunition_WeenieType)
+		return mod;
 
 	if (m_Qualities._enchantment_reg)
 		m_Qualities._enchantment_reg->EnchantFloat(WEAPON_OFFENSE_FLOAT, &mod);
 
+	if (_IsPlayer())
+	{
+		mod = 0.0;
+		if (m_Qualities._enchantment_reg && m_Qualities._enchantment_reg->EnchantFloat(WEAPON_AURA_OFFENSE_FLOAT, &mod))
+		{
+			return mod;
+		}
+	}
+
 	CWeenieObject *wielder = GetWorldWielder();
 	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
 	{
-		mod *= wielder->GetOffenseMod();
+		mod += (wielder->GetOffenseMod());
 	}
 
 	return mod;
@@ -5725,45 +6545,60 @@ double CWeenieObject::GetBitingStrikeFrequency()
 
 void CWeenieObject::AddImbueEffect(ImbuedEffectType effect)
 {
-	DWORD imbueEffects = GetImbueEffects();
+	uint32_t imbueEffects = GetImbueEffects();
 
 	if (imbueEffects & effect)
 		return; //it's already present.
 
 	imbueEffects |= effect;
-	m_Qualities.SetInt(IMBUED_EFFECT_INT, (int)effect);
 
-	//imbue effects 2 to 5 are not used by our dataset.
-	//if (!InqIntQuality(IMBUED_EFFECT_INT, 0, FALSE))
-	//	m_Qualities.SetInt(IMBUED_EFFECT_INT, (int)effect);
-	//else if (!InqIntQuality(IMBUED_EFFECT_2_INT, 0, FALSE))
-	//	m_Qualities.SetInt(IMBUED_EFFECT_2_INT, (int)effect);
-	//else if (!InqIntQuality(IMBUED_EFFECT_3_INT, 0, FALSE))
-	//	m_Qualities.SetInt(IMBUED_EFFECT_3_INT, (int)effect);
-	//else if (!InqIntQuality(IMBUED_EFFECT_4_INT, 0, FALSE))
-	//	m_Qualities.SetInt(IMBUED_EFFECT_4_INT, (int)effect);
-	//else if (!InqIntQuality(IMBUED_EFFECT_5_INT, 0, FALSE))
-	//	m_Qualities.SetInt(IMBUED_EFFECT_5_INT, (int)effect);
-	//else
-	//	return false;
-	//return true;
+	if (!InqIntQuality(IMBUED_EFFECT_INT, 0, FALSE))
+		m_Qualities.SetInt(IMBUED_EFFECT_INT, (int)effect);
+	else if (!InqIntQuality(IMBUED_EFFECT_2_INT, 0, FALSE))
+		m_Qualities.SetInt(IMBUED_EFFECT_2_INT, (int)effect);
+	else if (!InqIntQuality(IMBUED_EFFECT_3_INT, 0, FALSE))
+		m_Qualities.SetInt(IMBUED_EFFECT_3_INT, (int)effect);
+	else if (!InqIntQuality(IMBUED_EFFECT_4_INT, 0, FALSE))
+		m_Qualities.SetInt(IMBUED_EFFECT_4_INT, (int)effect);
+	else if (!InqIntQuality(IMBUED_EFFECT_5_INT, 0, FALSE))
+		m_Qualities.SetInt(IMBUED_EFFECT_5_INT, (int)effect);
+	else
+		return;
+	return;
 }
 
-DWORD CWeenieObject::GetImbueEffects()
+bool CWeenieObject::IsCovenantArmorShield()
 {
-	return InqIntQuality(IMBUED_EFFECT_INT, 0, FALSE);
+	if (m_Qualities.id >= 21156 && m_Qualities.id == 21159)
+		return true;
 
-	//imbue effects 2 to 5 are not used by our dataset.
-	//DWORD imbuedEffect = 0;
+	if (m_Qualities.id >= 40695 && m_Qualities.id == 40714)
+		return true;
 
-	//imbuedEffect |= (DWORD) InqIntQuality(IMBUED_EFFECT_INT, 0, FALSE);
-	//imbuedEffect |= (DWORD) InqIntQuality(IMBUED_EFFECT_2_INT, 0, FALSE);
-	//imbuedEffect |= (DWORD) InqIntQuality(IMBUED_EFFECT_2_INT, 0, FALSE);
-	//imbuedEffect |= (DWORD) InqIntQuality(IMBUED_EFFECT_3_INT, 0, FALSE);
-	//imbuedEffect |= (DWORD) InqIntQuality(IMBUED_EFFECT_4_INT, 0, FALSE);
-	//imbuedEffect |= (DWORD) InqIntQuality(IMBUED_EFFECT_5_INT, 0, FALSE);
+	return false;
+}
 
-	//return imbuedEffect;
+bool CWeenieObject::IsArmor()
+{
+	int retval = 0;
+	if (m_Qualities.InqInt(ITEM_TYPE_INT, retval) && retval == 2)
+		return true;
+	return false;
+}
+
+
+uint32_t CWeenieObject::GetImbueEffects()
+{
+	uint32_t imbuedEffect = 0;
+
+	imbuedEffect |= (uint32_t)InqIntQuality(IMBUED_EFFECT_INT, 0, FALSE);
+	imbuedEffect |= (uint32_t)InqIntQuality(IMBUED_EFFECT_2_INT, 0, FALSE);
+	imbuedEffect |= (uint32_t)InqIntQuality(IMBUED_EFFECT_2_INT, 0, FALSE);
+	imbuedEffect |= (uint32_t)InqIntQuality(IMBUED_EFFECT_3_INT, 0, FALSE);
+	imbuedEffect |= (uint32_t)InqIntQuality(IMBUED_EFFECT_4_INT, 0, FALSE);
+	imbuedEffect |= (uint32_t)InqIntQuality(IMBUED_EFFECT_5_INT, 0, FALSE);
+
+	return imbuedEffect;
 }
 
 double CWeenieObject::GetManaConversionMod()
@@ -5773,19 +6608,28 @@ double CWeenieObject::GetManaConversionMod()
 	if (m_Qualities._enchantment_reg)
 		m_Qualities._enchantment_reg->EnchantFloat(MANA_CONVERSION_MOD_FLOAT, &mod);
 
+	if (_IsPlayer())
+	{
+		mod = 1.0;
+		if (m_Qualities._enchantment_reg && m_Qualities._enchantment_reg->EnchantFloat(WEAPON_AURA_MANA_CONV_FLOAT, &mod))
+		{
+			return mod;
+		}
+	}
+
 	CWeenieObject *wielder = GetWorldWielder();
 	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
 	{
-		mod *= (1.0 + wielder->GetManaConversionMod());
+		mod *= wielder->GetManaConversionMod();
 	}
 
 	return mod;
 }
 
-DWORD CWeenieObject::GetEffectiveManaConversionSkill()
+uint32_t CWeenieObject::GetEffectiveManaConversionSkill()
 {
 	SKILL_ADVANCEMENT_CLASS sac;
-	DWORD manaConvSkill = 0;
+	uint32_t manaConvSkill = 0;
 
 	//mana conversion is an unuseable untrained skill, which means it's always 0 if you don't have it at least trained.
 	if (!m_Qualities.InqSkillAdvancementClass(MANA_CONVERSION_SKILL, sac) || sac >= TRAINED_SKILL_ADVANCEMENT_CLASS)
@@ -5797,7 +6641,7 @@ DWORD CWeenieObject::GetEffectiveManaConversionSkill()
 
 		if (manaMod > 0.0)
 		{
-			manaConvSkill = (DWORD)max(0, ((int)manaConvSkill * (1.0 + manaMod)));
+			manaConvSkill = (uint32_t)max(0, (int)(manaConvSkill * (1.0 + manaMod)));
 		}
 	}
 
@@ -5812,6 +6656,15 @@ int CWeenieObject::GetAttackTime()
 	if (m_Qualities._enchantment_reg)
 		m_Qualities._enchantment_reg->EnchantInt(WEAPON_TIME_INT, &speed, TRUE);
 
+	if (_IsPlayer())
+	{
+		speed = 0.0;
+		if (m_Qualities._enchantment_reg && m_Qualities._enchantment_reg->EnchantInt(WEAPON_AURA_SPEED_INT, &speed, true))
+		{
+			return speed;
+		}
+	}
+
 	CWeenieObject *wielder = GetWorldWielder();
 	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
 	{
@@ -5820,10 +6673,10 @@ int CWeenieObject::GetAttackTime()
 
 	/*
 	if (speed < 0)
-		speed = 0;
+	speed = 0;
 	if (speed > 100)
-		speed = 100;
-		*/
+	speed = 100;
+	*/
 
 	// 0 = 2.0
 	// 100 = 1.0
@@ -5831,18 +6684,70 @@ int CWeenieObject::GetAttackTime()
 	return speed;
 }
 
+double CWeenieObject::GetManaCon()
+{
+	CWeenieObject *wielder = GetWorldWielder();
+
+	double manacon = 0;
+	m_Qualities.InqFloat(MANA_CONVERSION_MOD_FLOAT, manacon, TRUE);
+
+	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
+	{
+		if (wielder->m_Qualities._enchantment_reg)
+			wielder->m_Qualities._enchantment_reg->EnchantFloat(MANA_CONVERSION_MOD_FLOAT, &manacon);
+	}
+
+	return manacon;
+}
+
 int CWeenieObject::GetAttackTimeUsingWielded()
 {
 	return GetAttackTime();
 }
 
-int CWeenieObject::GetAttackDamage()
+int CWeenieObject::GetAttackDamage(bool isAssess)
 {
 	int damage = InqIntQuality(DAMAGE_INT, 0, TRUE);
-	
+
+	// Don't enchant Ammunition instead look up the damage of the launcher
+	if (m_Qualities.m_WeenieType == Ammunition_WeenieType)
+	{
+		CAmmunitionWeenie *missile = AsAmmunition();
+
+		if (missile && missile->_launcherID)
+		{
+			CWeenieObject *launcher = g_pWorld->FindObject(missile->_launcherID);
+			if (launcher)
+			{
+				damage += launcher->GetAttackDamage();
+
+				int launcherElement = launcher->m_Qualities.GetInt(DAMAGE_TYPE_INT, 0);
+				int ammoElement = m_Qualities.GetInt(DAMAGE_TYPE_INT, 0);
+
+				if (!isAssess)
+				{
+					if (ammoElement == launcherElement || ammoElement == BASE_DAMAGE_TYPE)
+					{
+						if (launcher->m_Qualities.GetInt(ELEMENTAL_DAMAGE_BONUS_INT, 0))
+							damage += launcher->GetElementalDamageBonus();
+					}
+				}
+				return damage;
+			}
+		}
+	}
+
 	if (m_Qualities._enchantment_reg)
 		m_Qualities._enchantment_reg->EnchantInt(DAMAGE_INT, &damage, FALSE);
 
+	int auraDam;
+	if (AsPlayer())
+	{
+		int auraDam = 0;
+		if (m_Qualities._enchantment_reg)
+			m_Qualities._enchantment_reg->EnchantInt(WEAPON_AURA_DAMAGE_INT, &auraDam, FALSE);
+		damage += auraDam;
+	}
 	CWeenieObject *wielder = GetWorldWielder();
 	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
 	{
@@ -5852,152 +6757,178 @@ int CWeenieObject::GetAttackDamage()
 	return damage;
 }
 
+
+double CWeenieObject::GetElementalDamageMod()
+{
+	
+	double elementdmg = InqFloatQuality(ELEMENTAL_DAMAGE_MOD_FLOAT, 0.0, true);
+
+	if (m_Qualities._enchantment_reg)
+		m_Qualities._enchantment_reg->EnchantFloat(ELEMENTAL_DAMAGE_MOD_FLOAT, &elementdmg);
+
+	if (_IsPlayer())
+	{
+		double auraed = 0;
+		if (m_Qualities._enchantment_reg && m_Qualities._enchantment_reg->EnchantFloat(WEAPON_AURA_ELEMENTAL_FLOAT, &auraed))
+		{
+			return auraed;
+		}
+	}
+
+	CWeenieObject *wielder = GetWorldWielder();
+	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
+	{
+		elementdmg += wielder->GetElementalDamageMod();
+	}
+
+	return elementdmg;
+}
+
+
+int CWeenieObject::GetElementalDamageBonus()
+{
+	int damageBonus = InqIntQuality(ELEMENTAL_DAMAGE_BONUS_INT, 0, TRUE);
+
+	// Ammunition shouldn't have an elemental damage bonus.
+	if (m_Qualities.m_WeenieType == Ammunition_WeenieType)
+		return damageBonus;
+
+	if (m_Qualities._enchantment_reg)
+		m_Qualities._enchantment_reg->EnchantInt(ELEMENTAL_DAMAGE_BONUS_INT, &damageBonus, FALSE);
+
+	return damageBonus;
+}
+
+
+
 bool CWeenieObject::IsInPeaceMode()
 {
 	return get_minterp()->interpreted_state.current_style == Motion_NonCombat;
 }
 
-bool CWeenieObject::TryMeleeEvade(DWORD attackSkill)
+bool CWeenieObject::TryAttackEvade(uint32_t attackSkill, STypeSkill defSkill)
 {
 	if (GetStamina() < 1) // when we're out of stamina our defense skill is lowered to 0.
 		return false;
 
-	DWORD defenseSkill = 0;
-	InqSkill(MELEE_DEFENSE_SKILL, defenseSkill, FALSE);
+	uint32_t defenseSkill = 0;
+	InqSkill(defSkill, defenseSkill, FALSE);
 
-	double defenseMod = GetMeleeDefenseModUsingWielded();
-
-	bool inCombatMode = true;
-	if (get_minterp()->interpreted_state.current_style == Motion_NonCombat)
+	double defenseMod = 1.0;
+	
+	if (AsMonster() && AsMonster()->HasWielded())
 	{
-		inCombatMode = false;
-		switch (get_minterp()->interpreted_state.forward_command)
-		{
-		default:
-			defenseMod *= 0.8;
-			break;
-		case Motion_Crouch:
-			defenseMod *= 0.5;
-			break;
-		case Motion_Sitting:
-			defenseMod *= 0.25;
-			break;
-		case Motion_Sleeping:
-			defenseMod *= 0.1;
-			break;
-		}
+		if (defSkill == STypeSkill::MELEE_DEFENSE_SKILL)
+			defenseMod = GetMeleeDefenseModUsingWielded();
+		else
+			defenseMod = GetMissileDefenseModUsingWielded();
 	}
 
-	defenseSkill = (int)round((double)defenseSkill * defenseMod);
+	defenseMod *= GetCurrentMotionMod();
+	if(AsPlayer())
+		defenseMod *= GetCurrentTargetMod();
 
+	if (AsPlayer() && AsPlayer()->IsLoggingOut())
+		defenseMod *= 0.25;
+
+	defenseSkill = (int)round((double)defenseSkill * defenseMod * CalculateLoadImpactOnDefense());
 	bool success = ::TryMeleeEvade(attackSkill, defenseSkill);
 
-	if (inCombatMode)
+	if (success && _IsPlayer())
 	{
-		if (success)
-		{
-			if (AsPlayer())
-			{
-				//the higher a player's Endurance, the more likely they are not to use a point of stamina to successfully evade a missile or melee attack.
-				//A player is required to have Melee Defense for melee attacks or Missile Defense for missile attacks trained or specialized in order 
-				//for this specific ability to work. This benefit is tied to Endurance only, and it caps out at around a 75% chance to avoid losing
-				//a point of stamina per successful evasion. 
-				SKILL_ADVANCEMENT_CLASS defenseSkillSAC = SKILL_ADVANCEMENT_CLASS::UNTRAINED_SKILL_ADVANCEMENT_CLASS;
-				m_Qualities.InqSkillAdvancementClass(STypeSkill::MELEE_DEFENSE_SKILL, defenseSkillSAC);
-
-				if (defenseSkillSAC >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
-				{
-					DWORD endurance = 0;
-					m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
-					float noStaminaUseChance = ((float)endurance - 100.0) / 400.0; //made up formula: 75% reduction at 400 endurance.
-					noStaminaUseChance = min(max(noStaminaUseChance, 0.0), 0.75);
-					if (Random::RollDice(0.0, 1.0) > noStaminaUseChance)
-						AdjustStamina(-1); // failed the roll, use stamina.
-				}
-				else
-					AdjustStamina(-1); // defense skill not trained/specialized, use stamina.
-			}
-			else
-				AdjustStamina(-1);
-		}
-		else
-			AdjustStamina(-1); // while in combat all evasion failures consume 1 stamina.
+		CalculateStaminaLossFromAttack(defSkill);
 	}
+	else
+		AdjustStamina(-1); // while in combat all evasion failures consume 1 stamina.
 
 	return success;
 }
 
-bool CWeenieObject::TryMissileEvade(DWORD attackSkill)
+double CWeenieObject::GetCurrentMotionMod()
 {
-	if (GetStamina() < 1) // when we're out of stamine our defense skill is lowered to 0.
-		return false;
+	double defenseMod = 1.0;
 
-	DWORD defenseSkill = 0;
-	InqSkill(MISSILE_DEFENSE_SKILL, defenseSkill, FALSE);
-
-	double defenseMod = GetMissileDefenseModUsingWielded();
-	if (AsContainer())
+	if (IsInPeaceMode())
 	{
-		for (auto item : AsContainer()->m_Wielded)
-		{
-			if (item->GetImbueEffects() & MissileDefense_ImbuedEffectType)
-				defenseMod += 0.01;
-		}
-	}
-
-	bool inCombatMode = true;
-	if (get_minterp()->interpreted_state.current_style == Motion_NonCombat)
-	{
-		inCombatMode = false;
 		switch (get_minterp()->interpreted_state.forward_command)
 		{
-		default:
-			defenseMod *= 0.8;
+		case Motion_Sleeping:
+			defenseMod = 0.1;
+			break;
+		case Motion_Falling:
+		case Motion_Sitting:
+			defenseMod = 0.25;
 			break;
 		case Motion_Crouch:
-			defenseMod *= 0.5;
+			defenseMod = 0.5;
 			break;
-		case Motion_Sitting:
-			defenseMod *= 0.25;
-			break;
-		case Motion_Sleeping:
-			defenseMod *= 0.1;
+		default:
+			defenseMod = 0.8;
 			break;
 		}
 	}
-
-	defenseSkill = (int)round((double)defenseSkill * defenseMod);
-
-	bool success = ::TryMissileEvade(attackSkill, defenseSkill);
-
-	if (inCombatMode)
+	else
 	{
-		if (success)
+		switch (get_minterp()->interpreted_state.forward_command)
 		{
-			//the higher a player's Endurance, the more likely they are not to use a point of stamina to successfully evade a missile or melee attack.
-			//A player is required to have Melee Defense for melee attacks or Missile Defense for missile attacks trained or specialized in order 
-			//for this specific ability to work. This benefit is tied to Endurance only, and it caps out at around a 75% chance to avoid losing
-			//a point of stamina per successful evasion. 
-			SKILL_ADVANCEMENT_CLASS defenseSkillSAC = SKILL_ADVANCEMENT_CLASS::UNTRAINED_SKILL_ADVANCEMENT_CLASS;
-			m_Qualities.InqSkillAdvancementClass(STypeSkill::MISSILE_DEFENSE_SKILL, defenseSkillSAC);
-
-			if (defenseSkillSAC >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
-			{
-				DWORD endurance = 0;
-				m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
-				float noStaminaUseChance = ((float)endurance - 100.0) / 400.0; //made up formula: 75% reduction at 400 endurance.
-				noStaminaUseChance = min(max(noStaminaUseChance, 0.0), 0.75);
-				if (Random::RollDice(0.0, 1.0) > noStaminaUseChance)
-					AdjustStamina(-1); // failed the roll, use stamina.
-			}
-			else
-				AdjustStamina(-1); // defense skill not trained/specialized, use stamina.
+		case Motion_Falling:
+		case Motion_Sitting:
+		case Motion_Crouch:
+		case Motion_Sleeping:
+			defenseMod = 0.4;
+			break;
 		}
-		else
-			AdjustStamina(-1); // while in combat all evasion failures consume 1 stamina.
 	}
+	return defenseMod;
+}
 
-	return success;
+double CWeenieObject::GetCurrentTargetMod()
+{
+	uint32_t attacker = m_Qualities.GetIID(CURRENT_ATTACKER_IID, 0);
+	uint32_t target = m_Qualities.GetIID(CURRENT_COMBAT_TARGET_IID, 0);
+	if (attacker && target && attacker == target)
+		return 1.15;
+
+	return 1.0;
+}
+
+void CWeenieObject::CalculateStaminaLossFromAttack(STypeSkill skill)
+{
+	//the higher a player's Endurance, the more likely they are not to use a point of stamina to successfully evade a missile or melee attack.
+	//A player is required to have Melee Defense for melee attacks or Missile Defense for missile attacks trained or specialized in order 
+	//for this specific ability to work. This benefit is tied to Endurance only, and it caps out at around a 75% chance to avoid losing
+	//a point of stamina per successful evasion. 
+	SKILL_ADVANCEMENT_CLASS defenseSkillSAC = SKILL_ADVANCEMENT_CLASS::UNTRAINED_SKILL_ADVANCEMENT_CLASS;
+	m_Qualities.InqSkillAdvancementClass(skill, defenseSkillSAC);
+
+	if (defenseSkillSAC >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
+	{
+		uint32_t endurance = 0;
+		m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
+
+		float noStamUseChance = 0;
+		if (endurance >= 50)
+		{
+			noStamUseChance = ((float)(endurance * endurance) * 0.000005) + ((float)endurance * 0.00124) - 0.07; // Better curve and caps at 300 End vs 400 End
+		}
+		noStamUseChance = min(noStamUseChance, 0.75f);
+		if (Random::RollDice(0.0, 1.0) > noStamUseChance)
+			AdjustStamina(-1); // failed the roll, use stamina.
+	}
+	else
+		AdjustStamina(-1); // defense skill not trained/specialized, use stamina.
+}
+
+float CWeenieObject::CalculateLoadImpactOnDefense()
+{
+	float burden = 0.0f;
+	m_Qualities.InqLoad(burden);
+	if (burden >= 2.0)
+		return 0;
+	if (burden <= 1.0)
+		return 1;
+	float returnv = 1 - std::abs(1.0 - burden);
+	return returnv;
 }
 
 void CWeenieObject::HandleAggro(CWeenieObject *attacker)
@@ -6036,11 +6967,17 @@ void CWeenieObject::OnTeleported()
 	if (m_SpellcastingManager)
 		m_SpellcastingManager->Cancel();
 
-	if (m_EmoteManager)
+	if (m_EmoteManager && weenie_obj->_IsPlayer())
 		m_EmoteManager->Cancel();
 
 	if (m_AttackManager)
 		m_AttackManager->Cancel();
+
+	if (AsPlayer())
+		AsPlayer()->CancelLifestoneProtection(); //terminate lifestone protection on teleport (catch all for portal use and /recalls. Casted portals are captured in SpellCastingManager.cpp)
+
+	if (AsPlayer())
+		m_Qualities.SetFloat(LAST_TELEPORT_START_TIMESTAMP_FLOAT, Timer::cur_time + 5.0);
 }
 
 void CWeenieObject::Movement_Teleport(const Position &position, bool bWasDeath)
@@ -6052,13 +6989,14 @@ void CWeenieObject::Movement_Teleport(const Position &position, bool bWasDeath)
 
 	last_move_was_autonomous = false;
 
-	DWORD dwOldLastCell = GetLandcell();
+	uint32_t dwOldLastCell = GetLandcell();
 
 	if (weenie_obj && weenie_obj->_IsPlayer())
 		EnterPortal(dwOldLastCell);
 
 	SetPositionStruct sps;
 	sps.pos = position;
+	sps.pos.frame.m_origin.z += 0.008f;
 	sps.SetFlags(SEND_POSITION_EVENT_SPF | SLIDE_SPF | PLACEMENT_SPF | TELEPORT_SPF);
 	SetPosition(sps);
 
@@ -6068,8 +7006,8 @@ void CWeenieObject::Movement_Teleport(const Position &position, bool bWasDeath)
 	{
 		// Send position and movement -- only seen this happen on death so far
 		BinaryWriter positionAndMovement;
-		positionAndMovement.Write<DWORD>(0xF619);
-		positionAndMovement.Write<DWORD>(GetID());
+		positionAndMovement.Write<uint32_t>(0xF619);
+		positionAndMovement.Write<uint32_t>(GetID());
 
 		PositionPack position;
 		position.position = m_Position;
@@ -6104,11 +7042,12 @@ bool CWeenieObject::IsAttacking()
 	return (m_AttackManager && m_AttackManager->IsAttacking());
 }
 
-void CWeenieObject::TryMeleeAttack(DWORD target_id, ATTACK_HEIGHT height, float power, DWORD motion)
+bool CWeenieObject::TryMeleeAttack(uint32_t target_id, ATTACK_HEIGHT height, float power, uint32_t motion)
 {
+	return true;
 }
 
-void CWeenieObject::TryMissileAttack(DWORD target_id, ATTACK_HEIGHT height, float power, DWORD motion)
+void CWeenieObject::TryMissileAttack(uint32_t target_id, ATTACK_HEIGHT height, float power, uint32_t motion)
 {
 }
 
@@ -6131,6 +7070,8 @@ int CWeenieObject::GetStackOrStructureNum()
 void CWeenieObject::DecrementStackOrStructureNum(int amount, bool bDestroyOnZero)
 {
 	int dummy;
+	if (m_Qualities.GetBool(UNLIMITED_USE_BOOL, 0) == TRUE)
+		return;
 	if (m_Qualities.InqInt(STRUCTURE_INT, dummy, TRUE))
 		DecrementStructureNum(amount, bDestroyOnZero);
 	else
@@ -6143,15 +7084,16 @@ void CWeenieObject::DecrementStackNum(int amount, bool bDestroyOnZero)
 
 	usesLeft -= amount;
 
+	SetStackSize(usesLeft);
+
 	if (usesLeft <= 0)
 	{
-		if(bDestroyOnZero)
+
+		if (bDestroyOnZero)
 			Remove();
 		else
 			SetStackSize(0);
 	}
-	else
-		SetStackSize(usesLeft);
 }
 
 void CWeenieObject::DecrementStructureNum(int amount, bool bDestroyOnZero)
@@ -6175,23 +7117,24 @@ void CWeenieObject::DecrementStructureNum(int amount, bool bDestroyOnZero)
 	}
 }
 
-void CWeenieObject::SetStackSize(DWORD stackSize)
+void CWeenieObject::SetStackSize(int stackSize)
 {
 	if (!m_Qualities.GetInt(MAX_STACK_SIZE_INT, 0))
 	{
 		// not a stackable... ??
 		return;
 	}
+	CWeenieDefaults *weenieDefs = g_pWeenieFactory->GetWeenieDefaults(m_Qualities.GetID());
 
 	m_Qualities.SetInt(STACK_SIZE_INT, stackSize);
 	//if (m_bWorldIsAware)
 	//	NotifyIntStatUpdated(STACK_SIZE_INT, false);
 
-	m_Qualities.SetInt(ENCUMB_VAL_INT, stackSize * InqIntQuality(STACK_UNIT_ENCUMB_INT, 0));
+	m_Qualities.SetInt(ENCUMB_VAL_INT, stackSize *  weenieDefs->m_Qualities.GetInt(STACK_UNIT_ENCUMB_INT, 0));
 	//if (m_bWorldIsAware)
 	//	NotifyIntStatUpdated(ENCUMB_VAL_INT, false);
 
-	m_Qualities.SetInt(VALUE_INT, stackSize * InqIntQuality(STACK_UNIT_VALUE_INT, 0));
+	m_Qualities.SetInt(VALUE_INT, stackSize * weenieDefs->m_Qualities.GetInt(STACK_UNIT_VALUE_INT, 0));
 	//if (m_bWorldIsAware)
 	//	NotifyIntStatUpdated(VALUE_INT, false);
 
@@ -6201,8 +7144,9 @@ void CWeenieObject::SetStackSize(DWORD stackSize)
 	if (CWeenieObject *owner = GetWorldTopLevelOwner())
 	{
 		owner->RecalculateEncumbrance();
+		//ToDo: figure out a method to allow this to work while not interfering with pyreal count when buying MMDs.
 		if (owner->AsPlayer() && m_Qualities.id == W_COINSTACK_CLASS)
-			owner->RecalculateCoinAmount();
+			owner->RecalculateCoinAmount(W_COINSTACK_CLASS);
 	}
 }
 
@@ -6211,7 +7155,7 @@ bool CWeenieObject::IsAvatarJumpsuit()
 	return m_Qualities.id >= 7000000 && m_Qualities.id <= 7010000;
 }
 
-bool CWeenieObject::LearnSpell(DWORD spell_id, bool showTextAndEffect)
+bool CWeenieObject::LearnSpell(uint32_t spell_id, bool showTextAndEffect)
 {
 	if (spell_id)
 	{
@@ -6229,8 +7173,8 @@ bool CWeenieObject::LearnSpell(DWORD spell_id, bool showTextAndEffect)
 				m_Qualities.AddSpell(spell_id);
 
 				BinaryWriter addSpellToSpellbook;
-				addSpellToSpellbook.Write<DWORD>(0x2C1);
-				addSpellToSpellbook.Write<DWORD>(spell_id);
+				addSpellToSpellbook.Write<uint32_t>(0x2C1);
+				addSpellToSpellbook.Write<uint32_t>(spell_id);
 				SendNetMessage(&addSpellToSpellbook, PRIVATE_MSG, TRUE, FALSE);
 
 				if (showTextAndEffect)
@@ -6273,7 +7217,8 @@ void CWeenieObject::Remove()
 	m_Qualities.SetInt(PARENT_LOCATION_INT, 0);
 	unset_parent();
 	ReleaseFromBlock();
-	MarkForDestroy();
+	g_pWorld->EnsureRemoved(this);
+	Destroy();
 }
 
 void CWeenieObject::DebugValidate()
@@ -6281,7 +7226,7 @@ void CWeenieObject::DebugValidate()
 #ifdef _DEBUG
 	assert(GetID());
 	assert(g_pWorld->FindObject(GetID()));
-	
+
 	assert(!GetContainerID() || !GetWielderID());
 
 	if (GetContainerID())
@@ -6302,8 +7247,8 @@ void CWeenieObject::DebugValidate()
 		/*
 		if (cell)
 		{
-			assert(m_pBlock);
-			assert(m_pBlock->GetHeader() == (cell->id >> 16));
+		assert(m_pBlock);
+		assert(m_pBlock->GetHeader() == (cell->id >> 16));
 		}
 		*/
 	}
@@ -6335,7 +7280,7 @@ void CWeenieObject::DebugValidate()
 #endif
 }
 
-BOOL CWeenieObject::InqSkill(STypeSkill key, DWORD &value, BOOL raw)
+BOOL CWeenieObject::InqSkill(STypeSkill key, uint32_t &value, BOOL raw)
 {
 	BOOL bResult = m_Qualities.InqSkill(key, value, raw);
 
@@ -6384,58 +7329,346 @@ void CWeenieObject::CheckVitalRanges()
 	}
 }
 
-void CWeenieObject::CheckEventState()
+//void CWeenieObject::CheckEventState()
+//{
+//	if (!m_Qualities._generator_table)
+//	{
+//		return;
+//	}
+//
+//	std::string eventName;
+//	if (m_Qualities.InqString(GENERATOR_EVENT_STRING, eventName))
+//	{
+//		if (g_pGameEventManager->IsEventStarted(eventName.c_str()))
+//		{
+//			HandleEventActive();
+//		}
+//		else
+//		{
+//			HandleEventInactive();
+//		}
+//	}
+//}
+//
+//void CWeenieObject::HandleEventActive()
+//{
+//	// if we have any spawns, we shouldn't be needing activation
+//	if (m_Qualities._generator_registry && !m_Qualities._generator_registry->_registry.empty())
+//		return;
+//	if (m_Qualities._generator_queue && !m_Qualities._generator_queue->_queue.empty())
+//		return;
+//
+//	g_pWeenieFactory->AddFromGeneratorTable(this, false);
+//}
+//
+//void CWeenieObject::HandleEventInactive()
+//{
+//	if (m_Qualities._generator_registry)
+//	{
+//		while (!m_Qualities._generator_registry->_registry.empty())
+//		{
+//			uint32_t weenie_id = m_Qualities._generator_registry->_registry.begin()->first;
+//
+//			if (CWeenieObject *spawned_weenie = g_pWorld->FindObject(weenie_id))
+//			{
+//				spawned_weenie->MarkForDestroy();
+//			}
+//
+//			// make sure it's gone (it should be already.)
+//			m_Qualities._generator_registry->_registry.erase(weenie_id);
+//		}
+//	}
+//
+//	if (m_Qualities._generator_queue)
+//	{
+//		m_Qualities._generator_queue->_queue.clear();
+//	}
+//}
+
+uint32_t CWeenieObject::GetRating(STypeInt rating)
 {
-	if (!m_Qualities._generator_table)
+	uint32_t ratingValue = 0;
+	int currentRating = 0;
+	switch (rating)
 	{
-		return;
+	case DAMAGE_RATING_INT:
+		if (m_Qualities.InqInt(DAMAGE_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_DAMAGE_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(AUGMENTATION_DAMAGE_BONUS_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(LUM_AUG_DAMAGE_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case DAMAGE_RESIST_RATING_INT:
+		if (m_Qualities.InqInt(DAMAGE_RESIST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_DAMAGE_RESIST_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(AUGMENTATION_DAMAGE_REDUCTION_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(LUM_AUG_DAMAGE_REDUCTION_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case HEAL_OVER_TIME_INT:
+		if (m_Qualities.InqInt(HEAL_OVER_TIME_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(AUGMENTATION_FASTER_REGEN_INT, currentRating, false, true) && get_minterp()->interpreted_state.forward_command == Motion_Sleeping)
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(LUM_AUG_HEALING_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case HEALING_BOOST_RATING_INT:
+		if (m_Qualities.InqInt(HEALING_BOOST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_HEALING_BOOST_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(LUM_AUG_HEALING_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case CRIT_RATING_INT:
+		if (m_Qualities.InqInt(CRIT_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_CRIT_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(AUGMENTATION_CRITICAL_EXPERTISE_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case CRIT_DAMAGE_RATING_INT:
+		if (m_Qualities.InqInt(CRIT_DAMAGE_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_CRIT_DAMAGE_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(AUGMENTATION_CRITICAL_POWER_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(LUM_AUG_CRIT_DAMAGE_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case CRIT_RESIST_RATING_INT:
+		if (m_Qualities.InqInt(CRIT_RESIST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_CRIT_RESIST_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case CRIT_DAMAGE_RESIST_RATING_INT:
+		if (m_Qualities.InqInt(CRIT_DAMAGE_RESIST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_CRIT_DAMAGE_RESIST_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(LUM_AUG_CRIT_REDUCTION_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case HEALING_RESIST_RATING_INT:
+		if (m_Qualities.InqInt(HEALING_RESIST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case DAMAGE_OVER_TIME_INT:
+		if (m_Qualities.InqInt(DAMAGE_OVER_TIME_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case WEAKNESS_RATING_INT:
+		if (m_Qualities.InqInt(WEAKNESS_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case NETHER_OVER_TIME_INT:
+		if (m_Qualities.InqInt(NETHER_OVER_TIME_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case NETHER_RESIST_RATING_INT:
+		if (m_Qualities.InqInt(NETHER_RESIST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_NETHER_RESIST_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case DOT_RESIST_RATING_INT:
+		if (m_Qualities.InqInt(DOT_RESIST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case LIFE_RESIST_RATING_INT:
+		if (m_Qualities.InqInt(LIFE_RESIST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_LIFE_RESIST_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case SNEAK_ATTACK_RATING_INT:
+		if (m_Qualities.InqInt(SNEAK_ATTACK_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case RECKLESSNESS_RATING_INT:
+		if (m_Qualities.InqInt(RECKLESSNESS_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case DECEPTION_RATING_INT:
+		if (m_Qualities.InqInt(DECEPTION_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case PK_DAMAGE_RATING_INT:
+		if (m_Qualities.InqInt(PK_DAMAGE_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_PK_DAMAGE_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
+	case PK_DAMAGE_RESIST_RATING_INT:
+		if (m_Qualities.InqInt(PK_DAMAGE_RESIST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		if (m_Qualities.InqInt(GEAR_PK_DAMAGE_RESIST_RATING_INT, currentRating, false, true))
+		{
+			ratingValue += currentRating;
+		}
+		break;
 	}
 
-	std::string eventName;
-	if (m_Qualities.InqString(GENERATOR_EVENT_STRING, eventName))
-	{
-		if (g_pGameEventManager->IsEventStarted(eventName.c_str()))
-		{
-			HandleEventActive();
-		}
-		else
-		{
-			HandleEventInactive();
-		}
-	}
+
+	return ratingValue;
 }
 
-void CWeenieObject::HandleEventActive()
+bool CWeenieObject::GetSetSpells(int setId, int newLevel, std::vector<short>& spellsToAdd)
 {
-	// if we have any spawns, we shouldn't be needing activation
-	if (m_Qualities._generator_registry && !m_Qualities._generator_registry->_registry.empty())
-		return;
-	if (m_Qualities._generator_queue && !m_Qualities._generator_queue->_queue.empty())
-		return;
+	if (!setId)
+		return false;
 
-	g_pWeenieFactory->AddFromGeneratorTable(this, false);
-}
+	if (!newLevel)
+		return true;
 
-void CWeenieObject::HandleEventInactive()
-{
-	if (m_Qualities._generator_registry)
+	CSpellTable *spellTable = MagicSystem::GetSpellTable();
+	if (!spellTable)
+		return false;
+
+	const SpellSet *spellSet = spellTable->GetSpellSet(setId);
+	if (!spellSet)
+		return false;
+
+	int maxSetLevel = (--spellSet->m_spellSetTiers.end())->first;
+	if (newLevel > maxSetLevel)
+		return true;
+
+	int findLevel = newLevel;
+	while (findLevel > 0)
 	{
-		while (!m_Qualities._generator_registry->_registry.empty())
+		auto newLevelFound = spellSet->m_spellSetTiers.find(findLevel);
+		if (newLevelFound != spellSet->m_spellSetTiers.end())
 		{
-			DWORD weenie_id = m_Qualities._generator_registry->_registry.begin()->first;
-			
-			if (CWeenieObject *spawned_weenie = g_pWorld->FindObject(weenie_id))
+			for (uint32_t spellId : newLevelFound->second.m_tierSpellList)
 			{
-				spawned_weenie->MarkForDestroy();
+				spellsToAdd.push_back(spellId);
 			}
-
-			// make sure it's gone (it should be already.)
-			m_Qualities._generator_registry->_registry.erase(weenie_id);
+			break;
 		}
+		findLevel--;
 	}
 
-	if (m_Qualities._generator_queue)
+	return true;
+}
+
+bool CWeenieObject::IsCurrency(int currencyid)
+{
+	switch (currencyid)// Add alt currencies to this list
 	{
-		m_Qualities._generator_queue->_queue.clear();
+	case W_TRADENOTE250000_CLASS:
+	case W_COINSTACK_CLASS:
+	{
+		return TRUE;
 	}
+
+	default:
+		return FALSE; // Not a currency
+	}
+}
+
+int32_t CWeenieObject::GetLevel()
+{
+	int32_t itemLevel = 1;
+	int32_t style = InqIntQuality(ITEM_XP_STYLE_INT, 0);
+	if (style != 0)
+	{
+		uint64_t currxp = (uint64_t)InqInt64Quality(ITEM_TOTAL_XP_INT64, 0);
+		uint64_t basexp = (uint64_t)InqInt64Quality(ITEM_BASE_XP_INT64, 0);
+		int32_t maxlvl = InqIntQuality(ITEM_MAX_LEVEL_INT, 0);
+
+		itemLevel = ExperienceSystem::ItemTotalXpToLevel(currxp, basexp, maxlvl, style);
+	}
+	return itemLevel;
 }

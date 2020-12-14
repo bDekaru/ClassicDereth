@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 
 #include "WeenieObject.h"
 #include "PhysicsObj.h"
@@ -93,7 +93,7 @@ bool CBaseDoor::IsClosed()
 	return get_minterp()->interpreted_state.forward_command != Motion_On;
 }
 
-int CBaseDoor::Activate(DWORD activator_id)
+int CBaseDoor::Activate(uint32_t activator_id)
 {
 	if (!m_bOpen)
 	{
@@ -109,6 +109,8 @@ int CBaseDoor::Activate(DWORD activator_id)
 	{
 		CloseDoor();
 	}
+
+	CWeenieObject::Activate(activator_id);
 
 	return WERROR_NONE;
 }

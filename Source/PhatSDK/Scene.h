@@ -19,7 +19,7 @@ public:
 	void GetObjFrame(unsigned int x, unsigned int y, unsigned int k, Vector *loc, Frame *obj_frame);
 	void Place(unsigned int ix, unsigned int iy, unsigned int iq, Vector *obj_loc);
 
-	DWORD obj_id = 0;
+	uint32_t obj_id = 0;
 	Frame base_loc;
 	float freq = 1.0f;
 	float displace_x = 0.0f;
@@ -42,7 +42,7 @@ public:
 
 	static DBObj *Allocator();
 	static void Destroyer(DBObj *);
-	static Scene *Get(DWORD ID);
+	static Scene *Get(uint32_t ID);
 	static void Release(Scene *);
 
 	void Destroy();

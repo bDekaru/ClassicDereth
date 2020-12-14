@@ -8,7 +8,7 @@ public:
 	CBaseLifestone();
 	virtual ~CBaseLifestone() override;
 
-	virtual class CBaseLifestone *AsLifestone() { return this; }
+	virtual class CBaseLifestone *AsLifestone() override { return this; }
 
 	virtual void ApplyQualityOverrides() override;
 	virtual int Use(CPlayerWeenie *) override;

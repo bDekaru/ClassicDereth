@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "WeenieObject.h"
 #include "PhysicsObj.h"
 #include "World.h"
@@ -90,7 +90,7 @@ BinaryWriter *CPhysicsObj::Animation_GetAnimationInfo(bool bMoveToUpdate)
 			get_minterp()->interpreted_state.Pack(AnimInfo);
 
 			if (position_manager && position_manager->GetStickyObjectID() != 0)
-				AnimInfo->Write<DWORD>(position_manager->GetStickyObjectID()); // sticky
+				AnimInfo->Write<uint32_t>(position_manager->GetStickyObjectID()); // sticky
 
 			break;
 		}
@@ -113,7 +113,7 @@ BinaryWriter *CPhysicsObj::Animation_GetAnimationInfo(bool bMoveToUpdate)
 	case MovementTypes::MoveToObject:
 		{
 			// revisit this...
-			AnimInfo->Write<DWORD>(moveToManager->sought_object_id);
+			AnimInfo->Write<uint32_t>(moveToManager->sought_object_id);
 
 			// _position_timestamp++;
 			CPhysicsObj *pTarget = CPhysicsObj::GetObject(moveToManager->sought_object_id);
@@ -129,13 +129,13 @@ BinaryWriter *CPhysicsObj::Animation_GetAnimationInfo(bool bMoveToUpdate)
 		}
 	case MovementTypes::TurnToObject:
 		{
-			AnimInfo->Write<DWORD>(moveToManager->sought_object_id);
+			AnimInfo->Write<uint32_t>(moveToManager->sought_object_id);
 
 			float heading = 0.0f;
 
 			CPhysicsObj *pTarget = CPhysicsObj::GetObject(moveToManager->sought_object_id);
 			if (pTarget && !pTarget->parent)
-				m_Position.heading(pTarget->m_Position);
+				heading = m_Position.heading(pTarget->m_Position);
 
 			AnimInfo->Write<float>(heading);
 			moveToManager->movement_params.PackNet(MovementTypes::TurnToObject, AnimInfo);
@@ -161,8 +161,8 @@ void CPhysicsObj::Animation_Update()
 		return;
 	
 	BinaryWriter AnimUpdate;
-	AnimUpdate.Write<DWORD>(0xF74C);
-	AnimUpdate.Write<DWORD>(id);
+	AnimUpdate.Write<uint32_t>(0xF74C);
+	AnimUpdate.Write<uint32_t>(id);
 	AnimUpdate.Write<WORD>(_instance_timestamp);
 	AnimUpdate.Write<WORD>(++_movement_timestamp);
 	AnimUpdate.Write<WORD>(_server_control_timestamp);
@@ -175,7 +175,7 @@ void CPhysicsObj::Animation_Update()
 	AnimUpdate.Write(AnimInfo);
 	delete AnimInfo;
 
-	g_pWorld->BroadcastPVS(this, AnimUpdate.GetData(), AnimUpdate.GetSize(), OBJECT_MSG);
+	g_pWorld->BroadcastPVS(this, AnimUpdate.GetData(), AnimUpdate.GetSize(), OBJECT_MSG, false, false, true);
 }
 
 void CPhysicsObj::Animation_MoveToUpdate()
@@ -186,8 +186,8 @@ void CPhysicsObj::Animation_MoveToUpdate()
 	last_move_was_autonomous = false;
 
 	BinaryWriter AnimUpdate;
-	AnimUpdate.Write<DWORD>(0xF74C);
-	AnimUpdate.Write<DWORD>(id);
+	AnimUpdate.Write<uint32_t>(0xF74C);
+	AnimUpdate.Write<uint32_t>(id);
 	AnimUpdate.Write<WORD>(_instance_timestamp);
 	AnimUpdate.Write<WORD>(++_movement_timestamp);
 	AnimUpdate.Write<WORD>(++_server_control_timestamp);
@@ -198,7 +198,7 @@ void CPhysicsObj::Animation_MoveToUpdate()
 	AnimUpdate.Write(AnimInfo);
 	delete AnimInfo;
 
-	g_pWorld->BroadcastPVS(this, AnimUpdate.GetData(), AnimUpdate.GetSize(), OBJECT_MSG);
+	g_pWorld->BroadcastPVS(this, AnimUpdate.GetData(), AnimUpdate.GetSize(), OBJECT_MSG, false, false, true);
 
 	last_move_was_autonomous = false;
 }

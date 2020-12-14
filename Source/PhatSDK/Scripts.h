@@ -25,7 +25,7 @@ public:
     BOOL UnPack(BYTE **ppData, ULONG iSize);
 
     float m_Mod;
-    DWORD m_ScriptID;
+    uint32_t m_ScriptID;
 };
 
 class PhysicsScriptTable : public DBObj
@@ -36,13 +36,13 @@ public:
 
     static DBObj* Allocator();
     static void Destroyer(DBObj*);
-    static PhysicsScriptTable* Get(DWORD ID);
+    static PhysicsScriptTable* Get(uint32_t ID);
     static void Release(PhysicsScriptTable *);
 
     void Destroy();
     BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-    DWORD GetScript(DWORD Index, float Mod);
+    uint32_t GetScript(uint32_t Index, float Mod);
 
     LongNIValHash<PhysicsScriptTableData *> m_TableData; // 0x20 / 0x2C
 };
@@ -53,10 +53,10 @@ public:
     PhysicsScriptTableData();
     ~PhysicsScriptTableData();
 
-    DWORD GetScript(float Mod);
+    uint32_t GetScript(float Mod);
     BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-    // DWORD/float representing the iIndex/fMod for the effect.
+    // uint32_t/float representing the iIndex/fMod for the effect.
     SmartArray<ScriptAndModData> m_SAMDataArray;
 };
 
@@ -68,7 +68,7 @@ public:
 
     static DBObj* Allocator();
     static void Destroyer(DBObj*);
-    static PhysicsScript* Get(DWORD ID);
+    static PhysicsScript* Get(uint32_t ID);
     static void Release(PhysicsScript *);
 
     void Destroy();
@@ -98,7 +98,7 @@ public:
     ScriptManager(CPhysicsObj *pObject);
     ~ScriptManager();
 
-    BOOL AddScript(DWORD ScriptID);
+    BOOL AddScript(uint32_t ScriptID);
     BOOL AddScriptInternal(PhysicsScript *pScript);
     void AddScriptNode(ScriptManagerNode *pNode);
     void ClearScripts();
@@ -110,7 +110,7 @@ public:
     CPhysicsObj *m_pOwner; // 0x00
     ScriptManagerNode *m_pScriptsBegin; // 0x04
     ScriptManagerNode *m_pScriptsEnd; // 0x08
-    long m_0C; // 0x0C
+    int32_t m_0C; // 0x0C
     double m_EndTime; // 0x10
 };
 

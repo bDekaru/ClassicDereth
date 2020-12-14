@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "TargetManager.h"
 
@@ -37,13 +37,13 @@ void TargetManager::SetTargetQuantum(double new_quantum)
 
 		if (ptarget)
 		{
-			quantum = target_info->quantum;
+			target_info->quantum = new_quantum;
 			ptarget->add_voyeur(physobj->id, target_info->radius, quantum);
 		}
 	}
 }
 
-void TargetManager::AddVoyeur(DWORD object_id, float radius, double quantum)
+void TargetManager::AddVoyeur(uint32_t object_id, float radius, double quantum)
 {
 	if (voyeur_table)
 	{
@@ -89,7 +89,7 @@ void TargetManager::SendVoyeurUpdate(TargettedVoyeurInfo *voyeur, Position *p, T
 		voyObj->receive_target_update(&info);
 }
 
-BOOL TargetManager::RemoveVoyeur(DWORD object_id)
+BOOL TargetManager::RemoveVoyeur(uint32_t object_id)
 {
 	if (voyeur_table)
 	{
@@ -132,7 +132,7 @@ void TargetManager::ClearTarget()
 {
 	if (target_info)
 	{
-		CPhysicsObj *targetObj = CPhysicsObj::GetObjectA(target_info->object_id);
+		CPhysicsObj *targetObj = CPhysicsObj::GetObject(target_info->object_id);
 		if (targetObj)
 			targetObj->remove_voyeur(physobj->id);
 
@@ -143,7 +143,7 @@ void TargetManager::ClearTarget()
 	}
 }
 
-void TargetManager::SetTarget(DWORD context_id, DWORD object_id, float radius, double quantum)
+void TargetManager::SetTarget(uint32_t context_id, uint32_t object_id, float radius, double quantum)
 {
 	ClearTarget();
 
@@ -189,11 +189,19 @@ void TargetManager::HandleTargetting()
 
 			while (!iter.EndReached())
 			{
-				TargettedVoyeurInfo *pVoyeurInfo = iter.GetCurrentData();
-				
-				iter.Next();
+				try
+				{
 
-				CheckAndUpdateVoyeur(pVoyeurInfo);
+					TargettedVoyeurInfo *pVoyeurInfo = iter.GetCurrentData();
+
+					iter.Next();
+
+					CheckAndUpdateVoyeur(pVoyeurInfo);
+				}
+				catch (...)
+				{
+					SERVER_ERROR << "Error in targetting";
+				}
 			}
 		}
 
@@ -224,10 +232,17 @@ void TargetManager::NotifyVoyeurOfEvent(TargetStatus _event)
 
 		while (!iter.EndReached())
 		{
-			TargettedVoyeurInfo *pInfo = iter.GetCurrentData();
-			iter.Next();
+			try
+			{
+				TargettedVoyeurInfo *pInfo = iter.GetCurrentData();
+				iter.Next();
 
-			SendVoyeurUpdate(pInfo, &physobj->m_Position, _event);
+				SendVoyeurUpdate(pInfo, &physobj->m_Position, _event);
+			}
+			catch(...)
+			{
+				SERVER_ERROR << "Error in TargetManager.";
+			}
 		}
 	}
 }

@@ -1,9 +1,9 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 
 typedef QTIsaac<(8), unsigned int> AC_Isaac;
 
-void *AllocCrypto(DWORD seed)
+void *AllocCrypto(uint32_t seed)
 {
 	return new AC_Isaac(seed, seed, seed);
 }
@@ -16,7 +16,7 @@ void FreeCrypto(void *pCryptoBuffer)
 	}
 }
 
-DWORD GetNextXORVal(void *pCryptoBuffer)
+uint32_t GetNextXORVal(void *pCryptoBuffer)
 {
 	return ((AC_Isaac *)pCryptoBuffer)->rand();
 }

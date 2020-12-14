@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ObjDesc.h"
 
 BOOL Subpalette::supercedes(Subpalette *change)
@@ -185,32 +185,14 @@ void ObjDesc::RemoveTextureMapChange(TextureMapChange *toRemove)
 void ObjDesc::RemoveDuplicateTextureMapChange(TextureMapChange *newGuy)
 {
 	TextureMapChange *pIterator = firstTMChange;
-	if (pIterator)
+
+	while (pIterator)
 	{
-		while (!newGuy->replaces(pIterator))
-		{
-			pIterator = pIterator->next;
-			if (!pIterator)
-				return;
-		}
+		TextureMapChange *next = pIterator->next;
+		if (newGuy->replaces(pIterator))
+			RemoveTextureMapChange(pIterator);
 
-		if (pIterator)
-		{
-			TextureMapChange *pNext = pIterator->next;
-			if (pNext)
-				pNext->prev = pIterator->prev;
-			else
-				lastTMChange = pIterator->prev;
-
-			TextureMapChange *pPrev = pIterator->prev;
-			if (pPrev)
-				pPrev->next = pIterator->next;
-			else
-				firstTMChange = pIterator->next;
-
-			delete pIterator;
-			num_texture_map_changes--;
-		}
+		pIterator = next;
 	}
 }
 
@@ -269,19 +251,14 @@ void ObjDesc::RemoveDuplicateAnimPartChange(AnimPartChange *newGuy)
 {
 	AnimPartChange *pIterator = firstAPChange;
 
-	if (pIterator)
+	while (pIterator)
 	{
-		while (pIterator->part_index != newGuy->part_index)
-		{
-			pIterator = pIterator->next;
-			if (!pIterator)
-				return;
-		}
-
-		if (pIterator)
-		{
+		AnimPartChange *next = pIterator->next;
+		if (pIterator->part_index == newGuy->part_index)
 			RemoveAnimPartChange(pIterator);
-		}
+
+		pIterator = next;
+
 	}
 }
 
@@ -304,13 +281,13 @@ std::list<Subpalette *> ObjDesc::GetSubpalettes(unsigned int rangeStart, unsigne
 {
 	std::list<Subpalette *> results;
 
-	DWORD rangeEnd = rangeLength;
+	uint32_t rangeEnd = rangeLength;
 
 	Subpalette *subpal = firstSubpal;
 	while (subpal)
 	{		
-		DWORD palStart = subpal->offset >> 3;
-		DWORD palEnd = palStart + (subpal->numcolors >> 3);
+		uint32_t palStart = subpal->offset >> 3;
+		uint32_t palEnd = palStart + (subpal->numcolors >> 3);
 
 		if (palStart < rangeEnd && palEnd > rangeStart) // get anything that intersects the range
 			results.push_back(subpal);
@@ -353,7 +330,7 @@ bool ObjDesc::ContainsAnimPartChange(int part_index) // custom
 	return false;
 }
 
-bool ObjDesc::ContainsAnimPartChange(int part_index, DWORD part_id) // custom
+bool ObjDesc::ContainsAnimPartChange(int part_index, uint32_t part_id) // custom
 {
 	AnimPartChange *partChange = firstAPChange;
 
@@ -368,7 +345,7 @@ bool ObjDesc::ContainsAnimPartChange(int part_index, DWORD part_id) // custom
 	return false;
 }
 
-bool ObjDesc::ContainsTextureMapChange(int part_index, DWORD old_tex_id, DWORD new_tex_id) // custom
+bool ObjDesc::ContainsTextureMapChange(int part_index, uint32_t old_tex_id, uint32_t new_tex_id) // custom
 {
 	TextureMapChange *tmChange = firstTMChange;
 
@@ -387,7 +364,7 @@ bool ObjDesc::ContainsTextureMapChange(int part_index, DWORD old_tex_id, DWORD n
 }
 
 
-bool ObjDesc::ContainsTextureMapChange(int part_index, DWORD new_tex_id) // custom
+bool ObjDesc::ContainsTextureMapChange(int part_index, uint32_t new_tex_id) // custom
 {
 	TextureMapChange *tmChange = firstTMChange;
 
@@ -406,16 +383,16 @@ bool ObjDesc::ContainsTextureMapChange(int part_index, DWORD new_tex_id) // cust
 }
 
 
-bool ObjDesc::ContainsSubpalette(DWORD subid, DWORD offset, DWORD numcolors) // custom
+bool ObjDesc::ContainsSubpalette(uint32_t subid, uint32_t offset, uint32_t numcolors) // custom
 {
 	Subpalette *subpal = firstSubpal;
 
-	DWORD rangeEnd = offset + numcolors;
+	uint32_t rangeEnd = offset + numcolors;
 
 	while (subpal)
 	{
-		DWORD subpalStart = subpal->offset;
-		DWORD subpalEnd = subpalStart + subpal->numcolors;
+		uint32_t subpalStart = subpal->offset;
+		uint32_t subpalEnd = subpalStart + subpal->numcolors;
 
 		if (subpal->subID == subid && subpalStart <= offset && subpalEnd >= rangeEnd)
 			return true;
@@ -445,11 +422,23 @@ BOOL ObjDesc::AddAnimPartChange(AnimPartChange *_partChange)
 	if (!_partChange)
 		return FALSE;
 
-	RemoveDuplicateAnimPartChange(_partChange);
+	//RemoveDuplicateAnimPartChange(_partChange);
 	if (num_anim_part_changes == 255)
 	{
 		delete _partChange;
 		return FALSE;
+	}
+
+	AnimPartChange *change = firstAPChange;
+	while (change != nullptr)
+	{
+		if (change->part_index == _partChange->part_index)
+		{
+			change->part_id = _partChange->part_id;
+			delete _partChange;
+			return TRUE;
+		}
+		change = change->next;
 	}
 
 	if (lastAPChange)
@@ -590,7 +579,7 @@ DEFINE_UNPACK(ObjDesc)
 	{
 		paletteID = pReader->Unpack_AsDataIDOfKnownType(0x04000000);
 
-		for (DWORD i = 0; i < numSubpalettes; i++)
+		for (uint32_t i = 0; i < numSubpalettes; i++)
 		{
 			Subpalette *pSubpalette = new Subpalette();
 			if (!pSubpalette->UnPack(pReader))
@@ -603,7 +592,7 @@ DEFINE_UNPACK(ObjDesc)
 		}
 	}
 
-	for (DWORD i = 0; i < numTMCs; i++)
+	for (uint32_t i = 0; i < numTMCs; i++)
 	{
 		TextureMapChange *pTMC = new TextureMapChange();
 		if (!pTMC->UnPack(pReader))
@@ -615,7 +604,7 @@ DEFINE_UNPACK(ObjDesc)
 		AddTextureMapChange(pTMC);
 	}
 
-	for (DWORD i = 0; i < numAPCs; i++)
+	for (uint32_t i = 0; i < numAPCs; i++)
 	{
 		AnimPartChange *pAPC = new AnimPartChange();
 		if (!pAPC->UnPack(pReader))

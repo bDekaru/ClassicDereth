@@ -29,17 +29,17 @@
 
 struct DATHeader
 {
-	DWORD FileType; // 0x00 'TB' !
-	DWORD BlockSize; // 0x04 0x400 for PORTAL : 0x100 for CELL
-	DWORD FileSize; // 0x08 Should match file size.
-	DWORD Iteration; // 0x0C Version iteration.
-	DWORD FreeHead; // 0x10
-	DWORD FreeTail; // 0x14
-	DWORD FreeCount; // 0x18
-	DWORD BTree; // 0x1C BTree offset
-	DWORD Unknown0; // 0x20
-	DWORD Unknown1; // 0x24
-	DWORD Unknown2; // 0x28
+	uint32_t FileType; // 0x00 'TB' !
+	uint32_t BlockSize; // 0x04 0x400 for PORTAL : 0x100 for CELL
+	uint32_t FileSize; // 0x08 Should match file size.
+	uint32_t Iteration; // 0x0C Version iteration.
+	uint32_t FreeHead; // 0x10
+	uint32_t FreeTail; // 0x14
+	uint32_t FreeCount; // 0x18
+	uint32_t BTree; // 0x1C BTree offset
+	uint32_t Unknown0; // 0x20
+	uint32_t Unknown1; // 0x24
+	uint32_t Unknown2; // 0x28
 };
 #else
 
@@ -72,23 +72,23 @@ struct DATHeader
 #pragma pack(push, 4)
 struct DATHeader
 {
-	DWORD FileType;
-	DWORD BlockSize;
-	DWORD FileSize;
-	DWORD DataSet; // 1 = portal
-	DWORD DataSubset;
-	DWORD FreeHead;
-	DWORD FreeTail;
-	DWORD FreeCount;
-	DWORD BTree;
-	DWORD NewLRU; // 0
-	DWORD OldLRU; // 0
+	uint32_t FileType;
+	uint32_t BlockSize;
+	uint32_t FileSize;
+	uint32_t DataSet; // 1 = portal
+	uint32_t DataSubset;
+	uint32_t FreeHead;
+	uint32_t FreeTail;
+	uint32_t FreeCount;
+	uint32_t BTree;
+	uint32_t NewLRU; // 0
+	uint32_t OldLRU; // 0
 	bool bUseLRU; // False
-	DWORD MasterMapID;
-	DWORD EnginePackVersion;
-	DWORD GamePackVersion; // 0
+	uint32_t MasterMapID;
+	uint32_t EnginePackVersion;
+	uint32_t GamePackVersion; // 0
 	BYTE VersionMajor[16];
-	DWORD VersionMinor;
+	uint32_t VersionMinor;
 };
 #pragma pack(pop)
 #endif
@@ -96,27 +96,27 @@ struct DATHeader
 #ifdef PRE_TOD_DATA_FILES
 struct BTEntry
 {
-	DWORD GID_;
-	DWORD Offset_;
-	DWORD size_;
+	uint32_t GID_;
+	uint32_t Offset_;
+	uint32_t size_;
 };
 #else
 struct BTEntry
 {
-	DWORD _bf0;
-	DWORD GID_;
-	DWORD Offset_;
-	DWORD size_;
-	DWORD date_;
-	DWORD iter_; // iteration
+	uint32_t _bf0;
+	uint32_t GID_;
+	uint32_t Offset_;
+	uint32_t size_;
+	uint32_t date_;
+	uint32_t iter_; // iteration
 };
 #endif
 
 struct BTNode
 {
-	DWORD BlockSpacer;
-	DWORD Branches[0x3E];
-	DWORD EntryCount;
+	uint32_t BlockSpacer;
+	uint32_t Branches[0x3E];
+	uint32_t EntryCount;
 	BTEntry Entries[0x3D];
 };
 
@@ -128,25 +128,25 @@ public:
 	BTreeNode(BlockLoader *pBlockLoader);
 	virtual ~BTreeNode();
 
-	BOOL LoadData(DWORD BlockHead);
+	BOOL LoadData(uint32_t BlockHead);
 	void LoadChildren();
 	void LoadChildrenRecursive();
 
-	void SetFileCallback(void(*)(void *, DWORD, BTEntry *));
+	void SetFileCallback(void(*)(void *, uint32_t, BTEntry *));
 	void SetProgressCallback(void(*)(void *, float));
 	void SetCallbackArg(void *);
 
-	BOOL Lookup(DWORD ID, BTEntry *pEntry);
+	BOOL Lookup(uint32_t ID, BTEntry *pEntry);
 
-	void FindEntryIDsWithinRange(DWORD Min, DWORD Max, float Progress, float ProgressDelta);
+	void FindEntryIDsWithinRange(uint32_t Min, uint32_t Max, float Progress, float ProgressDelta);
 
 protected:
 
-	DWORD GetBranchCount() const;
-	BTreeNode *GetBranch(DWORD index);
+	uint32_t GetBranchCount() const;
+	BTreeNode *GetBranch(uint32_t index);
 
 	// Using this design, you can't run 2 scans at the same time.
-	static void(*m_pfnFileCallback)(void *, DWORD, BTEntry *);
+	static void(*m_pfnFileCallback)(void *, uint32_t, BTEntry *);
 	static void(*m_pfnProgressCallback)(void *, float);
 	static void *m_pCallbackArg;
 
@@ -176,12 +176,15 @@ public:
 	BOOL OpenFile(const char* Path, DATHeader *pHeader);
 	void CloseFile();
 
-	BOOL SyncRead(void *pBuffer, DWORD dwLength, DWORD dwPosition);
-	BOOL SyncWrite(void *pBuffer, DWORD dwLength, DWORD dwPosition);
+	BOOL SyncRead(void *pBuffer, uint32_t dwLength, uint32_t dwPosition);
+	BOOL SyncWrite(void *pBuffer, uint32_t dwLength, uint32_t dwPosition);
 
 private:
+	using mapped_file_t = mio::basic_mmap<mio::access_mode::read, uint8_t>;
 
-	HANDLE m_hFile;
+	//HANDLE m_hFile;
+	mapped_file_t m_file;
+	size_t m_length;
 };
 
 class BlockLoader
@@ -192,9 +195,9 @@ public:
 
 	BOOL Init(const char *Path, DATHeader *pHeader);
 
-	DWORD GetTreeOrigin();
+	uint32_t GetTreeOrigin();
 
-	BOOL LoadData(DWORD HeadBlock, void *pBuffer, DWORD Length);
+	BOOL LoadData(uint32_t HeadBlock, void *pBuffer, uint32_t Length);
 
 private:
 
@@ -205,9 +208,9 @@ private:
 
 struct DATEntry
 {
-	DWORD ID;
+	uint32_t ID;
 	BYTE *Data;
-	DWORD Length;
+	uint32_t Length;
 };
 
 class DATDisk
@@ -222,9 +225,9 @@ public:
 	~DATDisk();
 
 	BOOL Open();
-	BOOL GetData(DWORD ID, DATEntry *pEntry);
-	BOOL GetDataEx(DWORD BlockHead, void *Data, DWORD Length);
-	void FindFileIDsWithinRange(DWORD Min, DWORD Max, void(*FileCallback)(void *, DWORD, BTEntry *), void(*ProgressCallback)(void *, float), void *CallbackArg);
+	BOOL GetData(uint32_t ID, DATEntry *pEntry);
+	BOOL GetDataEx(uint32_t BlockHead, void *Data, uint32_t Length);
+	void FindFileIDsWithinRange(uint32_t Min, uint32_t Max, void(*FileCallback)(void *, uint32_t, BTEntry *), void(*ProgressCallback)(void *, float), void *CallbackArg);
 
 	const DATHeader *GetHeader();
 

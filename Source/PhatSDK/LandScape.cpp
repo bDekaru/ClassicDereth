@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "LandScape.h"
 #include "LandBlock.h"
 #include "LandDefs.h"
@@ -41,8 +41,8 @@ LScape::LScape()
 
     // ambient_level = 0.4;
     // sunlight = 1.2;
-    // dword_5F15E0 = 0;
-    // dword_5F15E4 = 0.5;
+    // uint32_t_5F15E0 = 0;
+    // uint32_t_5F15E4 = 0.5;
 
     CLandBlock::init();
 
@@ -133,13 +133,13 @@ void LScape::pea_draw(void)
 }
 #endif
 
-CLandBlock* LScape::get_all(DWORD LandBlock)
+CLandBlock* LScape::get_all(uint32_t LandBlock)
 {
     CLandBlock *pLandBlock;
 
     if (pLandBlock = CLandBlock::Get(LandBlock))
     {
-        long LCoordX, LCoordY;
+        int32_t LCoordX, LCoordY;
 
         LandDefs::blockid_to_lcoord(
             LandBlock, LCoordX, LCoordY);
@@ -153,12 +153,12 @@ CLandBlock* LScape::get_all(DWORD LandBlock)
     return pLandBlock;
 }
 
-BOOL LScape::get_block_shift(DWORD Block1, DWORD Block2, DWORD* XOut, DWORD* YOut)
+BOOL LScape::get_block_shift(uint32_t Block1, uint32_t Block2, uint32_t* XOut, uint32_t* YOut)
 {
     if (!Block1)
         return FALSE;
 
-    long X2, Y2, X1, Y1;
+    int32_t X2, Y2, X1, Y1;
     LandDefs::blockid_to_lcoord(Block2, X2, Y2);
     LandDefs::blockid_to_lcoord(Block1, X1, Y1);
 
@@ -168,7 +168,7 @@ BOOL LScape::get_block_shift(DWORD Block1, DWORD Block2, DWORD* XOut, DWORD* YOu
     return TRUE;
 }
 
-void LScape::update_loadpoint(DWORD LandBlock)
+void LScape::update_loadpoint(uint32_t LandBlock)
 {
     if (!LandBlock)
     {
@@ -176,7 +176,7 @@ void LScape::update_loadpoint(DWORD LandBlock)
         return;
     }
 
-    DWORD ShiftX, ShiftY;
+    uint32_t ShiftX, ShiftY;
     BOOL Unknown;
     Unknown = !get_block_shift(loaded_cell_id, LandBlock, &ShiftX, &ShiftY);
 
@@ -209,14 +209,14 @@ void LScape::update_loadpoint(DWORD LandBlock)
         loaded_cell_id = LandBlock;
 }
 
-void LScape::calc_draw_order(DWORD, BOOL)
+void LScape::calc_draw_order(uint32_t, BOOL)
 {
     // Not done.
 }
 
-void LScape::update_block(DWORD LandBlock, long ShiftX, long ShiftY, BOOL Unknown)
+void LScape::update_block(uint32_t LandBlock, int32_t ShiftX, int32_t ShiftY, BOOL Unknown)
 {
-    long GidX, GidY;
+    int32_t GidX, GidY;
     LandDefs::gid_to_lcoord(
         LandBlock, GidX, GidY);
 
@@ -312,8 +312,8 @@ void LScape::update_block(DWORD LandBlock, long ShiftX, long ShiftY, BOOL Unknow
                                 land_blocks[x*mid_width + y]->release_all();
                         }
 
-                        long curr_x = ShiftX + x;
-                        long curr_y = ShiftY + y;
+                        int32_t curr_x = ShiftX + x;
+                        int32_t curr_y = ShiftY + y;
 
                         if ((curr_x < mid_width) && (curr_y < mid_width))
                             land_blocks[x*mid_width + y] = land_blocks[curr_x*mid_width + curr_y];
@@ -332,7 +332,7 @@ void LScape::update_block(DWORD LandBlock, long ShiftX, long ShiftY, BOOL Unknow
         {
             for (int x = 0, gid_x = GidX; x < mid_width; x++, gid_x += LandDefs::lblock_side) {
                 for (int y = 0, gid_y = GidY; y < mid_width; y++, gid_y += LandDefs::lblock_side) {
-                    DWORD index = x*mid_width + y;
+                    uint32_t index = x*mid_width + y;
 
                     if (!land_blocks[index]) {
                         if (LandDefs::in_bounds(gid_x, gid_y))
@@ -353,7 +353,7 @@ void LScape::update_block(DWORD LandBlock, long ShiftX, long ShiftY, BOOL Unknow
 
         for (int x = 0, gid_x = GidX; x < mid_width; x++, gid_x += LandDefs::lblock_side) {
             for (int y = 0, gid_y = GidY; y < mid_width; y++, gid_y += LandDefs::lblock_side) {
-                DWORD index = (x*mid_width) + y;
+                uint32_t index = (x*mid_width) + y;
 
                 if (LandDefs::in_bounds(gid_x, gid_y))
                     land_blocks[index] = get_all(LandDefs::get_block_gid(gid_x, gid_y));
@@ -370,7 +370,7 @@ void LScape::update_block(DWORD LandBlock, long ShiftX, long ShiftY, BOOL Unknow
 
             if (pLB)
             {
-                long Magic1, Magic2;
+                int32_t Magic1, Magic2;
                 get_block_orient(x, y, Magic1, Magic2);
 
                 if ((pLB->side_cell_count == LandDefs::lblock_side) &&
@@ -391,7 +391,7 @@ void LScape::update_block(DWORD LandBlock, long ShiftX, long ShiftY, BOOL Unknow
     }
 }
 
-BOOL LScape::SetMidRadius(long MidRadius)
+BOOL LScape::SetMidRadius(int32_t MidRadius)
 {
     if (MidRadius < 1)
         return FALSE;
@@ -407,12 +407,12 @@ BOOL LScape::SetMidRadius(long MidRadius)
     return TRUE;
 }
 
-void LScape::get_block_orient(long x, long y, long& magic1, long& magic2)
+void LScape::get_block_orient(int32_t x, int32_t y, int32_t& magic1, int32_t& magic2)
 {
-    long ydist = y - mid_radius;
-    long ydista = abs(ydist);
-    long xdist = x - mid_radius;
-    long xdista = abs(xdist);
+    int32_t ydist = y - mid_radius;
+    int32_t ydista = abs(ydist);
+    int32_t xdist = x - mid_radius;
+    int32_t xdista = abs(xdist);
 
     if (xdista <= ydista)
         xdista = ydista;
@@ -516,19 +516,19 @@ void LScape::set_sky_position(const Position& Pos)
     }
 }
 
-CLandBlock *LScape::get_landblock(DWORD cell_id)
+CLandBlock *LScape::get_landblock(uint32_t cell_id)
 {
 	UNFINISHED();
 	return NULL;
 }
 
-CLandCell *LScape::get_landcell(DWORD x_lcoord_offset)
+CLandCell *LScape::get_landcell(uint32_t x_lcoord_offset)
 {
 	CLandBlock *pLandBlock = get_landblock(x_lcoord_offset);
 
 	if (pLandBlock)
 	{
-		long x, y;
+		int32_t x, y;
 		LandDefs::gid_to_lcoord(x_lcoord_offset, x, y);
 		return &pLandBlock->lcell[y % 8 + x_lcoord_offset % 8 * pLandBlock->side_cell_count];
 	}

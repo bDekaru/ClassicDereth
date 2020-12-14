@@ -5,9 +5,10 @@
 #include "WeenieObject.h"
 #include "Monster.h"
 #include "Player.h"
+#include "easylogging++.h"
 
 #ifdef _DEBUG
-#define DELETE_ENTITY(x) LOG(Temp, Normal, csprintf("Delete Entity %u @ %s\r\n", pEntity->id, __FUNCTION__)); delete pEntity
+#define DELETE_ENTITY(x) SERVER_INFO << "Delete Entity" << pEntity->id << "@" << __FUNCTION__; delete pEntity
 #else
 #define DELETE_ENTITY(x) delete pEntity
 #endif
@@ -16,14 +17,16 @@ enum LandblockDormancyStatus
 {
 	DoNotGoDormant,
 	WaitToGoDormant,
-	Dormant
+	Dormant,
+	NeverDormant
 };
 
-class CWorldLandBlock
+class CWorldLandBlock :
+	public CLockable
 {
 public:
 	CWorldLandBlock(CWorld *pWorld, WORD wHeader);
-	~CWorldLandBlock();
+	virtual ~CWorldLandBlock();
 	
 	void ClearOldDatabaseEntries();
 
@@ -32,23 +35,23 @@ public:
 	WORD GetHeader();
 	BOOL Think();
 
-	void ClearSpawns();
+	void ClearSpawns(bool forced = false);
 
 	void Insert(CWeenieObject *pEntity, WORD wOld = 0, BOOL bNew = FALSE, bool bMakeAware = true);
 	void Destroy(CWeenieObject *pEntity, bool bDoRelease = true);
 	void Release(CWeenieObject *pEntity);
 	void ExchangePVS(CWeenieObject *pSource, WORD old_block_id);
 	void ExchangeData(CWeenieObject *pSource);
-	void ExchangeDataForCellID(CWeenieObject *pSource, DWORD cell_id);
-	void ExchangeDataForStabChange(CWeenieObject *pSource, DWORD old_cell_id, DWORD new_cell_id);
+	void ExchangeDataForCellID(CWeenieObject *pSource, uint32_t cell_id);
+	void ExchangeDataForStabChange(CWeenieObject *pSource, uint32_t old_cell_id, uint32_t new_cell_id);
 
-	CPlayerWeenie* FindPlayer(DWORD dwGUID);
-	CWeenieObject* FindEntity(DWORD dwGUID);
+	CPlayerWeenie* FindPlayer(uint32_t dwGUID);
+	CWeenieObject* FindEntity(uint32_t dwGUID);
 
-	void Broadcast(void *_data, DWORD _len, WORD _group, DWORD ignore_ent, BOOL _game_event);
+	void Broadcast(void *_data, uint32_t _len, WORD _group, uint32_t ignore_ent, BOOL _game_event, bool ephemeral = false);
 
-	DWORD PlayerCount() { return (DWORD)m_PlayerList.size(); }
-	DWORD LiveCount() { return (DWORD)m_EntityList.size(); }
+	uint32_t PlayerCount() { return (uint32_t)m_PlayerList.size(); }
+	uint32_t LiveCount() { return (uint32_t)m_EntityList.size(); }
 
 	void EnumNearbyFastNoSphere(const Position &pos, float range, std::list<CWeenieObject *> *results);
 	void EnumNearby(const Position &pos, float range, std::list<CWeenieObject *> *results);
@@ -61,15 +64,19 @@ public:
 	bool HasPlayers();
 	LandblockDormancyStatus GetDormancyStatus() { return m_DormancyStatus; }
 	double GetDormancyTime() { return m_fTimeToGoDormant; }
+	void NeverGoDormant() { m_DormancyStatus = LandblockDormancyStatus::NeverDormant; }
 
 	bool IsWaterBlock();
 	bool HasAnySeenOutside();
-	bool PossiblyVisibleToOutdoors(DWORD cell_id);
+	bool PossiblyVisibleToOutdoors(WORD cell_id);
 
 	bool IsTickingWithWorld() { return m_bTickingWithWorld; }
 	void SetIsTickingWithWorld(bool ticking);
 
 	void UnloadSpawnsUntilNextTick();
+	void RespawnNextTick();
+
+	bool IsNoDrop() { return m_noDrop; }
 
 protected:
 	void MakeNotDormant();
@@ -80,7 +87,7 @@ protected:
 	bool PlayerWithinPVS();
 	bool CanGoDormant();
 
-	void ActivateLandblocksWithinPVS(DWORD cell_id);
+	void ActivateLandblocksWithinPVS(uint32_t cell_id);
 
 	CWorld *m_pWorld;
 
@@ -107,4 +114,6 @@ protected:
 	bool m_bTickingWithWorld = true;
 
 	bool _cached_any_seen_outside = true;
+
+	bool m_noDrop = false;
 };

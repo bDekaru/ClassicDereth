@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "SortCell.h"
 
 CSortCell::CSortCell()
@@ -23,7 +23,7 @@ BOOL CSortCell::has_building()
 	return (building != NULL);
 }
 
-CPhysicsObj *CSortCell::get_object(DWORD obj_iid)
+CPhysicsObj *CSortCell::get_object(uint32_t obj_iid)
 {
 	CPhysicsObj *result = CObjCell::get_object(obj_iid);
 

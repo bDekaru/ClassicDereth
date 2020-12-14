@@ -9,7 +9,7 @@ public:
 	CChestWeenie();
 	virtual ~CChestWeenie() override;
 
-	virtual class CChestWeenie *AsChest() { return this; }
+	virtual class CChestWeenie *AsChest() override { return this; }
 
 	virtual void PostSpawn() override;
 

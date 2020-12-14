@@ -1,9 +1,6 @@
 
-#include "stdafx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
-
-
-#include "StdAfx.h"
 #include "SpellTable.h"
 #include "SpellComponentTable.h"
 
@@ -15,7 +12,7 @@ DEFINE_PACK(SpellFormulaEx)
 DEFINE_UNPACK(SpellFormulaEx)
 {
 	for (int i = 0; i < 8; i++)
-		_comps[i] = pReader->Read<DWORD>();
+		_comps[i] = pReader->Read<uint32_t>();
 
 	return true;
 }
@@ -45,7 +42,7 @@ ITEM_TYPE SpellFormulaEx::GetTargetingType()
 	return SpellComponentTable::GetTargetTypeFromComponentID(_comps[i]);
 }
 
-DWORD SpellFormulaEx::GetPowerLevelOfPowerComponent()
+uint32_t SpellFormulaEx::GetPowerLevelOfPowerComponent()
 {
 	return MagicSystem::DeterminePowerLevelOfComponent(_comps[0]);
 }
@@ -57,7 +54,7 @@ DEFINE_PACK(SpellEx)
 
 DEFINE_UNPACK(SpellEx)
 {
-	_spell_id = pReader->Read<DWORD>();
+	_spell_id = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -188,16 +185,16 @@ DEFINE_UNPACK(CSpellBaseEx)
 	_name = pReader->ReadString();
 	_desc = pReader->ReadString();
 
-	_school = pReader->Read<DWORD>();
-	_iconID = pReader->Read<DWORD>();
-	_category = pReader->Read<DWORD>();
-	_bitfield = pReader->Read<DWORD>();
+	_school = pReader->Read<uint32_t>();
+	_iconID = pReader->Read<uint32_t>();
+	_category = pReader->Read<uint32_t>();
+	_bitfield = pReader->Read<uint32_t>();
 	_base_mana = pReader->Read<int>();
 	_base_range_constant = pReader->Read<float>();
 	_base_range_mod = pReader->Read<float>();
 	_power = pReader->Read<int>();
 	_spell_economy_mod = pReader->Read<float>();
-	_formula_version = pReader->Read<DWORD>();
+	_formula_version = pReader->Read<uint32_t>();
 	_component_loss = pReader->Read<float>();
 
 	_meta_spell.UnPack(pReader);
@@ -209,7 +206,7 @@ DEFINE_UNPACK(CSpellBaseEx)
 	_recovery_interval = pReader->Read<double>();
 	_recovery_amount = pReader->Read<float>();
 	_display_order = pReader->Read<int>();
-	_non_component_target_type = pReader->Read<DWORD>();
+	_non_component_target_type = pReader->Read<uint32_t>();
 	_mana_mod = pReader->Read<int>();
 
 	return true;
@@ -217,8 +214,8 @@ DEFINE_UNPACK(CSpellBaseEx)
 
 DEFINE_UNPACK_JSON(CSpellBaseEx)
 {
-	_name = reader["name"];
-	_desc = reader["desc"];
+	_name = reader["name"].get<std::string>();
+	_desc = reader["desc"].get<std::string>();
 
 	_school = reader["school"];
 	_iconID = reader["iconID"];
@@ -282,7 +279,7 @@ SpellFormulaEx CSpellBaseEx::InqSpellFormula() const
 {
 	SpellFormulaEx formula = _formula;
 
-	for (DWORD i = 0; i < SPELLFORMULA_MAX_COMPS; i++)
+	for (uint32_t i = 0; i < SPELLFORMULA_MAX_COMPS; i++)
 	{
 	//	if (formula._comps[i])
 	//		formula._comps[i] -= (PString::compute_hash(_name.c_str()) % 0x12107680) + (PString::compute_hash(_desc.c_str()) % 0xBEADCF45);
@@ -316,7 +313,7 @@ DEFINE_PACK(CSpellTableEx)
 DEFINE_UNPACK(CSpellTableEx)
 {
 #ifdef PHATSDK_USE_INFERRED_SPELL_DATA
-	pReader->Read<DWORD>();
+	pReader->Read<uint32_t>();
 #endif
 
 	_spellBaseHash.UnPack(pReader);
@@ -335,7 +332,7 @@ DEFINE_PACK_JSON(CSpellTableEx)
 	_spellBaseHash.PackJson(writer["spellBaseHash"]);
 }
 
-const CSpellBaseEx *CSpellTableEx::GetSpellBase(DWORD spell_id)
+const CSpellBaseEx *CSpellTableEx::GetSpellBase(uint32_t spell_id)
 {
 	return _spellBaseHash.lookup(spell_id);
 }

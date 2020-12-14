@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "AttributeTransferDevice.h"
 #include "UseManager.h"
 #include "Player.h"
@@ -42,7 +42,7 @@ int CAttributeTransferDeviceWeenie::Use(CPlayerWeenie *player)
 		player->NotifyUseDone(WERROR_NONE);
 		return WERROR_NONE;
 	}
-	int maxFromAmount = min(fromAttrib._init_level - 10, 10);
+	int maxFromAmount = min((int)fromAttrib._init_level - 10, 10);
 
 	if (toAttrib._init_level >= 100)
 	{
@@ -50,7 +50,7 @@ int CAttributeTransferDeviceWeenie::Use(CPlayerWeenie *player)
 		player->NotifyUseDone(WERROR_NONE);
 		return WERROR_NONE;
 	}
-	int maxToAmount = min(100 - toAttrib._init_level, 10);
+	int maxToAmount = min((int)(100 - toAttrib._init_level), 10);
 
 	// do the attribute transfer
 	int transferAmount = min(maxFromAmount, maxToAmount);

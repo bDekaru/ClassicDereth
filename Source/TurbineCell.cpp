@@ -1,6 +1,6 @@
 
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "TurbineCell.h"
 
 TurbineCell::TurbineCell()

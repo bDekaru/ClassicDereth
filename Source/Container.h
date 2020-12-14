@@ -11,7 +11,7 @@ public:
 	CContainerWeenie();
 	virtual ~CContainerWeenie() override;
 
-	virtual class CContainerWeenie *AsContainer() { return this; }
+	virtual class CContainerWeenie *AsContainer() override { return this; }
 
 	virtual bool IsAttunedOrContainsAttuned() override;
 
@@ -30,17 +30,17 @@ public:
 
 	virtual void RecalculateEncumbrance() override;
 
-	virtual DWORD RecalculateCoinAmount() override;
-	virtual DWORD ConsumeCoin(int amountToConsume) override;
+	virtual uint32_t RecalculateCoinAmount(int currencyid) override;
+	virtual uint32_t ConsumeCoin(int amountToConsume, int currencyid) override;
 
 	bool IsGroundContainer();
 	bool IsInOpenRange(CWeenieObject *other);
 
-	virtual int DoUseResponse(CWeenieObject *other);
+	virtual int DoUseResponse(CWeenieObject *other) override;
 
 	virtual void OnContainerOpened(CWeenieObject *other);
 	virtual void OnContainerClosed(CWeenieObject *requestedBy = NULL);
-	virtual DWORD OnReceiveInventoryItem(CWeenieObject *source, CWeenieObject *item, DWORD desired_slot);
+	virtual uint32_t OnReceiveInventoryItem(CWeenieObject *source, CWeenieObject *item, uint32_t desired_slot);
 
 	virtual void NotifyGeneratedPickedUp(CWeenieObject *weenie) override;
 
@@ -51,12 +51,13 @@ public:
 
 	void UnloadContainer();
 
-	CContainerWeenie *FindContainer(DWORD container_id);
-	virtual CWeenieObject *FindContainedItem(DWORD object_id) override;
+	CContainerWeenie *FindContainer(uint32_t container_id);
+	virtual CWeenieObject *FindContainedItem(uint32_t object_id) override;
 
 	virtual CWeenieObject *GetWieldedCombat(COMBAT_USE combatUse) override;
 	void SetWieldedCombat(CWeenieObject *wielded, COMBAT_USE combatUse);
 
+	bool HasWielded();
 	CWeenieObject *GetWieldedMelee();
 	CWeenieObject *GetWieldedMissile();
 	CWeenieObject *GetWieldedAmmo();
@@ -64,30 +65,30 @@ public:
 	CWeenieObject *GetWieldedTwoHanded();
 	virtual CWeenieObject *GetWieldedCaster() override;
 
-	void Container_GetWieldedByMask(std::list<CWeenieObject *> &wielded, DWORD inv_loc_mask);
+	void Container_GetWieldedByMask(std::list<CWeenieObject *> &wielded, uint32_t inv_loc_mask);
 	CWeenieObject *GetWielded(INVENTORY_LOC slot) override;
 
-	BOOL Container_CanEquip(CWeenieObject *pItem, DWORD dwCoverage);
+	BOOL Container_CanEquip(CWeenieObject *pItem, uint32_t dwCoverage);
 	BOOL Container_CanStore(CWeenieObject *pItem, bool bPackSlot);
 	BOOL Container_CanStore(CWeenieObject *pItem);
 
 	BOOL IsItemsCapacityFull();
 	BOOL IsContainersCapacityFull();
 
-	void Container_EquipItem(DWORD dwCell, CWeenieObject *pItem, DWORD dwCoverage, DWORD child_location, DWORD placement);
-	void Container_DeleteItem(DWORD object_id);
-	virtual DWORD Container_InsertInventoryItem(DWORD dwCell, CWeenieObject *pItem, DWORD slot);
+	void Container_EquipItem(uint32_t dwCell, CWeenieObject *pItem, uint32_t dwCoverage, uint32_t child_location, uint32_t placement);
+	void Container_DeleteItem(uint32_t object_id);
+	virtual uint32_t Container_InsertInventoryItem(uint32_t dwCell, CWeenieObject *pItem, uint32_t slot);
 
-	DWORD Container_GetNumFreeMainPackSlots();
+	uint32_t Container_GetNumFreeMainPackSlots();
 
 	virtual void ReleaseContainedItemRecursive(CWeenieObject *item) override;
 
 	bool SpawnTreasureInContainer(eTreasureCategory category, int tier, int workmanship = -1);
-	bool SpawnInContainer(DWORD wcid, int amount = 1, int ptid = 0, float shade = 0, bool sendEnvent = true);
+	bool SpawnInContainer(uint32_t wcid, int amount = 1, int ptid = 0, float shade = 0, bool sendEnvent = true);
 	bool SpawnCloneInContainer(CWeenieObject *itemToClone, int amount, bool sendEnvent = true);
 	bool SpawnInContainer(CWeenieObject *item, bool sendEnvent = true, bool deleteItemOnFailure = true);
 
-	CWeenieObject *FindContained(DWORD object_id);
+	CWeenieObject *FindContained(uint32_t object_id) override;
 
 	virtual void InitPhysicsObj() override;
 
@@ -101,6 +102,9 @@ public:
 
 	void AdjustToNewCombatMode();
 
+	virtual uint32_t GetItemCount(int itemid) override;
+	virtual uint32_t ConsumeItem(int amountToConsume, int itemid) override;
+
 	CWeenieObject *m_WieldedCombat[MAX_WIELDED_COMBAT];
 	std::vector<CWeenieObject *> m_Wielded;
 	std::vector<CWeenieObject *> m_Items;
@@ -109,7 +113,7 @@ public:
 	// For opening/closing containers
 	double _nextCheckToClose = 0.0;
 	bool _failedPreviousCheckToClose = false;
-	DWORD _openedById = 0;
+	uint32_t _openedById = 0;
 
 	bool m_bInitiallyLocked = false;
 

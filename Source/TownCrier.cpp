@@ -1,10 +1,10 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "TownCrier.h"
 #include "ChatMsgs.h"
 #include "World.h"
 #include "Player.h"
-#include "SpellCastingManager.h"
+#include "SpellcastingManager.h"
 #include "Config.h"
 
 CTownCrier::CTownCrier()
@@ -39,7 +39,7 @@ std::string CTownCrier::GetNewsText(bool paid)
 	phrases.push_back("Has that 50,000 pyreal piece of armor been cluttering up your house chest for too long? Well, go to Shoushi, Yaraq, or Holtburg and sell it!");
 	phrases.push_back("Wait, you can't have this handful of blackened mineral! It's mine! If you want some for yourself, you'll have to get it on your own!");
 
-	return phrases[Random::GenInt(0, (DWORD)(phrases.size() - 1))];
+	return phrases[Random::GenInt(0, (uint32_t)(phrases.size() - 1))];
 }
 
 int CTownCrier::DoUseResponse(CWeenieObject *player)
@@ -58,7 +58,7 @@ int CTownCrier::DoUseResponse(CWeenieObject *player)
 		TurnToObject(player->GetID(), &params);
 	}
 
-	return WERROR_NONE;
+	return CWeenieObject::DoUseResponse(player);
 }
 
 int CTownCrier::Use(CPlayerWeenie *pOther)
@@ -72,7 +72,7 @@ int CTownCrier::Use(CPlayerWeenie *pOther)
 	return WERROR_NONE;
 }
 
-void CTownCrier::HandleMoveToDone(DWORD error)
+void CTownCrier::HandleMoveToDone(uint32_t error)
 {
 	CWeenieObject::HandleMoveToDone(error);
 	
@@ -524,7 +524,7 @@ void CTownCrier::HandleMoveToDone(DWORD error)
 	}
 }
 
-DWORD CTownCrier::OnReceiveInventoryItem(CWeenieObject *source, CWeenieObject *item, DWORD desired_slot)
+uint32_t CTownCrier::OnReceiveInventoryItem(CWeenieObject *source, CWeenieObject *item, uint32_t desired_slot)
 {
 	if (item->m_Qualities.id == W_COINSTACK_CLASS)
 		DoUseResponse(source);

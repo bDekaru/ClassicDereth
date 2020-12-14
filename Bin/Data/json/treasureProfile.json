@@ -3,7 +3,7 @@
   {
     "comment1": "If this is enabled items can be generated with properties that weren't possible in retail",
     "comment2": "like slayer, crushing blow and bitting strike effects in weapons and level requirements in armor.",
-    "extraMutations": true,
+    "extraMutations": false,
 
     "rareJunkChance": 0.3
   },
@@ -3315,188 +3315,191 @@
       ]
     }
   ],
-  "casters": {
-    "possibleMaterials": [ "gem", "metal" ],
-    "wieldTiers": [
-      {
-        "weaponSkillRequired": 0,
-        "minElementalDamageMod": 0.0,
-        "maxElementalDamageMod": 0.0,
-        "maxManaConversionBonus": 10.0,
-        "maxMeleeDefenseBonus": 15.0,
-        "maxMissileDefenseBonus": 2.5,
-        "maxMagicDefenseBonus": 2.5,
-        "manaConversionBonusChance": 0.50,
-        "meleeDefenseBonusChance": 0.25,
-        "missileDefenseBonusChance": 0.25,
-        "magicDefenseBonusChance": 0.25,
-        "elementalChance": 0.25,
-
-        "maxPropertyAmount": 1,
-
-        "slayer_Chance": 0.02,
-        "slayer_MinDamageBonus": 1.25,
-        "slayer_MaxDamageBonus": 2.0,
-        "slayer_Types": [ "banderling", "drudge", "mosswart", "mite", "phyntosWasp", 
-          "rat", "gromnie", "reedshark", "armoredillo", "shallowsShark", "skeleton", "shreth" ],
+  "casters": [
+    {
+      "category": "Non-Elemental Casters",
+      "possibleMaterials": [ "gem", "metal", "stone" ],
+      "wieldTiers": [
+        {
+          "weaponSkillRequired": 0,
+          "minElementalDamageMod": 0.0,
+          "maxElementalDamageMod": 0.0,
+          "maxManaConversionBonus": 10.0,
+          "maxMeleeDefenseBonus": 15.0,
+          "maxMissileDefenseBonus": 2.5,
+          "maxMagicDefenseBonus": 2.5,
+          "manaConversionBonusChance": 0.50,
+          "meleeDefenseBonusChance": 0.25,
+          "missileDefenseBonusChance": 0.25,
+          "magicDefenseBonusChance": 0.25,
+          "elementalChance": 0.25,
   
-        "crushingBlow_Chance": 0.05,
-        "crushingBlow_MinCriticalMultiplier": 0.3,
-        "crushingBlow_MaxCriticalMultiplier": 0.5,
+          "maxPropertyAmount": 1,
   
-        "bitingStrike_Chance": 0.05,
-        "bitingStrike_MinCriticalFrequency": 0.06,
-        "bitingStrike_MaxCriticalFrequency": 0.08
-      },
-      {
-        "weaponSkillRequired": 290,
-        "minElementalDamageMod": 0.1,
-        "maxElementalDamageMod": 2.0,
-        "maxManaConversionBonus": 10.0,
-        "maxMeleeDefenseBonus": 15.0,
-        "maxMissileDefenseBonus": 2.5,
-        "maxMagicDefenseBonus": 2.5,
-        "manaConversionBonusChance": 0.50,
-        "meleeDefenseBonusChance": 0.25,
-        "missileDefenseBonusChance": 0.25,
-        "magicDefenseBonusChance": 0.25,
-        "elementalChance": 0.25,
-
-        "maxPropertyAmount": 2,
-          
-        "slayer_Chance": 0.02,
-        "slayer_MinDamageBonus": 1.25,
-        "slayer_MaxDamageBonus": 2.0,
-        "slayer_Types": [ "olthoi", "banderling", "drudge", "mosswart", "lugian", "tumerok", "mite", "tusker", "phyntosWasp", 
-          "rat", "golem", "undead", "gromnie", "reedshark", "armoredillo", "virindi", "wisp", "shadow", "mattekar", "mumiyah", 
-          "sclavus", "shallowsShark", "monouga", "zefir", "skeleton", "shreth", "moarsman", "grievver", "niffis", "ursuin", 
-          "crystal", "hollowMinion", "scarecrow", "doll", "marionette", "carenzi", "siraluun", "simulacrum", "elemental", "statue" ],
-
-        "crushingBlow_Chance": 0.05,
-        "crushingBlow_MinCriticalMultiplier": 0.3,
-        "crushingBlow_MaxCriticalMultiplier": 0.6,
-
-        "bitingStrike_Chance": 0.05,
-        "bitingStrike_MinCriticalFrequency": 0.07,
-        "bitingStrike_MaxCriticalFrequency": 0.09
-      },
-      {
-        "weaponSkillRequired": 310,
-        "minElementalDamageMod": 2.0,
-        "maxElementalDamageMod": 5.0,
-        "maxManaConversionBonus": 10.0,
-        "maxMeleeDefenseBonus": 15.0,
-        "maxMissileDefenseBonus": 2.5,
-        "maxMagicDefenseBonus": 2.5,
-        "manaConversionBonusChance": 0.50,
-        "meleeDefenseBonusChance": 0.25,
-        "missileDefenseBonusChance": 0.25,
-        "magicDefenseBonusChance": 0.25,
-        "elementalChance": 0.25,
-
-        "maxPropertyAmount": 3,
-
-        "slayer_Chance": 0.02,
-        "slayer_MinDamageBonus": 1.25,
-        "slayer_MaxDamageBonus": 2.0,
-        "slayer_Types": [ "olthoi", "banderling", "drudge", "mosswart", "lugian", "tumerok", "mite", "tusker", "phyntosWasp", 
-          "rat", "golem", "undead", "gromnie", "reedshark", "armoredillo", "virindi", "wisp", "shadow", "mattekar", "mumiyah", 
-          "sclavus", "shallowsShark", "monouga", "zefir", "skeleton", "shreth", "moarsman", "grievver", "niffis", "ursuin", 
-          "crystal", "hollowMinion", "scarecrow", "doll", "marionette", "carenzi", "siraluun", "simulacrum", "elemental", "statue" ],
-
-        "crushingBlow_Chance": 0.05,
-        "crushingBlow_MinCriticalMultiplier": 0.3,
-        "crushingBlow_MaxCriticalMultiplier": 0.7,
+          "slayer_Chance": 0.02,
+          "slayer_MinDamageBonus": 1.25,
+          "slayer_MaxDamageBonus": 2.0,
+          "slayer_Types": [ "banderling", "drudge", "mosswart", "mite", "phyntosWasp", 
+            "rat", "gromnie", "reedshark", "armoredillo", "shallowsShark", "skeleton", "shreth" ],
+    
+          "crushingBlow_Chance": 0.05,
+          "crushingBlow_MinCriticalMultiplier": 0.3,
+          "crushingBlow_MaxCriticalMultiplier": 0.5,
+    
+          "bitingStrike_Chance": 0.05,
+          "bitingStrike_MinCriticalFrequency": 0.06,
+          "bitingStrike_MaxCriticalFrequency": 0.08
+        },
+        {
+          "weaponSkillRequired": 290,
+          "minElementalDamageMod": 0.1,
+          "maxElementalDamageMod": 2.0,
+          "maxManaConversionBonus": 10.0,
+          "maxMeleeDefenseBonus": 15.0,
+          "maxMissileDefenseBonus": 2.5,
+          "maxMagicDefenseBonus": 2.5,
+          "manaConversionBonusChance": 0.50,
+          "meleeDefenseBonusChance": 0.25,
+          "missileDefenseBonusChance": 0.25,
+          "magicDefenseBonusChance": 0.25,
+          "elementalChance": 0.25,
   
-        "bitingStrike_Chance": 0.05,
-        "bitingStrike_MinCriticalFrequency": 0.08,
-        "bitingStrike_MaxCriticalFrequency": 0.10
-      },
-      {
-        "weaponSkillRequired": 330,
-        "minElementalDamageMod": 5.0,
-        "maxElementalDamageMod": 8.0,
-        "maxManaConversionBonus": 10.0,
-        "maxMeleeDefenseBonus": 15.0,
-        "maxMissileDefenseBonus": 2.5,
-        "maxMagicDefenseBonus": 2.5,
-        "manaConversionBonusChance": 0.50,
-        "meleeDefenseBonusChance": 0.25,
-        "missileDefenseBonusChance": 0.25,
-        "magicDefenseBonusChance": 0.25,
-        "elementalChance": 0.25,
-
-        "maxPropertyAmount": 3,
-
-        "slayer_Chance": 0.02,
-        "slayer_MinDamageBonus": 1.25,
-        "slayer_MaxDamageBonus": 2.0,
-        "slayer_Types": [ "olthoi", "banderling", "drudge", "mosswart", "lugian", "tumerok", "mite", "tusker", "phyntosWasp", 
-          "rat", "golem", "undead", "gromnie", "reedshark", "armoredillo", "virindi", "wisp", "shadow", "mattekar", "mumiyah", 
-          "sclavus", "shallowsShark", "monouga", "zefir", "skeleton", "shreth", "moarsman", "grievver", "niffis", "ursuin", 
-          "crystal", "hollowMinion", "scarecrow", "doll", "marionette", "carenzi", "siraluun", "simulacrum", "elemental", "statue" ],
-   
-        "crushingBlow_Chance": 0.05,
-        "crushingBlow_MinCriticalMultiplier": 0.3,
-        "crushingBlow_MaxCriticalMultiplier": 0.8,
+          "maxPropertyAmount": 2,
+            
+          "slayer_Chance": 0.02,
+          "slayer_MinDamageBonus": 1.25,
+          "slayer_MaxDamageBonus": 2.0,
+          "slayer_Types": [ "olthoi", "banderling", "drudge", "mosswart", "lugian", "tumerok", "mite", "tusker", "phyntosWasp", 
+            "rat", "golem", "undead", "gromnie", "reedshark", "armoredillo", "virindi", "wisp", "shadow", "mattekar", "mumiyah", 
+            "sclavus", "shallowsShark", "monouga", "zefir", "skeleton", "shreth", "moarsman", "grievver", "niffis", "ursuin", 
+            "crystal", "hollowMinion", "scarecrow", "doll", "marionette", "carenzi", "siraluun", "simulacrum", "elemental", "statue" ],
   
-        "bitingStrike_Chance": 0.05,
-        "bitingStrike_MinCriticalFrequency": 0.08,
-        "bitingStrike_MaxCriticalFrequency": 0.11
-      },
-      {
-        "weaponSkillRequired": 355,
-        "minElementalDamageMod": 8.0,
-        "maxElementalDamageMod": 10.0,
-        "maxManaConversionBonus": 10.0,
-        "maxMeleeDefenseBonus": 15.0,
-        "maxMissileDefenseBonus": 2.5,
-        "maxMagicDefenseBonus": 2.5,
-        "manaConversionBonusChance": 0.50,
-        "meleeDefenseBonusChance": 0.25,
-        "missileDefenseBonusChance": 0.25,
-        "magicDefenseBonusChance": 0.25,
-        "elementalChance": 0.25,
-
-        "maxPropertyAmount": 3,
-
-        "slayer_Chance": 0.02,
-        "slayer_MinDamageBonus": 1.25,
-        "slayer_MaxDamageBonus": 2.0,
-        "slayer_Types": [ "olthoi", "banderling", "drudge", "mosswart", "lugian", "tumerok", "mite", "tusker", "phyntosWasp", 
-          "rat", "golem", "undead", "gromnie", "reedshark", "armoredillo", "virindi", "wisp", "shadow", "mattekar", "mumiyah", 
-          "sclavus", "shallowsShark", "monouga", "zefir", "skeleton", "shreth", "moarsman", "grievver", "niffis", "ursuin", 
-          "crystal", "hollowMinion", "scarecrow", "doll", "marionette", "carenzi", "siraluun", "simulacrum", "elemental", "statue" ],
+          "crushingBlow_Chance": 0.05,
+          "crushingBlow_MinCriticalMultiplier": 0.3,
+          "crushingBlow_MaxCriticalMultiplier": 0.6,
   
-        "crushingBlow_Chance": 0.05,
-        "crushingBlow_MinCriticalMultiplier": 0.3,
-        "crushingBlow_MaxCriticalMultiplier": 1.0,
+          "bitingStrike_Chance": 0.05,
+          "bitingStrike_MinCriticalFrequency": 0.07,
+          "bitingStrike_MaxCriticalFrequency": 0.09
+        },
+        {
+          "weaponSkillRequired": 310,
+          "minElementalDamageMod": 2.0,
+          "maxElementalDamageMod": 5.0,
+          "maxManaConversionBonus": 10.0,
+          "maxMeleeDefenseBonus": 15.0,
+          "maxMissileDefenseBonus": 2.5,
+          "maxMagicDefenseBonus": 2.5,
+          "manaConversionBonusChance": 0.50,
+          "meleeDefenseBonusChance": 0.25,
+          "missileDefenseBonusChance": 0.25,
+          "magicDefenseBonusChance": 0.25,
+          "elementalChance": 0.25,
   
-        "bitingStrike_Chance": 0.05,
-        "bitingStrike_MinCriticalFrequency": 0.08,
-        "bitingStrike_MaxCriticalFrequency": 0.13
-      }
-    ],
-    "entries": [
-      {
-        "name": "Orb",
-        "wcid": 2366
-      },
-      {
-        "name": "Wand",
-        "wcid": 2472
-      },
-      {
-        "name": "Staff",
-        "possibleMaterials": [ "wood", "metal" ],
-        "wcid": 2547
-      },
-      {
-        "name": "Sceptre",
-        "wcid": 2548
-      }
-    ]
-  },
+          "maxPropertyAmount": 3,
+  
+          "slayer_Chance": 0.02,
+          "slayer_MinDamageBonus": 1.25,
+          "slayer_MaxDamageBonus": 2.0,
+          "slayer_Types": [ "olthoi", "banderling", "drudge", "mosswart", "lugian", "tumerok", "mite", "tusker", "phyntosWasp", 
+            "rat", "golem", "undead", "gromnie", "reedshark", "armoredillo", "virindi", "wisp", "shadow", "mattekar", "mumiyah", 
+            "sclavus", "shallowsShark", "monouga", "zefir", "skeleton", "shreth", "moarsman", "grievver", "niffis", "ursuin", 
+            "crystal", "hollowMinion", "scarecrow", "doll", "marionette", "carenzi", "siraluun", "simulacrum", "elemental", "statue" ],
+  
+          "crushingBlow_Chance": 0.05,
+          "crushingBlow_MinCriticalMultiplier": 0.3,
+          "crushingBlow_MaxCriticalMultiplier": 0.7,
+    
+          "bitingStrike_Chance": 0.05,
+          "bitingStrike_MinCriticalFrequency": 0.08,
+          "bitingStrike_MaxCriticalFrequency": 0.10
+        },
+        {
+          "weaponSkillRequired": 330,
+          "minElementalDamageMod": 5.0,
+          "maxElementalDamageMod": 8.0,
+          "maxManaConversionBonus": 10.0,
+          "maxMeleeDefenseBonus": 15.0,
+          "maxMissileDefenseBonus": 2.5,
+          "maxMagicDefenseBonus": 2.5,
+          "manaConversionBonusChance": 0.50,
+          "meleeDefenseBonusChance": 0.25,
+          "missileDefenseBonusChance": 0.25,
+          "magicDefenseBonusChance": 0.25,
+          "elementalChance": 0.25,
+  
+          "maxPropertyAmount": 3,
+  
+          "slayer_Chance": 0.02,
+          "slayer_MinDamageBonus": 1.25,
+          "slayer_MaxDamageBonus": 2.0,
+          "slayer_Types": [ "olthoi", "banderling", "drudge", "mosswart", "lugian", "tumerok", "mite", "tusker", "phyntosWasp", 
+            "rat", "golem", "undead", "gromnie", "reedshark", "armoredillo", "virindi", "wisp", "shadow", "mattekar", "mumiyah", 
+            "sclavus", "shallowsShark", "monouga", "zefir", "skeleton", "shreth", "moarsman", "grievver", "niffis", "ursuin", 
+            "crystal", "hollowMinion", "scarecrow", "doll", "marionette", "carenzi", "siraluun", "simulacrum", "elemental", "statue" ],
+     
+          "crushingBlow_Chance": 0.05,
+          "crushingBlow_MinCriticalMultiplier": 0.3,
+          "crushingBlow_MaxCriticalMultiplier": 0.8,
+    
+          "bitingStrike_Chance": 0.05,
+          "bitingStrike_MinCriticalFrequency": 0.08,
+          "bitingStrike_MaxCriticalFrequency": 0.11
+        },
+        {
+          "weaponSkillRequired": 355,
+          "minElementalDamageMod": 8.0,
+          "maxElementalDamageMod": 10.0,
+          "maxManaConversionBonus": 10.0,
+          "maxMeleeDefenseBonus": 15.0,
+          "maxMissileDefenseBonus": 2.5,
+          "maxMagicDefenseBonus": 2.5,
+          "manaConversionBonusChance": 0.50,
+          "meleeDefenseBonusChance": 0.25,
+          "missileDefenseBonusChance": 0.25,
+          "magicDefenseBonusChance": 0.25,
+          "elementalChance": 0.25,
+  
+          "maxPropertyAmount": 3,
+  
+          "slayer_Chance": 0.02,
+          "slayer_MinDamageBonus": 1.25,
+          "slayer_MaxDamageBonus": 2.0,
+          "slayer_Types": [ "olthoi", "banderling", "drudge", "mosswart", "lugian", "tumerok", "mite", "tusker", "phyntosWasp", 
+            "rat", "golem", "undead", "gromnie", "reedshark", "armoredillo", "virindi", "wisp", "shadow", "mattekar", "mumiyah", 
+            "sclavus", "shallowsShark", "monouga", "zefir", "skeleton", "shreth", "moarsman", "grievver", "niffis", "ursuin", 
+            "crystal", "hollowMinion", "scarecrow", "doll", "marionette", "carenzi", "siraluun", "simulacrum", "elemental", "statue" ],
+    
+          "crushingBlow_Chance": 0.05,
+          "crushingBlow_MinCriticalMultiplier": 0.3,
+          "crushingBlow_MaxCriticalMultiplier": 1.0,
+    
+          "bitingStrike_Chance": 0.05,
+          "bitingStrike_MinCriticalFrequency": 0.08,
+          "bitingStrike_MaxCriticalFrequency": 0.13
+        }
+      ],
+      "entries": [
+        {
+          "name": "Orb",
+          "wcid": 2366
+        },
+        {
+          "name": "Wand",
+          "wcid": 2472
+        },
+        {
+          "name": "Staff",
+          "possibleMaterials": [ "wood", "metal" ],
+          "wcid": 2547
+        },
+        {
+          "name": "Sceptre",
+          "wcid": 2548
+        }
+      ]
+    }
+  ],
   "armor": {
     "wieldTiers": [
       {
@@ -5057,7 +5060,8 @@
     {
       "spellName": "Impenetrability",
       "spells": [ 51, 1482, 1483, 1484, 1485, 1486, 2108 ],
-      "cantrips": [ 2604, 2592 ]
+      "cantrips": [ 2604, 2592 ],
+      "comment": "All magical armor will have the spell defined on this first slot, this replicates all magical armor having at least the impenetrability spell."
     },
     {
       "spellName": "Acid Bane",
@@ -13409,52 +13413,52 @@
   ],
   "workmanshipProperties": {
     "1": {
-      "valueMultiplier": 1.0,
+      "valueMultiplier": 0.5,
       "gemChance": 0,
       "maxGemCount": 0
     },
     "2": {
-      "valueMultiplier": 2.0,
+      "valueMultiplier": 0.65,
       "gemChance": 0,
       "maxGemCount": 0
     },
     "3": {
-      "valueMultiplier": 4.0,
+      "valueMultiplier": 0.8,
       "gemChance": 0,
       "maxGemCount": 0
     },
     "4": {
-      "valueMultiplier": 6.0,
+      "valueMultiplier": 1.0,
       "gemChance": 0,
       "maxGemCount": 0
     },
     "5": {
-      "valueMultiplier": 8.0,
+      "valueMultiplier": 1.5,
       "gemChance": 0.25,
       "maxGemCount": 1
     },
     "6": {
-      "valueMultiplier": 10.0,
+      "valueMultiplier": 2.5,
       "gemChance": 0.25,
       "maxGemCount": 2
     },
     "7": {
-      "valueMultiplier": 14.0,
+      "valueMultiplier": 4.0,
       "gemChance": 0.25,
       "maxGemCount": 4
     },
     "8": {
-      "valueMultiplier": 18.0,
+      "valueMultiplier": 6.0,
       "gemChance": 0.25,
       "maxGemCount": 6
     },
     "9": {
-      "valueMultiplier": 22.0,
+      "valueMultiplier": 8.0,
       "gemChance": 0.25,
       "maxGemCount": 8
     },
     "10": {
-      "valueMultiplier": 26.0,
+      "valueMultiplier": 10.0,
       "gemChance": 0.25,
       "maxGemCount": 10
     }

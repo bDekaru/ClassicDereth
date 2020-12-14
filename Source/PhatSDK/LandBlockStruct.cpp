@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Polygon.h"
 #include "LandDefs.h"
 #include "LandCell.h"
@@ -58,7 +58,7 @@ void CLandBlockStruct::Destroy()
 	// Set all UV array pointers to NULL (so nothing tries to delete them)
 	if (vertex_array.vertex_type == 1)
 	{
-		for (DWORD i = 0; i < vertex_array.num_vertices; i++)
+		for (uint32_t i = 0; i < vertex_array.num_vertices; i++)
 			((CVertex *)((BYTE *)vertex_array.vertices + i*CVertexArray::vertex_size))->uvarray = NULL;
 	}
 
@@ -121,9 +121,9 @@ BOOL CLandBlockStruct::UnPack(BYTE **ppData, ULONG iSize)
 	return TRUE;
 }
 
-BOOL CLandBlockStruct::generate(DWORD LandBlock, DWORD CellScale, DWORD TransAdj)
+BOOL CLandBlockStruct::generate(uint32_t LandBlock, uint32_t CellScale, uint32_t TransAdj)
 {
-	long CellWidth = LandDefs::lblock_side / CellScale;
+	int32_t CellWidth = LandDefs::lblock_side / CellScale;
 
 	if ((CellWidth == side_cell_count) && (trans_dir == TransAdj))
 		return FALSE;
@@ -173,9 +173,9 @@ BOOL CLandBlockStruct::generate(DWORD LandBlock, DWORD CellScale, DWORD TransAdj
 
 void CLandBlockStruct::AdjPlanes(void)
 {
-	for (DWORD x = 0; x < (unsigned)side_polygon_count; x++) {
-		for (DWORD y = 0; y < (unsigned)side_polygon_count; y++) {
-			for (DWORD poly = 0; poly < 2; poly++) {
+	for (uint32_t x = 0; x < (unsigned)side_polygon_count; x++) {
+		for (uint32_t y = 0; y < (unsigned)side_polygon_count; y++) {
+			for (uint32_t poly = 0; poly < 2; poly++) {
 				polygons[(((x * side_polygon_count) + y) * 2) + poly].make_plane();
 			}
 		}
@@ -184,15 +184,15 @@ void CLandBlockStruct::AdjPlanes(void)
 
 void CLandBlockStruct::InitPVArrays(void)
 {
-	long NumSquares = side_polygon_count * side_polygon_count;
-	long NumVertices = side_vertex_count * side_vertex_count;
-	long NumCells = side_cell_count * side_cell_count;
+	int32_t NumSquares = side_polygon_count * side_polygon_count;
+	int32_t NumVertices = side_vertex_count * side_vertex_count;
+	int32_t NumCells = side_cell_count * side_cell_count;
 
 	// Use D3DVertex check is here.
 	vertex_array.AllocateVertex(NumVertices, 1);
 
-	for (DWORD x = 0; x < side_vertex_count; x++) {
-		for (DWORD y = 0; y < side_vertex_count; y++) {
+	for (uint32_t x = 0; x < side_vertex_count; x++) {
+		for (uint32_t y = 0; y < side_vertex_count; y++) {
 
 			int VertIndex = ((side_vertex_count * x) + y);
 
@@ -211,7 +211,7 @@ void CLandBlockStruct::InitPVArrays(void)
 		}
 	}
 
-	long NumPolygons = NumSquares * 2;
+	int32_t NumPolygons = NumSquares * 2;
 	polygons = new CPolygon[NumPolygons];
 
 	for (int i = 0; i < NumPolygons; i++)
@@ -236,7 +236,7 @@ void CLandBlockStruct::InitPVArrays(void)
 #endif
 	}
 
-	SWtoNEcut = new DWORD[NumSquares];
+	SWtoNEcut = new uint32_t[NumSquares];
 	lcell = new CLandCell[NumCells];
 	vertex_lighting = new Vector[NumVertices];
 }
@@ -256,7 +256,7 @@ void CLandBlockStruct::TransAdjust(void)
 {
 	if ((trans_dir == 1) || (trans_dir == 5) || (trans_dir == 7))
 	{
-		for (DWORD i = 1; i < side_polygon_count; i += 2)
+		for (uint32_t i = 1; i < side_polygon_count; i += 2)
 		{
 			CVertex *pV1, *pV2, *pV3;
 
@@ -302,7 +302,7 @@ void CLandBlockStruct::TransAdjust(void)
 		{
 			CVertex *pV1, *pV2, *pV3;
 
-			DWORD dwWhatever = (side_vertex_count * side_polygon_count) + i;
+			uint32_t dwWhatever = (side_vertex_count * side_polygon_count) + i;
 
 			pV1 = VERTEX_NUM(vertex_array.vertices, dwWhatever - 1);
 			pV2 = VERTEX_NUM(vertex_array.vertices, dwWhatever + 1);
@@ -432,7 +432,7 @@ void CLandBlockStruct::TransAdjust(void)
 
 void CLandBlockStruct::ConstructVertices(void)
 {
-	DWORD CellScale = LandDefs::lblock_side / side_cell_count;
+	uint32_t CellScale = LandDefs::lblock_side / side_cell_count;
 	float PolyGridWidth = LandDefs::block_length / side_polygon_count;
 
 	for (ULONG x = 0; x < side_vertex_count; x++) {
@@ -453,53 +453,53 @@ void CLandBlockStruct::ConstructVertices(void)
 	}
 }
 
-int FSplitNESW(long x, long y)
+int FSplitNESW(int32_t x, int32_t y)
 {
 	double v = ((x * y) * 0xCCAC033) - (x * 0x421BE3BD) + ((y * 0x6C1AC587) - 0x519B8F25);
-	int w = (unsigned long)v / 2147483648;
+	int w = (uint32_t)v / 2147483648;
 	int p = ((w % 2) ? 1 : 0);
 	return p;
 }
 
-void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
+void CLandBlockStruct::ConstructPolygons(uint32_t LandBlock)
 {
 	// if (LandBlock == 0x0000FFFF)
 	//    __asm int 3;
 
-	long LCoordX, LCoordY;
+	int32_t LCoordX, LCoordY;
 	LandDefs::blockid_to_lcoord(LandBlock, LCoordX, LCoordY);
 
-	long var_4 = 214614067 * LandDefs::vertex_per_cell;
-	long var_8 = 1109124029 * LandDefs::vertex_per_cell;
-	long var_20 = 1;
-	long var_24 = 214614067 * (LCoordX * LandDefs::vertex_per_cell);
-	long var_28 = 1109124029 * (LCoordX * LandDefs::vertex_per_cell);
-	long var_2C = 0;
-	long var_10 = (LCoordY * LandDefs::vertex_per_cell);
-	long var_3C = LandDefs::vertex_per_cell;
+	int32_t var_4 = 214614067 * LandDefs::vertex_per_cell;
+	int32_t var_8 = 1109124029 * LandDefs::vertex_per_cell;
+	int32_t var_20 = 1;
+	int32_t var_24 = 214614067 * (LCoordX * LandDefs::vertex_per_cell);
+	int32_t var_28 = 1109124029 * (LCoordX * LandDefs::vertex_per_cell);
+	int32_t var_2C = 0;
+	int32_t var_10 = (LCoordY * LandDefs::vertex_per_cell);
+	int32_t var_3C = LandDefs::vertex_per_cell;
 
 	for (int x = 0; x < side_cell_count; x++) // x = var_58
 	{
-		long var_38 = LCoordX + x;
-		long var_30 = 1;
-		long var_34 = 0;
+		int32_t var_38 = LCoordX + x;
+		int32_t var_30 = 1;
+		int32_t var_34 = 0;
 		float var_C = var_20;
 
 		for (int y = 0; y < side_cell_count; y++) // y = arg_0
 		{
-			long var_14 = LCoordY + y;
-			long var_40 = var_28;
-			long var_44 = var_24 + 1813693831;
+			int32_t var_14 = LCoordY + y;
+			int32_t var_40 = var_28;
+			int32_t var_44 = var_24 + 1813693831;
 
 			for (int i = 0; i < LandDefs::vertex_per_cell; i++) // i = var_4C
 			{
-				long var_ebx = var_2C + i;
-				long var_edi = var_34;
+				int32_t var_ebx = var_2C + i;
+				int32_t var_edi = var_34;
 
 				for (int j = 0; j < LandDefs::vertex_per_cell; j++) // j = var_48
 				{
-					DWORD var_54 = (((var_10 + var_edi) * var_44) - var_40) - 1369149221;
-					DWORD var_50 = ((LandDefs::vertex_per_cell * i) + j) * 2;
+					uint32_t var_54 = (((var_10 + var_edi) * var_44) - var_40) - 1369149221;
+					uint32_t var_50 = ((LandDefs::vertex_per_cell * i) + j) * 2;
 
 #if 0
 					if (side_cell_count == 8)
@@ -508,7 +508,7 @@ void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
 						{
 							SWtoNEcut[(side_polygon_count * var_ebx) + var_edi] = 0;
 
-							long unk = (side_vertex_count * var_ebx) + var_edi;
+							int32_t unk = (side_vertex_count * var_ebx) + var_edi;
 							var_54 = var_ebx + 1;
 
 							lcell[(side_cell_count * x) + y].polygons[var_50] =
@@ -516,7 +516,7 @@ void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
 								((side_polygon_count * var_ebx) + var_edi) * 2, unk,
 									(side_vertex_count * var_54) + var_edi, unk + 1);
 
-							long unk2 = (side_vertex_count * var_54) + var_edi;
+							int32_t unk2 = (side_vertex_count * var_54) + var_edi;
 
 							lcell[(side_cell_count * x) + y].polygons[var_50 + 1] =
 								AddPolygon(
@@ -527,7 +527,7 @@ void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
 						{
 							SWtoNEcut[(side_polygon_count * var_ebx) + var_edi] = 1;
 
-							long unk = (side_vertex_count * (var_ebx + 1)) + var_edi;
+							int32_t unk = (side_vertex_count * (var_ebx + 1)) + var_edi;
 							var_54 = var_ebx + 1;
 
 							lcell[(side_cell_count * x) + y].polygons[var_50] =
@@ -536,7 +536,7 @@ void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
 									(side_vertex_count * var_ebx) + var_edi,
 									unk, unk + 1);
 
-							long unk2 = (side_vertex_count * var_ebx) + var_edi;
+							int32_t unk2 = (side_vertex_count * var_ebx) + var_edi;
 
 							lcell[(side_cell_count * x) + y].polygons[var_50 + 1] =
 								AddPolygon(
@@ -550,7 +550,7 @@ void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
 						{
 							SWtoNEcut[(side_polygon_count * var_ebx) + var_edi] = 0;
 
-							long unk = (side_vertex_count * var_ebx) + var_edi;
+							int32_t unk = (side_vertex_count * var_ebx) + var_edi;
 							var_54 = var_ebx + 1;
 
 							lcell[(side_cell_count * x) + y].polygons[var_50] =
@@ -558,7 +558,7 @@ void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
 								((side_polygon_count * var_ebx) + var_edi) * 2, unk,
 									(side_vertex_count * var_54) + var_edi, unk + 1);
 
-							long unk2 = (side_vertex_count * var_54) + var_edi;
+							int32_t unk2 = (side_vertex_count * var_54) + var_edi;
 
 							lcell[(side_cell_count * x) + y].polygons[var_50 + 1] =
 								AddPolygon(
@@ -569,7 +569,7 @@ void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
 						{
 							SWtoNEcut[(side_polygon_count * var_ebx) + var_edi] = 1;
 
-							long unk = (side_vertex_count * (var_ebx + 1)) + var_edi;
+							int32_t unk = (side_vertex_count * (var_ebx + 1)) + var_edi;
 							var_54 = var_ebx + 1;
 
 							lcell[(side_cell_count * x) + y].polygons[var_50] =
@@ -578,7 +578,7 @@ void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
 									(side_vertex_count * var_ebx) + var_edi,
 									unk, unk + 1);
 
-							long unk2 = (side_vertex_count * var_ebx) + var_edi;
+							int32_t unk2 = (side_vertex_count * var_ebx) + var_edi;
 
 							lcell[(side_cell_count * x) + y].polygons[var_50 + 1] =
 								AddPolygon(
@@ -601,7 +601,7 @@ void CLandBlockStruct::ConstructPolygons(DWORD LandBlock)
 				var_40 += 1109124029;
 			}
 
-			DWORD CellID = LandDefs::lcoord_to_gid(var_38, var_14); // LandDefs::get_block_gid(var_38, var_14);
+			uint32_t CellID = LandDefs::lcoord_to_gid(var_38, var_14); // LandDefs::get_block_gid(var_38, var_14);
 
 			lcell[(side_cell_count * x) + y].id = CellID;
 			lcell[(side_cell_count * x) + y].pos.objcell_id = CellID;
@@ -649,7 +649,7 @@ CPolygon* CLandBlockStruct::AddPolygon(int PolyIndex, int Vertex0, int Vertex1, 
 	return &polygons[PolyIndex];
 }
 
-void CLandBlockStruct::ConstructUVs(DWORD LandBlock)
+void CLandBlockStruct::ConstructUVs(uint32_t LandBlock)
 {
 	// Missing RenderOptions::bSingleSurfaceLScape code
 
@@ -677,16 +677,16 @@ void CLandBlockStruct::ConstructUVs(DWORD LandBlock)
 	// Missing RenderOptions::bSingleSurfaceLScape code
 }
 
-void CLandBlockStruct::GetCellRotation(DWORD LandBlock, DWORD x, DWORD y, int& uvset, int& texidx)
+void CLandBlockStruct::GetCellRotation(uint32_t LandBlock, uint32_t x, uint32_t y, int& uvset, int& texidx)
 {
 	return;
 #if 0
-	long lcx, lcy;
+	int32_t lcx, lcy;
 	LandDefs::blockid_to_lcoord(LandBlock, lcx, lcy);
 	lcx += x;
 	lcy += y;
 
-	long var_18 = LandDefs::lblock_side / side_cell_count;
+	int32_t var_18 = LandDefs::lblock_side / side_cell_count;
 
 	int PalShifted;
 
@@ -695,22 +695,22 @@ void CLandBlockStruct::GetCellRotation(DWORD LandBlock, DWORD x, DWORD y, int& u
 	else
 		PalShifted = ((var_18 > 1) ? 4 : 0);
 
-	long var_1C = (LandDefs::side_vertex_count * x) + y;
-	DWORD Terrain = terrain[var_1C * var_18];
-	long var_esi = (Terrain & 0x7F) >> LandDefs::terrain_byte_offset;
-	long var_30 = Terrain & (LandDefs::num_road - 1);
-	long var_28 = (LandDefs::side_vertex_count * (x + 1)) + y;
-	DWORD Terrain2 = terrain[var_28 * var_18];
-	long var_edi = (Terrain2 & 0x7F) >> LandDefs::terrain_byte_offset;
-	long var_34 = Terrain2 & (LandDefs::num_road - 1);
-	DWORD Terrain3 = terrain[(var_28 + 1) * var_18];
-	long var_ebx = (Terrain3 & 0x7F) >> LandDefs::terrain_byte_offset;
-	long var_38 = Terrain3 & (LandDefs::num_road - 1);
-	DWORD Terrain4 = terrain[(var_1C + 1) * var_18];
-	long var_ebp = (Terrain4 & 0x7F) >> LandDefs::terrain_byte_offset;
-	long var_28 = Terrain4 & (LandDefs::num_road - 1);
+	int32_t var_1C = (LandDefs::side_vertex_count * x) + y;
+	uint32_t Terrain = terrain[var_1C * var_18];
+	int32_t var_esi = (Terrain & 0x7F) >> LandDefs::terrain_byte_offset;
+	int32_t var_30 = Terrain & (LandDefs::num_road - 1);
+	int32_t var_28 = (LandDefs::side_vertex_count * (x + 1)) + y;
+	uint32_t Terrain2 = terrain[var_28 * var_18];
+	int32_t var_edi = (Terrain2 & 0x7F) >> LandDefs::terrain_byte_offset;
+	int32_t var_34 = Terrain2 & (LandDefs::num_road - 1);
+	uint32_t Terrain3 = terrain[(var_28 + 1) * var_18];
+	int32_t var_ebx = (Terrain3 & 0x7F) >> LandDefs::terrain_byte_offset;
+	int32_t var_38 = Terrain3 & (LandDefs::num_road - 1);
+	uint32_t Terrain4 = terrain[(var_1C + 1) * var_18];
+	int32_t var_ebp = (Terrain4 & 0x7F) >> LandDefs::terrain_byte_offset;
+	int32_t var_28 = Terrain4 & (LandDefs::num_road - 1);
 
-	DWORD Palettes[4]; // var_10, var_C, var_8, var_4
+	uint32_t Palettes[4]; // var_10, var_C, var_8, var_4
 
 	Palettes[0] = GetPalCode(PalShifted, var_30, var_34, var_38, var_28, var_esi, var_edi, var_ebx, var_ebp);
 	Palettes[1] = GetPalCode(PalShifted, var_34, var_38, var_28, var_30, var_edi, var_ebx, var_ebp, var_esi);
@@ -761,13 +761,13 @@ void CLandBlockStruct::CalcWater()
 	water_type = (LandDefs::WaterType)(HasWater ? (WaterBlock ? 2 : 1) : 0);
 }
 
-void CLandBlockStruct::CalcCellWater(long x, long y, BOOL& CellHasWater, BOOL& CellFullyFlooded)
+void CLandBlockStruct::CalcCellWater(int32_t x, int32_t y, BOOL& CellHasWater, BOOL& CellFullyFlooded)
 {
 	CellHasWater = FALSE;
 	CellFullyFlooded = TRUE;
 
-	for (int vx = (x * LandDefs::vertex_per_cell); vx < ((x + 1) * LandDefs::vertex_per_cell); vx++) {
-		for (int vy = (y * LandDefs::vertex_per_cell); vy < ((y + 1) * LandDefs::vertex_per_cell); vy++)
+	for (int vx = (x * LandDefs::vertex_per_cell); vx <= ((x + 1) * LandDefs::vertex_per_cell); vx++) {
+		for (int vy = (y * LandDefs::vertex_per_cell); vy <= ((y + 1) * LandDefs::vertex_per_cell); vy++)
 		{
 			static BOOL terrain_is_water[32] = {
 				0, 0, 0, 0, 0, 0, 0, 0,
@@ -805,72 +805,26 @@ SURFCHAR TERRAIN_SURF_CHAR[32] = {
 
 double CLandBlockStruct::calc_water_depth(unsigned int cell_id, Vector *point)
 {
-#if 0
-	CLandBlockStruct *v3; // esi@1
-	unsigned int v4; // ecx@3
-	unsigned int v5; // edx@3
-	float v6; // et1@5
-	double v8; // st6@5
-	unsigned __int8 v9; // c0@5
-	unsigned __int8 v10; // c2@5
-	bool v11; // pf@5
-	unsigned __int8 v13; // c0@5
-	unsigned __int8 v14; // c3@5
-	SURFCHAR v15; // eax@7
-	int v16; // ecx@9
-	unsigned __int16 *v17; // eax@9
-	unsigned int v18; // ecx@10
-	double result; // st7@15
-	unsigned int v20; // [sp+8h] [bp-4h]@0
+	int cellX = ((cell_id - 1) & 0xFFFF) / 8;
+	int cellY = ((cell_id - 1) & 0xFFFF) % 8;
 
-	v3 = this;
-	if (LandDefs::inbound_valid_cellid(cell_id) && (unsigned __int16)cell_id < 0x100u)
-	{
-		v4 = ((unsigned int)(unsigned __int16)cell_id - 1) >> 3;
-		v5 = ((_BYTE)cell_id - 1) & 7;
-	}
-	else
-	{
-		v5 = cell_id;
-		v4 = v20;
-	}
-	v6 = point->x;
-	v8 = point->y;
-	v11 = (v9 | v10) == 0;
-	if (v11)
-	{
-		v16 = v5 + 8 * v4 + v4;
-		v17 = v3->terrain;
-		if (v13 | v14)
-			v18 = LOBYTE(v17[v16]);
-		else
-			v18 = LOBYTE(v17[v16 + 1]);
-		v15 = TERRAIN_SURF_CHAR[(v18 >> 2) & 0x1F];
-	}
-	else if (v13 | v14)
-	{
-		v15 = TERRAIN_SURF_CHAR[((unsigned int)LOBYTE(v3->terrain[v5 + 8 * (v4 + 1) + v4 + 1]) >> 2) & 0x1F];
-	}
-	else
-	{
-		v15 = TERRAIN_SURF_CHAR[((unsigned int)*((_BYTE *)&v3->terrain[8 * v4 + 10] + 2 * v5 + 2 * v4) >> 2) & 0x1F];
-	}
-	if (v15)
-	{
-		if (v15 == 1)
-			result = 0.44999999;
-		else
-			result = 0.0;
-	}
-	else
-	{
-		result = 0.1;
-	}
-	return result;
-#endif
+	int terrainIdx = cellX * 9 + cellY;
 
-	UNFINISHED();
-	return 0.1;
+	if (fmod(point->x, 24.0f) > 12.0f)
+		terrainIdx += 9;
+
+	if(fmod(point->y, 24.0f) > 12.0f)
+		terrainIdx++;
+
+	WORD cell_terrain = terrain[terrainIdx];
+	int surfCharIdx = cell_terrain >> 2 & 0x1F;
+
+	bool has_water = TERRAIN_SURF_CHAR[surfCharIdx];
+
+	if (has_water)
+		return 0.44999999;
+	else
+		return 0.1;
 }
 
 

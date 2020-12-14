@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 
 #if PHATSDK_RENDER_AVAILABLE
 #include "Render.h"
@@ -10,20 +10,20 @@
 
 #ifdef PRE_TOD
 
-DWORD                        ImgTexManager::num_chunks;
+uint32_t                        ImgTexManager::num_chunks;
 DArray<ImgTexChunk *>        ImgTexManager::chunk_array(256, 256);
 
-void(*ImgTex::textureloss_callback)(DWORD dwLoss) = NULL; //static_cast< void (*)(DWORD) >(NULL);
+void(*ImgTex::textureloss_callback)(uint32_t dwLoss) = NULL; //static_cast< void (*)(uint32_t) >(NULL);
 LongNIValHash<ImgTex *>* ImgTex::temp_buffer_table[MAX_IMAGE_TYPES];
 LongNIValHash<ImgTex *>    ImgTex::texture_table; // keyed
 LongNIValHash<ImgTex *>    ImgTex::custom_texture_table; // misc
 LongNIValHash<ImgTex *>    ImgTex::tiled_image_table; //combined
 
-long    ImgTex::min_tex_size = 8;
-long    ImgTex::image_use_type;
+int32_t    ImgTex::min_tex_size = 8;
+int32_t    ImgTex::image_use_type;
 BOOL    ImgTex::bSquareTexturesOnly = FALSE;
 
-long    ImgTex::RowHeights[6] = { 8, 16, 32, 64, 128, 256 };
+int32_t    ImgTex::RowHeights[6] = { 8, 16, 32, 64, 128, 256 };
 
 BOOL ImgTexManager::FreeTexture(ImgTexChunkInfo *pChunkInfo)
 {
@@ -39,7 +39,7 @@ BOOL ImgTexManager::FreeTexture(ImgTexChunkInfo *pChunkInfo)
 
 	if (!(--pChunk->m_iUnknown))
 	{
-		for (DWORD i = 0; i < num_chunks; i++)
+		for (uint32_t i = 0; i < num_chunks; i++)
 		{
 			if (pChunk == chunk_array.array_data[i])
 			{
@@ -57,12 +57,12 @@ BOOL ImgTexManager::FreeTexture(ImgTexChunkInfo *pChunkInfo)
 	return TRUE;
 }
 
-BOOL ImgTexManager::AllocateTexture(long Width, long Height, ImgTexChunkInfo *pChunkInfo)
+BOOL ImgTexManager::AllocateTexture(int32_t Width, int32_t Height, ImgTexChunkInfo *pChunkInfo)
 {
-	long WidthPower = ImgTex::GetPow2(Width);
-	long HeightPower = ImgTex::GetPow2(Height);
+	int32_t WidthPower = ImgTex::GetPow2(Width);
+	int32_t HeightPower = ImgTex::GetPow2(Height);
 
-	for (DWORD i = 0; i < num_chunks; i++)
+	for (uint32_t i = 0; i < num_chunks; i++)
 	{
 		ImgTexChunk *pChunk = chunk_array.array_data[i];
 
@@ -118,18 +118,18 @@ ImgTexChunk::ImgTexChunk()
 	m_iUnknown = 0;
 }
 
-void ImgTexChunk::SetImageSize(long Width, long Height)
+void ImgTexChunk::SetImageSize(int32_t Width, int32_t Height)
 {
 
 	m_iWidthPow = ImgTex::GetPow2(Width);
 	m_iHeightPow = ImgTex::GetPow2(Height);
 
-	for (long Y = 0; Y < (256 / m_iHeightPow); Y++)
+	for (int32_t Y = 0; Y < (256 / m_iHeightPow); Y++)
 	{
-		for (long X = 1; (X - 1) < (256 / m_iWidthPow); X++)
+		for (int32_t X = 1; (X - 1) < (256 / m_iWidthPow); X++)
 		{
-			long Val = ((X % (256 / m_iWidthPow)) ? X : 0);
-			long HP;
+			int32_t Val = ((X % (256 / m_iWidthPow)) ? X : 0);
+			int32_t HP;
 
 			if (X % (256 / m_iWidthPow))
 				HP = Y;
@@ -166,10 +166,10 @@ ImgTexChunkInfo::~ImgTexChunkInfo()
 
 void ImgTexChunkInfo::calc_chunk_offset()
 {
-	DWORD Offset = (DWORD)m_pPixelData - (DWORD)m_pChunk;
+	uint32_t Offset = (uint32_t)m_pPixelData - (uint32_t)m_pChunk;
 
-	m_f08 = ((float)(long)(Offset & 0xFF)) + 0.002f;
-	m_f0C = ((float)(long)(Offset >> 8)) + 0.002f;
+	m_f08 = ((float)(int32_t)(Offset & 0xFF)) + 0.002f;
+	m_f0C = ((float)(int32_t)(Offset >> 8)) + 0.002f;
 }
 
 ImgTex::ImgTex()
@@ -226,9 +226,9 @@ void ImgTex::Destroy()
 	// Deprecated.. Release D3D Chunk Manager..
 }
 
-long ImgTex::GetPow2(long Value)
+int32_t ImgTex::GetPow2(int32_t Value)
 {
-	for (DWORD i = 0; i < 6; i++)
+	for (uint32_t i = 0; i < 6; i++)
 	{
 		if (Value <= RowHeights[i])
 			return RowHeights[i];
@@ -237,7 +237,7 @@ long ImgTex::GetPow2(long Value)
 	return 0;
 }
 
-void ImgTex::SetTextureLossCallback(void(*pfnCallback)(DWORD))
+void ImgTex::SetTextureLossCallback(void(*pfnCallback)(uint32_t))
 {
 	textureloss_callback = pfnCallback;
 }
@@ -262,7 +262,7 @@ void ImgTex::Destroyer(DBObj* pTexture)
 	delete ((ImgTex *)pTexture);
 }
 
-ImgTex *ImgTex::Get(DWORD ID)
+ImgTex *ImgTex::Get(uint32_t ID)
 {
 	return (ImgTex *)ObjCaches::Textures->Get(ID);
 }
@@ -289,7 +289,7 @@ void ImgTex::releaseTexture(ImgTex *pTexture)
 	}
 	else
 	{
-		if (custom_texture_table.remove((DWORD)pTexture, &pTexture))
+		if (custom_texture_table.remove((uint32_t)pTexture, &pTexture))
 		{
 			// Found, delete it.
 			delete pTexture;
@@ -297,7 +297,7 @@ void ImgTex::releaseTexture(ImgTex *pTexture)
 	}
 }
 
-ImgTex *ImgTex::makeCustomTexture(DWORD custom_texture_ID)
+ImgTex *ImgTex::makeCustomTexture(uint32_t custom_texture_ID)
 {
 	ImgTex *pTexture = new ImgTex;
 
@@ -316,7 +316,7 @@ ImgTex *ImgTex::makeCustomTexture(DWORD custom_texture_ID)
 		}
 		else
 		{
-			custom_texture_table.add(pTexture, (DWORD)pTexture);
+			custom_texture_table.add(pTexture, (uint32_t)pTexture);
 		}
 	}
 
@@ -333,13 +333,13 @@ ImgTex *ImgTex::makeTempTexture()
 		pTexture->m_lLinks = 0;
 		pTexture->m_bInCache = FALSE;
 
-		custom_texture_table.add(pTexture, (DWORD)pTexture);
+		custom_texture_table.add(pTexture, (uint32_t)pTexture);
 	}
 
 	return pTexture;
 }
 
-ImgTex *ImgTex::getCustomTexture(DWORD custom_texture_ID)
+ImgTex *ImgTex::getCustomTexture(uint32_t custom_texture_ID)
 {
 	ImgTex *pEntry = NULL;
 
@@ -349,7 +349,7 @@ ImgTex *ImgTex::getCustomTexture(DWORD custom_texture_ID)
 	return pEntry;
 }
 
-ImgTex *ImgTex::AllocateTempBuffer(long Width, long Height, long Type)
+ImgTex *ImgTex::AllocateTempBuffer(int32_t Width, int32_t Height, int32_t Type)
 {
 	ImgTex *pTempBuffer = makeTempTexture();
 
@@ -368,7 +368,7 @@ ImgTex *ImgTex::AllocateTempBuffer(long Width, long Height, long Type)
 
 BOOL ImgTex::InitTemporaryBuffer()
 {
-	for (DWORD i = 0; i < MAX_IMAGE_TYPES; i++)
+	for (uint32_t i = 0; i < MAX_IMAGE_TYPES; i++)
 		temp_buffer_table[i] = NULL;
 
 	return TRUE;
@@ -376,7 +376,7 @@ BOOL ImgTex::InitTemporaryBuffer()
 
 void ImgTex::ReleaseTemporaryBuffer()
 {
-	for (DWORD i = 0; i < MAX_IMAGE_TYPES; i++)
+	for (uint32_t i = 0; i < MAX_IMAGE_TYPES; i++)
 	{
 		if (temp_buffer_table[i])
 		{
@@ -400,7 +400,7 @@ void ImgTex::CleanupTemporaryBuffer()
 {
 	ReleaseTemporaryBuffer();
 
-	for (DWORD i = 0; i < MAX_IMAGE_TYPES; i++)
+	for (uint32_t i = 0; i < MAX_IMAGE_TYPES; i++)
 	{
 		if (temp_buffer_table[i])
 		{
@@ -414,7 +414,7 @@ void ImgTex::releaseAllSurfaces()
 {
 }
 
-ImgTex *ImgTex::GetTempBuffer(long Width, long Height, long Type)
+ImgTex *ImgTex::GetTempBuffer(int32_t Width, int32_t Height, int32_t Type)
 {
 	// Create a hash table for this image type, if one doesn't already exist.
 	LongNIValHash<ImgTex *>* pTempBufferTable = temp_buffer_table[Type];
@@ -428,7 +428,7 @@ ImgTex *ImgTex::GetTempBuffer(long Width, long Height, long Type)
 	}
 
 	ImgTex *pTempImage = NULL;
-	DWORD TempKey = (Width << 16) | (Height & 0xFFFF);
+	uint32_t TempKey = (Width << 16) | (Height & 0xFFFF);
 
 	// Does an entry already exist?
 	if (pTempBufferTable->lookup(TempKey, &pTempImage))
@@ -473,7 +473,7 @@ LPVOID ImgTex::GetData()
 	*/
 }
 
-BOOL ImgTex::Combine(ImgTex* pImgTex, Palette* pPalette, BOOL bUnknown, long Type)
+BOOL ImgTex::Combine(ImgTex* pImgTex, Palette* pPalette, BOOL bUnknown, int32_t Type)
 {
 	BOOL bCached;
 
@@ -511,7 +511,7 @@ BOOL ImgTex::Combine(ImgTex* pImgTex, Palette* pPalette, BOOL bUnknown, long Typ
 	return TRUE;
 }
 
-BOOL ImgTex::CopyIntoData(LPVOID lpData, long Width, long Height, long Pitch, DWORD arg_10, ImgTex *pSourceImg, Palette *pPalette, BOOL bUnknown)
+BOOL ImgTex::CopyIntoData(LPVOID lpData, int32_t Width, int32_t Height, int32_t Pitch, uint32_t arg_10, ImgTex *pSourceImg, Palette *pPalette, BOOL bUnknown)
 {
 	// Source/Target dimensions must match!
 	if (pSourceImg->m_lWidth != Width || pSourceImg->m_lHeight != Height)
@@ -519,7 +519,7 @@ BOOL ImgTex::CopyIntoData(LPVOID lpData, long Width, long Height, long Pitch, DW
 
 	LPVOID lpNextData = lpData;
 
-	for (long Y = 0; Y < pSourceImg->m_lHeight; Y++)
+	for (int32_t Y = 0; Y < pSourceImg->m_lHeight; Y++)
 	{
 		LPVOID lpSourceData = (LPVOID)(((BYTE *)pSourceImg->m_pPixels) + (pSourceImg->m_lPitch * Y));
 
@@ -528,7 +528,7 @@ BOOL ImgTex::CopyIntoData(LPVOID lpData, long Width, long Height, long Pitch, DW
 		// Next row will be designated by the data pitch.
 		lpNextData = (LPVOID)(((BYTE *)lpData) + Pitch);
 
-		for (long X = 0; X < pSourceImg->m_lWidth; X++)
+		for (int32_t X = 0; X < pSourceImg->m_lWidth; X++)
 		{
 			BYTE bColorIndex = ((BYTE *)lpSourceData)[X];
 			WORD wColorARGB;
@@ -555,7 +555,7 @@ BOOL ImgTex::CopyIntoData(LPVOID lpData, long Width, long Height, long Pitch, DW
 	return TRUE;
 }
 
-BOOL ImgTex::InitOther(long Width, long Height, long Type, DWORD Flags, BOOL InCache)
+BOOL ImgTex::InitOther(int32_t Width, int32_t Height, int32_t Type, uint32_t Flags, BOOL InCache)
 {
 	if (m_pD3DTexture9)
 		return FALSE;
@@ -606,7 +606,7 @@ BOOL ImgTex::InitOther(long Width, long Height, long Type, DWORD Flags, BOOL InC
 	return bSuccess;
 }
 
-BOOL ImgTex::InitIndex8(long Width, long Height, long Type)
+BOOL ImgTex::InitIndex8(int32_t Width, int32_t Height, int32_t Type)
 {
 	if (!ImgTexManager::AllocateTexture(Width, Height, &m_ChunkInfo))
 		return FALSE;
@@ -620,19 +620,19 @@ BOOL ImgTex::InitIndex8(long Width, long Height, long Type)
 	return TRUE;
 }
 
-BOOL ImgTex::InitCSI(long Width, long Height, long Type)
+BOOL ImgTex::InitCSI(int32_t Width, int32_t Height, int32_t Type)
 {
 	UNFINISHED();
 	return FALSE;
 }
 
-BOOL ImgTex::InitAlpha(long Width, long Height, long Type)
+BOOL ImgTex::InitAlpha(int32_t Width, int32_t Height, int32_t Type)
 {
 	UNFINISHED();
 	return FALSE;
 }
 
-BOOL ImgTex::Init(long Width, long Height, long Type, BOOL InCache)
+BOOL ImgTex::Init(int32_t Width, int32_t Height, int32_t Type, BOOL InCache)
 {
 	switch (Type)
 	{
@@ -643,7 +643,7 @@ BOOL ImgTex::Init(long Width, long Height, long Type, BOOL InCache)
 	}
 }
 
-BOOL ImgTex::CopyIntoTexture(long Width, long Height, long Pitch, BYTE *Data)
+BOOL ImgTex::CopyIntoTexture(int32_t Width, int32_t Height, int32_t Pitch, BYTE *Data)
 {
 	ImgTex *pTempTex = GetTempBuffer(m_lWidth, m_lHeight, m_lType);
 
@@ -677,8 +677,8 @@ BOOL ImgTex::CopyIntoTexture(long Width, long Height, long Pitch, BYTE *Data)
 }
 
 BOOL ImgTex::CopySrcIntoDst(
-	long sWidth, long sHeight, long sPitch, LPVOID sData, int sPSize,
-	long dWidth, long dHeight, long dPitch, LPVOID dData, int dPSize)
+	int32_t sWidth, int32_t sHeight, int32_t sPitch, LPVOID sData, int sPSize,
+	int32_t dWidth, int32_t dHeight, int32_t dPitch, LPVOID dData, int dPSize)
 {
 
 	if (sPSize != dPSize)
@@ -693,16 +693,16 @@ BOOL ImgTex::CopySrcIntoDst(
 	if (sHeight % dHeight)
 		return FALSE;
 
-	long WidthScale = sWidth / dWidth;
-	long HeightScale = sHeight / dHeight;
+	int32_t WidthScale = sWidth / dWidth;
+	int32_t HeightScale = sHeight / dHeight;
 
 	BYTE *dNextLine = (BYTE *)dData;
 	BYTE *sNextLine = (BYTE *)sData;
 	BYTE *dPixels;
 	BYTE *sPixels;
 
-	long Y;
-	long dP;
+	int32_t Y;
+	int32_t dP;
 
 	for (Y = 0; Y < (sHeight - HeightScale); Y += HeightScale)
 	{
@@ -713,9 +713,9 @@ BOOL ImgTex::CopySrcIntoDst(
 
 		dP = 0;
 
-		for (long X = 0; X < (sWidth - WidthScale); X += WidthScale)
+		for (int32_t X = 0; X < (sWidth - WidthScale); X += WidthScale)
 		{
-			for (long sP = 0; sP < sPSize;)
+			for (int32_t sP = 0; sP < sPSize;)
 				dPixels[dP++] = sPixels[sP++];
 
 			sPixels += WidthScale * sPSize;
@@ -723,9 +723,9 @@ BOOL ImgTex::CopySrcIntoDst(
 
 		sPixels = sNextLine + ((sWidth - 1) * sPSize);
 
-		for (long P = 0; P < sPSize; P++)
+		for (int32_t P = 0; P < sPSize; P++)
 		{
-			for (long sP = 0; sP < sPSize;)
+			for (int32_t sP = 0; sP < sPSize;)
 				dPixels[dP++] = sPixels[sP++];
 
 			sPixels += WidthScale * sPSize;
@@ -739,9 +739,9 @@ BOOL ImgTex::CopySrcIntoDst(
 	sPixels = (BYTE *)sData + ((sHeight - 1) * sPitch);
 	sNextLine = sPixels;
 
-	for (long X = 0; X < (sWidth - WidthScale); X += WidthScale)
+	for (int32_t X = 0; X < (sWidth - WidthScale); X += WidthScale)
 	{
-		for (long sP = 0; sP < sPSize;)
+		for (int32_t sP = 0; sP < sPSize;)
 			dPixels[dP++] = sPixels[sP++];
 
 		sPixels += WidthScale * sPSize;
@@ -750,7 +750,7 @@ BOOL ImgTex::CopySrcIntoDst(
 	dPixels = &dPixels[dP];
 	sPixels = sNextLine + ((sWidth - 1) * sPSize);
 
-	for (long sP = 0; sP < sPSize;)
+	for (int32_t sP = 0; sP < sPSize;)
 		*(dPixels++) = sPixels[sP++];
 
 	return TRUE;
@@ -760,10 +760,10 @@ BOOL ImgTex::UnPack(BYTE **ppData, ULONG iSize)
 {
 	Destroy();
 
-	long ImgType, ImgWidth, ImgHeight, SrcWidth, SrcHeight;
+	int32_t ImgType, ImgWidth, ImgHeight, SrcWidth, SrcHeight;
 
-	UNPACK(DWORD, id);
-	UNPACK(long, ImgType);
+	UNPACK(uint32_t, id);
+	UNPACK(int32_t, ImgType);
 
 	if (!ImgType)
 	{
@@ -772,13 +772,13 @@ BOOL ImgTex::UnPack(BYTE **ppData, ULONG iSize)
 		return FALSE;
 	}
 
-	UNPACK(long, ImgWidth);
-	UNPACK(long, ImgHeight);
+	UNPACK(int32_t, ImgWidth);
+	UNPACK(int32_t, ImgHeight);
 
 	SrcWidth = ImgWidth;
 	SrcHeight = ImgHeight;
 
-	const DWORD TextureScales[4] = { 0, 1, 2, 4 };
+	const uint32_t TextureScales[4] = { 0, 1, 2, 4 };
 
 	switch (ImgType)
 	{
@@ -848,8 +848,8 @@ BOOL ImgTex::UnPack(BYTE **ppData, ULONG iSize)
 
 			*ppData = *ppData + (SrcWidth * SrcHeight);
 
-			DWORD PaletteID;
-			UNPACK(DWORD, PaletteID);
+			uint32_t PaletteID;
+			UNPACK(uint32_t, PaletteID);
 
 			m_pPalette = Palette::Get(PaletteID);
 
@@ -983,16 +983,16 @@ void ImgColor::Destroyer(DBObj* pImgColor)
 	delete ((ImgTex *)pImgColor);
 }
 
-ImgColor *ImgColor::Get(DWORD ID)
+ImgColor *ImgColor::Get(uint32_t ID)
 {
 	return (ImgColor *)ObjCaches::ImgColors->Get(ID);
 }
 
 BOOL ImgColor::UnPack(BYTE **ppData, ULONG iSize)
 {
-	UNPACK(DWORD, id);
-	UNPACK(DWORD, m_Width);
-	UNPACK(DWORD, m_Height);
+	UNPACK(uint32_t, id);
+	UNPACK(uint32_t, m_Width);
+	UNPACK(uint32_t, m_Height);
 
 	if ((((m_Width * m_Height) + 4) * 3) > iSize)
 	{
@@ -1006,7 +1006,7 @@ BOOL ImgColor::UnPack(BYTE **ppData, ULONG iSize)
 }
 
 /*
-BOOL ImgColor::Init(DWORD width, DWORD height)
+BOOL ImgColor::Init(uint32_t width, uint32_t height)
 {
 	UNFINISHED();
 	return FALSE;
@@ -1021,20 +1021,20 @@ BOOL ImgColor::Init(DWORD width, DWORD height)
 
 // this code is NOT REVERSE ENGINEERED.. i made it up for throne of destiny
 
-DWORD ImgTexManager::num_chunks;
+uint32_t ImgTexManager::num_chunks;
 DArray<ImgTexChunk *> ImgTexManager::chunk_array(256, 256);
 
-void(*ImgTex::textureloss_callback)(DWORD dwLoss) = NULL; //static_cast< void (*)(DWORD) >(NULL);
+void(*ImgTex::textureloss_callback)(uint32_t dwLoss) = NULL; //static_cast< void (*)(uint32_t) >(NULL);
 LongNIValHash<ImgTex *>* ImgTex::temp_buffer_table[MAX_IMAGE_TYPES];
 LongNIValHash<ImgTex *> ImgTex::texture_table; // keyed
 LongNIValHash<ImgTex *> ImgTex::custom_texture_table; // misc
 LongNIValHash<ImgTex *> ImgTex::tiled_image_table; //combined
 
-long ImgTex::min_tex_size = 8;
-long ImgTex::image_use_type;
+int32_t ImgTex::min_tex_size = 8;
+int32_t ImgTex::image_use_type;
 BOOL ImgTex::bSquareTexturesOnly = FALSE;
 
-long ImgTex::RowHeights[6] = { 8, 16, 32, 64, 128, 256 };
+int32_t ImgTex::RowHeights[6] = { 8, 16, 32, 64, 128, 256 };
 
 BOOL ImgTexManager::FreeTexture(ImgTexChunkInfo *pChunkInfo)
 {
@@ -1050,7 +1050,7 @@ BOOL ImgTexManager::FreeTexture(ImgTexChunkInfo *pChunkInfo)
 
 	if (!(--pChunk->m_iUnknown))
 	{
-		for (DWORD i = 0; i < num_chunks; i++)
+		for (uint32_t i = 0; i < num_chunks; i++)
 		{
 			if (pChunk == chunk_array.array_data[i])
 			{
@@ -1068,12 +1068,12 @@ BOOL ImgTexManager::FreeTexture(ImgTexChunkInfo *pChunkInfo)
 	return TRUE;
 }
 
-BOOL ImgTexManager::AllocateTexture(long Width, long Height, ImgTexChunkInfo *pChunkInfo)
+BOOL ImgTexManager::AllocateTexture(int32_t Width, int32_t Height, ImgTexChunkInfo *pChunkInfo)
 {
-	long WidthPower = ImgTex::GetPow2(Width);
-	long HeightPower = ImgTex::GetPow2(Height);
+	int32_t WidthPower = ImgTex::GetPow2(Width);
+	int32_t HeightPower = ImgTex::GetPow2(Height);
 
-	for (DWORD i = 0; i < num_chunks; i++)
+	for (uint32_t i = 0; i < num_chunks; i++)
 	{
 		ImgTexChunk *pChunk = chunk_array.array_data[i];
 
@@ -1129,18 +1129,18 @@ ImgTexChunk::ImgTexChunk()
 	m_iUnknown = 0;
 }
 
-void ImgTexChunk::SetImageSize(long Width, long Height)
+void ImgTexChunk::SetImageSize(int32_t Width, int32_t Height)
 {
 
 	m_iWidthPow = ImgTex::GetPow2(Width);
 	m_iHeightPow = ImgTex::GetPow2(Height);
 
-	for (long Y = 0; Y < (256 / m_iHeightPow); Y++)
+	for (int32_t Y = 0; Y < (256 / m_iHeightPow); Y++)
 	{
-		for (long X = 1; (X - 1) < (256 / m_iWidthPow); X++)
+		for (int32_t X = 1; (X - 1) < (256 / m_iWidthPow); X++)
 		{
-			long Val = ((X % (256 / m_iWidthPow)) ? X : 0);
-			long HP;
+			int32_t Val = ((X % (256 / m_iWidthPow)) ? X : 0);
+			int32_t HP;
 
 			if (X % (256 / m_iWidthPow))
 				HP = Y;
@@ -1177,10 +1177,10 @@ ImgTexChunkInfo::~ImgTexChunkInfo()
 
 void ImgTexChunkInfo::calc_chunk_offset()
 {
-	DWORD Offset = (DWORD)((BYTE *)m_pPixelData - (BYTE *)m_pChunk);
+	uint32_t Offset = (uint32_t)((BYTE *)m_pPixelData - (BYTE *)m_pChunk);
 
-	m_f08 = ((float)(long)(Offset & 0xFF)) + 0.002f;
-	m_f0C = ((float)(long)(Offset >> 8)) + 0.002f;
+	m_f08 = ((float)(int32_t)(Offset & 0xFF)) + 0.002f;
+	m_f0C = ((float)(int32_t)(Offset >> 8)) + 0.002f;
 }
 
 ImgTex::ImgTex()
@@ -1239,9 +1239,9 @@ void ImgTex::Destroy()
 	// Deprecated.. Release D3D Chunk Manager..
 }
 
-long ImgTex::GetPow2(long Value)
+int32_t ImgTex::GetPow2(int32_t Value)
 {
-	for (DWORD i = 0; i < 6; i++)
+	for (uint32_t i = 0; i < 6; i++)
 	{
 		if (Value <= RowHeights[i])
 			return RowHeights[i];
@@ -1250,7 +1250,7 @@ long ImgTex::GetPow2(long Value)
 	return 0;
 }
 
-void ImgTex::SetTextureLossCallback(void(*pfnCallback)(DWORD))
+void ImgTex::SetTextureLossCallback(void(*pfnCallback)(uint32_t))
 {
 	textureloss_callback = pfnCallback;
 }
@@ -1275,7 +1275,7 @@ void ImgTex::Destroyer(DBObj* pTexture)
 	delete ((ImgTex *)pTexture);
 }
 
-ImgTex *ImgTex::Get(DWORD ID)
+ImgTex *ImgTex::Get(uint32_t ID)
 {
 	return (ImgTex *)ObjCaches::Textures->Get(ID);
 }
@@ -1303,8 +1303,7 @@ void ImgTex::releaseTexture(ImgTex *pTexture)
 	}
 	else
 	{
-		// This could wreak havoc in 64-bit, casting pointer to to 32-bit key...
-		if (custom_texture_table.remove((DWORD)pTexture, &pTexture))
+		if (custom_texture_table.remove(pTexture->GetID(), &pTexture))
 		{
 			// Found, delete it.
 			delete pTexture;
@@ -1312,9 +1311,9 @@ void ImgTex::releaseTexture(ImgTex *pTexture)
 	}
 }
 
-ImgTex *ImgTex::makeCustomTexture(DWORD custom_texture_ID)
+ImgTex *ImgTex::makeCustomTexture(uint32_t custom_texture_ID)
 {
-	DebugBreak();
+	// DebugBreak();
 
 	ImgTex *pTexture = new ImgTex;
 
@@ -1333,7 +1332,7 @@ ImgTex *ImgTex::makeCustomTexture(DWORD custom_texture_ID)
 		}
 		else
 		{
-			custom_texture_table.add(pTexture, (DWORD)pTexture);
+			custom_texture_table.add(pTexture, pTexture->GetID());
 		}
 	}
 
@@ -1342,7 +1341,7 @@ ImgTex *ImgTex::makeCustomTexture(DWORD custom_texture_ID)
 
 ImgTex *ImgTex::makeTempTexture()
 {
-	DebugBreak();
+	// DebugBreak();
 
 	ImgTex *pTexture = new ImgTex;
 
@@ -1352,15 +1351,15 @@ ImgTex *ImgTex::makeTempTexture()
 		pTexture->m_lLinks = 0;
 		pTexture->m_bInCache = FALSE;
 
-		custom_texture_table.add(pTexture, (DWORD)pTexture);
+		custom_texture_table.add(pTexture, pTexture->GetID());
 	}
 
 	return pTexture;
 }
 
-ImgTex *ImgTex::getCustomTexture(DWORD custom_texture_ID)
+ImgTex *ImgTex::getCustomTexture(uint32_t custom_texture_ID)
 {
-	DebugBreak();
+	// DebugBreak();
 
 	ImgTex *pEntry = NULL;
 
@@ -1370,7 +1369,7 @@ ImgTex *ImgTex::getCustomTexture(DWORD custom_texture_ID)
 	return pEntry;
 }
 
-ImgTex *ImgTex::AllocateTempBuffer(long Width, long Height, long Type)
+ImgTex *ImgTex::AllocateTempBuffer(int32_t Width, int32_t Height, int32_t Type)
 {
 	ImgTex *pTempBuffer = makeTempTexture();
 
@@ -1389,7 +1388,7 @@ ImgTex *ImgTex::AllocateTempBuffer(long Width, long Height, long Type)
 
 BOOL ImgTex::InitTemporaryBuffer()
 {
-	for (DWORD i = 0; i < MAX_IMAGE_TYPES; i++)
+	for (uint32_t i = 0; i < MAX_IMAGE_TYPES; i++)
 		temp_buffer_table[i] = NULL;
 
 	return TRUE;
@@ -1397,7 +1396,7 @@ BOOL ImgTex::InitTemporaryBuffer()
 
 void ImgTex::ReleaseTemporaryBuffer()
 {
-	for (DWORD i = 0; i < MAX_IMAGE_TYPES; i++)
+	for (uint32_t i = 0; i < MAX_IMAGE_TYPES; i++)
 	{
 		if (temp_buffer_table[i])
 		{
@@ -1421,7 +1420,7 @@ void ImgTex::CleanupTemporaryBuffer()
 {
 	ReleaseTemporaryBuffer();
 
-	for (DWORD i = 0; i < MAX_IMAGE_TYPES; i++)
+	for (uint32_t i = 0; i < MAX_IMAGE_TYPES; i++)
 	{
 		if (temp_buffer_table[i])
 		{
@@ -1435,7 +1434,7 @@ void ImgTex::releaseAllSurfaces()
 {
 }
 
-ImgTex *ImgTex::GetTempBuffer(long Width, long Height, long Type)
+ImgTex *ImgTex::GetTempBuffer(int32_t Width, int32_t Height, int32_t Type)
 {
 	// Create a hash table for this image type, if one doesn't already exist.
 	LongNIValHash<ImgTex *>* pTempBufferTable = temp_buffer_table[Type];
@@ -1449,7 +1448,7 @@ ImgTex *ImgTex::GetTempBuffer(long Width, long Height, long Type)
 	}
 
 	ImgTex *pTempImage = NULL;
-	DWORD TempKey = (Width << 16) | (Height & 0xFFFF);
+	uint32_t TempKey = (Width << 16) | (Height & 0xFFFF);
 
 	// Does an entry already exist?
 	if (pTempBufferTable->lookup(TempKey, &pTempImage))
@@ -1498,7 +1497,7 @@ LPVOID ImgTex::GetData()
 #endif
 }
 
-BOOL ImgTex::Combine(ImgTex* pImgTex, Palette* pPalette, BOOL bUnknown, long Type)
+BOOL ImgTex::Combine(ImgTex* pImgTex, Palette* pPalette, BOOL bUnknown, int32_t Type)
 {
 	BOOL bCached;
 
@@ -1536,7 +1535,7 @@ BOOL ImgTex::Combine(ImgTex* pImgTex, Palette* pPalette, BOOL bUnknown, long Typ
 	return TRUE;
 }
 
-BOOL ImgTex::CopyIntoData(LPVOID lpData, long Width, long Height, long Pitch, DWORD arg_10, ImgTex *pSourceImg, Palette *pPalette, BOOL bUnknown)
+BOOL ImgTex::CopyIntoData(LPVOID lpData, int32_t Width, int32_t Height, int32_t Pitch, uint32_t arg_10, ImgTex *pSourceImg, Palette *pPalette, BOOL bUnknown)
 {
 	// Source/Target dimensions must match!
 	if (pSourceImg->m_lWidth != Width || pSourceImg->m_lHeight != Height)
@@ -1544,7 +1543,7 @@ BOOL ImgTex::CopyIntoData(LPVOID lpData, long Width, long Height, long Pitch, DW
 
 	LPVOID lpNextData = lpData;
 
-	for (long Y = 0; Y < pSourceImg->m_lHeight; Y++)
+	for (int32_t Y = 0; Y < pSourceImg->m_lHeight; Y++)
 	{
 		LPVOID lpSourceData = (LPVOID)(((BYTE *)pSourceImg->m_pPixels) + (pSourceImg->m_lPitch * Y));
 
@@ -1553,7 +1552,7 @@ BOOL ImgTex::CopyIntoData(LPVOID lpData, long Width, long Height, long Pitch, DW
 		// Next row will be designated by the data pitch.
 		lpNextData = (LPVOID)(((BYTE *)lpData) + Pitch);
 
-		for (long X = 0; X < pSourceImg->m_lWidth; X++)
+		for (int32_t X = 0; X < pSourceImg->m_lWidth; X++)
 		{
 			BYTE bColorIndex = ((BYTE *)lpSourceData)[X];
 			WORD wColorARGB;
@@ -1580,7 +1579,7 @@ BOOL ImgTex::CopyIntoData(LPVOID lpData, long Width, long Height, long Pitch, DW
 	return TRUE;
 }
 
-BOOL ImgTex::InitOther(long Width, long Height, long Type, DWORD Flags, BOOL InCache)
+BOOL ImgTex::InitOther(int32_t Width, int32_t Height, int32_t Type, uint32_t Flags, BOOL InCache)
 {
 #if PHATSDK_RENDER_AVAILABLE
 	if (m_pD3DTexture9)
@@ -1635,7 +1634,7 @@ BOOL ImgTex::InitOther(long Width, long Height, long Type, DWORD Flags, BOOL InC
 #endif
 }
 
-BOOL ImgTex::InitIndex8(long Width, long Height, long Type)
+BOOL ImgTex::InitIndex8(int32_t Width, int32_t Height, int32_t Type)
 {
 	if (!ImgTexManager::AllocateTexture(Width, Height, &m_ChunkInfo))
 		return FALSE;
@@ -1649,19 +1648,19 @@ BOOL ImgTex::InitIndex8(long Width, long Height, long Type)
 	return TRUE;
 }
 
-BOOL ImgTex::InitCSI(long Width, long Height, long Type)
+BOOL ImgTex::InitCSI(int32_t Width, int32_t Height, int32_t Type)
 {
 	UNFINISHED_LEGACY("ImgTex::InitCSI");
 	return FALSE;
 }
 
-BOOL ImgTex::InitAlpha(long Width, long Height, long Type)
+BOOL ImgTex::InitAlpha(int32_t Width, int32_t Height, int32_t Type)
 {
 	UNFINISHED_LEGACY("ImgTex::InitAlpha");
 	return FALSE;
 }
 
-BOOL ImgTex::Init(long Width, long Height, long Type, BOOL InCache)
+BOOL ImgTex::Init(int32_t Width, int32_t Height, int32_t Type, BOOL InCache)
 {
 	switch (Type)
 	{
@@ -1672,7 +1671,7 @@ BOOL ImgTex::Init(long Width, long Height, long Type, BOOL InCache)
 	}
 }
 
-BOOL ImgTex::CopyIntoTexture(long Width, long Height, long Pitch, BYTE *Data)
+BOOL ImgTex::CopyIntoTexture(int32_t Width, int32_t Height, int32_t Pitch, BYTE *Data)
 {
 	ImgTex *pTempTex = GetTempBuffer(m_lWidth, m_lHeight, m_lType);
 
@@ -1706,8 +1705,8 @@ BOOL ImgTex::CopyIntoTexture(long Width, long Height, long Pitch, BYTE *Data)
 }
 
 BOOL ImgTex::CopySrcIntoDst(
-	long sWidth, long sHeight, long sPitch, LPVOID sData, int sPSize,
-	long dWidth, long dHeight, long dPitch, LPVOID dData, int dPSize)
+	int32_t sWidth, int32_t sHeight, int32_t sPitch, LPVOID sData, int sPSize,
+	int32_t dWidth, int32_t dHeight, int32_t dPitch, LPVOID dData, int dPSize)
 {
 
 	if (sPSize != dPSize)
@@ -1722,16 +1721,16 @@ BOOL ImgTex::CopySrcIntoDst(
 	if (sHeight % dHeight)
 		return FALSE;
 
-	long WidthScale = sWidth / dWidth;
-	long HeightScale = sHeight / dHeight;
+	int32_t WidthScale = sWidth / dWidth;
+	int32_t HeightScale = sHeight / dHeight;
 
 	BYTE *dNextLine = (BYTE *)dData;
 	BYTE *sNextLine = (BYTE *)sData;
 	BYTE *dPixels;
 	BYTE *sPixels;
 
-	long Y;
-	long dP;
+	int32_t Y;
+	int32_t dP;
 
 	for (Y = 0; Y < (sHeight - HeightScale); Y += HeightScale)
 	{
@@ -1742,9 +1741,9 @@ BOOL ImgTex::CopySrcIntoDst(
 
 		dP = 0;
 
-		for (long X = 0; X < (sWidth - WidthScale); X += WidthScale)
+		for (int32_t X = 0; X < (sWidth - WidthScale); X += WidthScale)
 		{
-			for (long sP = 0; sP < sPSize;)
+			for (int32_t sP = 0; sP < sPSize;)
 				dPixels[dP++] = sPixels[sP++];
 
 			sPixels += WidthScale * sPSize;
@@ -1752,9 +1751,9 @@ BOOL ImgTex::CopySrcIntoDst(
 
 		sPixels = sNextLine + ((sWidth - 1) * sPSize);
 
-		for (long P = 0; P < sPSize; P++)
+		for (int32_t P = 0; P < sPSize; P++)
 		{
-			for (long sP = 0; sP < sPSize;)
+			for (int32_t sP = 0; sP < sPSize;)
 				dPixels[dP++] = sPixels[sP++];
 
 			sPixels += WidthScale * sPSize;
@@ -1768,9 +1767,9 @@ BOOL ImgTex::CopySrcIntoDst(
 	sPixels = (BYTE *)sData + ((sHeight - 1) * sPitch);
 	sNextLine = sPixels;
 
-	for (long X = 0; X < (sWidth - WidthScale); X += WidthScale)
+	for (int32_t X = 0; X < (sWidth - WidthScale); X += WidthScale)
 	{
-		for (long sP = 0; sP < sPSize;)
+		for (int32_t sP = 0; sP < sPSize;)
 			dPixels[dP++] = sPixels[sP++];
 
 		sPixels += WidthScale * sPSize;
@@ -1779,7 +1778,7 @@ BOOL ImgTex::CopySrcIntoDst(
 	dPixels = &dPixels[dP];
 	sPixels = sNextLine + ((sWidth - 1) * sPSize);
 
-	for (long sP = 0; sP < sPSize;)
+	for (int32_t sP = 0; sP < sPSize;)
 		*(dPixels++) = sPixels[sP++];
 
 	return TRUE;
@@ -1789,10 +1788,10 @@ BOOL ImgTex::UnPack(BYTE **ppData, ULONG iSize)
 {
 	Destroy();
 
-	UNPACK(DWORD, id);
+	UNPACK(uint32_t, id);
 
-	DWORD unknown;
-	UNPACK(DWORD, unknown);
+	uint32_t unknown;
+	UNPACK(uint32_t, unknown);
 
 	BYTE type; // always 2?
 	UNPACK(BYTE, type);
@@ -1803,13 +1802,13 @@ BOOL ImgTex::UnPack(BYTE **ppData, ULONG iSize)
 		return FALSE;
 	}
 
-	DWORD numimages;
-	UNPACK(DWORD, numimages);
+	uint32_t numimages;
+	UNPACK(uint32_t, numimages);
 
-	for (DWORD i = 0; i < numimages; i++)
+	for (uint32_t i = 0; i < numimages; i++)
 	{
-		DWORD imageid;
-		UNPACK(DWORD, imageid);
+		uint32_t imageid;
+		UNPACK(uint32_t, imageid);
 
 #if PHATSDK_RENDER_AVAILABLE
 		ImgColor *pColor = ImgColor::Get(imageid);
@@ -1915,7 +1914,7 @@ void ImgColor::Destroyer(DBObj* pImgColor)
 	delete ((ImgTex *)pImgColor);
 }
 
-ImgColor *ImgColor::Get(DWORD ID)
+ImgColor *ImgColor::Get(uint32_t ID)
 {
 	return (ImgColor *)ObjCaches::ImgColors->Get(ID);
 }
@@ -1940,22 +1939,22 @@ void ImgColor::Destroy()
 BOOL ImgColor::UnPack(BYTE **ppData, ULONG iSize)
 {
 	/*
-	[16:22:20] <paradox> id/unk/width/height/format/length (all dword)
+	[16:22:20] <paradox> id/unk/width/height/format/length (all uint32_t)
    [16:23:10] <paradox> format uses the D3DFMT_* enum for several types
    [16:23:34] <Pea> format needs to be translated
    [16:23:37] <Pea> or does it match
    [16:23:42] <paradox> format 1f4 is a jpeg which needs some special handling
 	*/
 
-	UNPACK(DWORD, id);
+	UNPACK(uint32_t, id);
 
-	DWORD unknown;
-	UNPACK(DWORD, unknown);
+	uint32_t unknown;
+	UNPACK(uint32_t, unknown);
 
-	UNPACK(DWORD, m_Width);
-	UNPACK(DWORD, m_Height);
-	UNPACK(DWORD, m_Format);
-	UNPACK(DWORD, m_Length);
+	UNPACK(uint32_t, m_Width);
+	UNPACK(uint32_t, m_Height);
+	UNPACK(uint32_t, m_Format);
+	UNPACK(uint32_t, m_Length);
 
 	if (iSize < m_Length)
 	{
@@ -2008,25 +2007,25 @@ BOOL ImgColor::UnPack(BYTE **ppData, ULONG iSize)
 								///////////////////////////////
 	case 0x00000065:
 		{
-			DWORD dwPalette;
-			UNPACK(DWORD, dwPalette);
-			// pStream->ReadBinary(sizeof(DWORD), (BYTE*) &dwPalette);
+			uint32_t dwPalette;
+			UNPACK(uint32_t, dwPalette);
+			// pStream->ReadBinary(sizeof(uint32_t), (BYTE*) &dwPalette);
 
-			// DWORD *pPalette = ReadPalette(dwPalette);
+			// uint32_t *pPalette = ReadPalette(dwPalette);
 			Palette *pPalette = Palette::Get(dwPalette);
 
 			D3DLOCKED_RECT lrect;
 			pSurface->LockRect(&lrect, NULL, D3DLOCK_DISCARD);
 
 			BYTE *pSource = reinterpret_cast <BYTE *> (m_Data);
-			DWORD*pTarget = reinterpret_cast <DWORD *> (lrect.pBits);
+			uint32_t*pTarget = reinterpret_cast <uint32_t *> (lrect.pBits);
 
-			DWORD dwMax = 0;
+			uint32_t dwMax = 0;
 			for (unsigned int i = 0; i < m_Height * m_Width; ++i)
 			{
 				WORD dwPix = MAKEWORD(pSource[0], pSource[1]);
 
-				DWORD dwColor = pPalette->get_color_32(dwPix);
+				uint32_t dwColor = pPalette->get_color_32(dwPix);
 
 				BYTE bA = (BYTE)((dwColor & 0xFF000000) >> 24);
 				BYTE bR = (BYTE)((dwColor & 0x00FF0000) >> 16);
@@ -2057,18 +2056,18 @@ BOOL ImgColor::UnPack(BYTE **ppData, ULONG iSize)
 	case 0x00000029:
 		{
 			/*
-						   DWORD dwPalette;
-						   pStream->ReadBinary(sizeof(DWORD), (BYTE*) &dwPalette);
+						   uint32_t dwPalette;
+						   pStream->ReadBinary(sizeof(uint32_t), (BYTE*) &dwPalette);
 
-						   DWORD*	pPalette = ReadPalette(dwPalette);
+						   uint32_t*	pPalette = ReadPalette(dwPalette);
 
 						   D3DLOCKED_RECT lrect;
 						   pSurface->LockRect(&lrect, NULL, D3DLOCK_DISCARD);
 
-						   DWORD*	pTarget = reinterpret_cast < DWORD * > (lrect.pBits);
+						   uint32_t*	pTarget = reinterpret_cast < uint32_t * > (lrect.pBits);
 						   for (unsigned int i = 0; i < header.m_dwY * header.m_dwX; ++i)
 						   {
-							   DWORD dwColor = pPalette[pMem[i] * 8];
+							   uint32_t dwColor = pPalette[pMem[i] * 8];
 							   BYTE r = (BYTE) ((dwColor & 0x00FF0000) >> 16);
 							   BYTE g = (BYTE) ((dwColor & 0x0000FF00) >> 8);
 							   BYTE b = (BYTE) ((dwColor & 0x000000FF) >> 0);

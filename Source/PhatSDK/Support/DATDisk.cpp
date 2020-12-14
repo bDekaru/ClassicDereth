@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "DATDisk.h"
 
 DATDisk *DATDisk::pPortal = NULL;
@@ -37,9 +37,10 @@ void DATDisk::CloseDisks()
 
 DATDisk::DATDisk(const char *Path) : m_BTree(&m_BlockLoader)
 {
-	m_FilePath = _strdup(Path);
+	m_FilePath = strdup(Path);
 
-	ZeroMemory(&m_DATHeader, sizeof(DATHeader));
+	// ZeroMemory(&m_DATHeader, sizeof(DATHeader));
+	memset(&m_DATHeader, 0, sizeof(DATHeader));
 }
 
 DATDisk::~DATDisk()
@@ -64,7 +65,7 @@ const DATHeader *DATDisk::GetHeader()
 	return &m_DATHeader;
 }
 
-void DATDisk::FindFileIDsWithinRange(DWORD Min, DWORD Max, void(*FileCallback)(void *, DWORD, BTEntry *), void(*ProgressCallback)(void *, float), void *CallbackArg)
+void DATDisk::FindFileIDsWithinRange(uint32_t Min, uint32_t Max, void(*FileCallback)(void *, uint32_t, BTEntry *), void(*ProgressCallback)(void *, float), void *CallbackArg)
 {
 	m_BTree.SetFileCallback(FileCallback);
 	m_BTree.SetProgressCallback(ProgressCallback);
@@ -73,7 +74,7 @@ void DATDisk::FindFileIDsWithinRange(DWORD Min, DWORD Max, void(*FileCallback)(v
 	m_BTree.FindEntryIDsWithinRange(Min, Max, 0, 100.0);
 }
 
-BOOL DATDisk::GetData(DWORD ID, DATEntry *pEntry)
+BOOL DATDisk::GetData(uint32_t ID, DATEntry *pEntry)
 {
 	BTEntry FileInfo;
 
@@ -81,8 +82,8 @@ BOOL DATDisk::GetData(DWORD ID, DATEntry *pEntry)
 	if (!m_BTree.Lookup(ID, &FileInfo))
 		return FALSE;
 
-	// Attempt to allocate a file buffer. (Extra DWORD for block loading)
-	BYTE *Buffer = new BYTE[sizeof(DWORD) + FileInfo.size_];
+	// Attempt to allocate a file buffer. (Extra uint32_t for block loading)
+	BYTE *Buffer = new BYTE[sizeof(uint32_t) + FileInfo.size_];
 
 	if (!Buffer)
 		return FALSE;
@@ -105,7 +106,7 @@ BOOL DATDisk::GetData(DWORD ID, DATEntry *pEntry)
 	return TRUE;
 }
 
-BOOL DATDisk::GetDataEx(DWORD BlockHead, void *Data, DWORD Length)
+BOOL DATDisk::GetDataEx(uint32_t BlockHead, void *Data, uint32_t Length)
 {
 	if (!m_BlockLoader.LoadData(BlockHead, Data, Length))
 		return FALSE;
@@ -113,7 +114,7 @@ BOOL DATDisk::GetDataEx(DWORD BlockHead, void *Data, DWORD Length)
 	return TRUE;
 }
 
-void(*BTreeNode::m_pfnFileCallback)(void *, DWORD, BTEntry *);
+void(*BTreeNode::m_pfnFileCallback)(void *, uint32_t, BTEntry *);
 void(*BTreeNode::m_pfnProgressCallback)(void *, float);
 void *BTreeNode::m_pCallbackArg = NULL;
 
@@ -121,25 +122,25 @@ BTreeNode::BTreeNode(BlockLoader *pBlockLoader)
 {
 	m_pBlockLoader = pBlockLoader;
 
-	for (DWORD i = 0; i < 0x3E; i++)
+	for (uint32_t i = 0; i < 0x3E; i++)
 		m_Branches[i] = NULL;
 }
 
 BTreeNode::~BTreeNode()
 {
-	for (DWORD i = 0; i < 0x3E; i++)
+	for (uint32_t i = 0; i < 0x3E; i++)
 	{
 		if (m_Branches[i])
 			delete m_Branches[i];
 	}
 }
 
-BOOL BTreeNode::LoadData(DWORD BlockHead)
+BOOL BTreeNode::LoadData(uint32_t BlockHead)
 {
 	if (!BlockHead)
 		return FALSE;
 
-	if (!m_pBlockLoader->LoadData(BlockHead, &m_TreeData, sizeof(BTNode) - sizeof(DWORD)))
+	if (!m_pBlockLoader->LoadData(BlockHead, &m_TreeData, sizeof(BTNode) - sizeof(uint32_t)))
 		return FALSE;
 
 	m_bLeaf = (!m_TreeData.Branches[0] ? TRUE : FALSE);
@@ -147,7 +148,7 @@ BOOL BTreeNode::LoadData(DWORD BlockHead)
 	return TRUE;
 }
 
-DWORD BTreeNode::GetBranchCount() const
+uint32_t BTreeNode::GetBranchCount() const
 {
 	if (m_bLeaf)
 		return 0;
@@ -157,7 +158,7 @@ DWORD BTreeNode::GetBranchCount() const
 
 void BTreeNode::LoadChildren(void)
 {
-	for (DWORD i = 0; i < GetBranchCount(); i++)
+	for (uint32_t i = 0; i < GetBranchCount(); i++)
 	{
 		if (m_Branches[i])
 			continue;
@@ -177,7 +178,7 @@ void BTreeNode::LoadChildren(void)
 
 void BTreeNode::LoadChildrenRecursive(void)
 {
-	for (DWORD i = 0; i < GetBranchCount(); i++)
+	for (uint32_t i = 0; i < GetBranchCount(); i++)
 	{
 		if (m_Branches[i])
 			continue;
@@ -197,7 +198,7 @@ void BTreeNode::LoadChildrenRecursive(void)
 	}
 }
 
-void BTreeNode::SetFileCallback(void(*pfnFileCallback)(void *, DWORD, BTEntry *))
+void BTreeNode::SetFileCallback(void(*pfnFileCallback)(void *, uint32_t, BTEntry *))
 {
 	m_pfnFileCallback = pfnFileCallback;
 }
@@ -212,7 +213,7 @@ void BTreeNode::SetCallbackArg(void *CallbackArg)
 	m_pCallbackArg = CallbackArg;
 }
 
-BTreeNode* BTreeNode::GetBranch(DWORD index)
+BTreeNode* BTreeNode::GetBranch(uint32_t index)
 {
 	if (!m_Branches[index])
 	{
@@ -229,7 +230,7 @@ BTreeNode* BTreeNode::GetBranch(DWORD index)
 	return m_Branches[index];
 }
 
-BOOL BTreeNode::Lookup(DWORD ID, BTEntry *pEntry)
+BOOL BTreeNode::Lookup(uint32_t ID, BTEntry *pEntry)
 {
 	unsigned int i;
 
@@ -262,9 +263,9 @@ BOOL BTreeNode::Lookup(DWORD ID, BTEntry *pEntry)
 		return FALSE;
 }
 
-void BTreeNode::FindEntryIDsWithinRange(DWORD Min, DWORD Max, float Progress, float ProgressDelta)
+void BTreeNode::FindEntryIDsWithinRange(uint32_t Min, uint32_t Max, float Progress, float ProgressDelta)
 {
-	DWORD NumBranches = GetBranchCount();
+	uint32_t NumBranches = GetBranchCount();
 	float BranchDelta = (NumBranches ? ProgressDelta / NumBranches : 0);
 	float ProgressStart = Progress;
 
@@ -272,7 +273,7 @@ void BTreeNode::FindEntryIDsWithinRange(DWORD Min, DWORD Max, float Progress, fl
 
 	for (i = 0; i < m_TreeData.EntryCount; i++)
 	{
-		DWORD ID = m_TreeData.Entries[i].GID_;
+		uint32_t ID = m_TreeData.Entries[i].GID_;
 
 		if (ID > Max)
 		{
@@ -351,7 +352,7 @@ BlockLoader::~BlockLoader()
 {
 }
 
-DWORD BlockLoader::GetTreeOrigin()
+uint32_t BlockLoader::GetTreeOrigin()
 {
 	if (!m_pHeader)
 		return 0;
@@ -366,38 +367,38 @@ BOOL BlockLoader::Init(const char *Path, DATHeader *pHeader)
 	return m_DiskDev.OpenFile(Path, m_pHeader);
 }
 
-BOOL BlockLoader::LoadData(DWORD HeadBlock, void *pBuffer, DWORD Length)
+BOOL BlockLoader::LoadData(uint32_t HeadBlock, void *pBuffer, uint32_t Length)
 {
 	BYTE* pbBuffer = (BYTE *)pBuffer;
-	DWORD dwLength = Length;
+	uint32_t dwLength = Length;
 
-	DWORD dwBlockSize = m_pHeader->BlockSize;
-	DWORD dwDataPerBlock = dwBlockSize - sizeof(DWORD);
+	uint32_t dwBlockSize = m_pHeader->BlockSize;
+	uint32_t dwDataPerBlock = dwBlockSize - sizeof(uint32_t);
 
 	BOOL bLoadOK = TRUE;
 
 	if (!dwLength)
 		return TRUE;
 
-	DWORD dwBlock = HeadBlock;
+	uint32_t dwBlock = HeadBlock;
 
 	while (dwBlock)
 	{
 		if (!bLoadOK)
 			return FALSE;
 
-		DWORD dwOldValue = *((DWORD *)pbBuffer);
+		uint32_t dwOldValue = *((uint32_t *)pbBuffer);
 
 		if (dwDataPerBlock > dwLength)
 		{
-			dwBlockSize = dwLength + sizeof(DWORD);
+			dwBlockSize = dwLength + sizeof(uint32_t);
 			dwDataPerBlock = dwLength;
 		}
 
 		if (m_DiskDev.SyncRead(pbBuffer, dwBlockSize, dwBlock))
 		{
-			dwBlock = *((DWORD *)pbBuffer);
-			*((DWORD *)pbBuffer) = dwOldValue;
+			dwBlock = *((uint32_t *)pbBuffer);
+			*((uint32_t *)pbBuffer) = dwOldValue;
 			dwLength -= dwDataPerBlock;
 			pbBuffer += dwDataPerBlock;
 
@@ -422,7 +423,7 @@ BOOL BlockLoader::LoadData(DWORD HeadBlock, void *pBuffer, DWORD Length)
 
 DiskDev::DiskDev()
 {
-	m_hFile = INVALID_HANDLE_VALUE;
+	//m_hFile = INVALID_HANDLE_VALUE;
 }
 
 DiskDev::~DiskDev()
@@ -434,59 +435,87 @@ BOOL DiskDev::OpenFile(const char *Path, DATHeader *pHeader)
 {
 	CloseFile();
 
-	m_hFile = CreateFileA(Path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+	std::error_code err;
+	m_file.map(std::string(Path), err);
 
-	if (m_hFile == INVALID_HANDLE_VALUE)
+	if (err)
 		return FALSE;
 
+	m_length = m_file.length();
+
 	if (pHeader)
-	{
-		if (!SyncRead(pHeader, sizeof(DATHeader), DAT_HEADER_OFFSET))
-			return FALSE;
-	}
+		return SyncRead(pHeader, sizeof(DATHeader), DAT_HEADER_OFFSET);
 
 	return TRUE;
+
+	//m_hFile = CreateFileA(Path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+
+	//if (m_hFile == INVALID_HANDLE_VALUE)
+	//	return FALSE;
+
+	//if (pHeader)
+	//{
+	//	if (!SyncRead(pHeader, sizeof(DATHeader), DAT_HEADER_OFFSET))
+	//		return FALSE;
+	//}
+
+	//return TRUE;
 }
 
 void DiskDev::CloseFile()
 {
-	if (m_hFile != INVALID_HANDLE_VALUE)
-	{
-		CloseHandle(m_hFile);
-		m_hFile = INVALID_HANDLE_VALUE;
-	}
+	if (m_file.is_open())
+		m_file.unmap();
+
+	//if (m_hFile != INVALID_HANDLE_VALUE)
+	//{
+	//	CloseHandle(m_hFile);
+	//	m_hFile = INVALID_HANDLE_VALUE;
+	//}
 }
 
-BOOL DiskDev::SyncRead(void *pBuffer, DWORD dwLength, DWORD dwPosition)
+BOOL DiskDev::SyncRead(void *pBuffer, uint32_t dwLength, uint32_t dwPosition)
 {
-	if (INVALID_SET_FILE_POINTER == SetFilePointer(m_hFile, dwPosition, 0, FILE_BEGIN))
+	mapped_file_t::const_pointer ptr = m_file.cbegin();
+	if (!ptr)
 		return FALSE;
 
-	DWORD dwBytesRead;
-
-	if (!ReadFile(m_hFile, pBuffer, dwLength, &dwBytesRead, FALSE))
+	if (dwPosition + dwLength >= m_length)
 		return FALSE;
 
-	if (dwBytesRead != dwLength)
-		return FALSE;
-
+	memcpy(pBuffer, ptr + dwPosition, dwLength);
+	
 	return TRUE;
+	
+	//if (INVALID_SET_FILE_POINTER == SetFilePointer(m_hFile, dwPosition, 0, FILE_BEGIN))
+	//	return FALSE;
+
+	//uint32_t dwBytesRead;
+
+	//if (!ReadFile(m_hFile, pBuffer, dwLength, &dwBytesRead, FALSE))
+	//	return FALSE;
+
+	//if (dwBytesRead != dwLength)
+	//	return FALSE;
+
+	//return TRUE;
 }
 
-BOOL DiskDev::SyncWrite(void *pBuffer, DWORD dwLength, DWORD dwPosition)
+BOOL DiskDev::SyncWrite(void *pBuffer, uint32_t dwLength, uint32_t dwPosition)
 {
-	if (INVALID_SET_FILE_POINTER == SetFilePointer(m_hFile, dwPosition, 0, FILE_BEGIN))
-		return FALSE;
+	return FALSE;
+	//if (INVALID_SET_FILE_POINTER == SetFilePointer(m_hFile, dwPosition, 0, FILE_BEGIN))
+	//	return FALSE;
 
-	DWORD dwBytesWritten;
+	//uint32_t dwBytesWritten;
 
-	if (!WriteFile(m_hFile, pBuffer, dwLength, &dwBytesWritten, FALSE))
-		return FALSE;
+	//if (!WriteFile(m_hFile, pBuffer, dwLength, &dwBytesWritten, FALSE))
+	//	return FALSE;
 
-	if (dwBytesWritten != dwLength)
-		return FALSE;
+	//if (dwBytesWritten != dwLength)
+	//	return FALSE;
 
-	return TRUE;
+	//return TRUE;
 }
 
 

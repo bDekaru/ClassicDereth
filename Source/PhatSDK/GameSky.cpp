@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "GameSky.h"
 #include "RegionDesc.h"
 
@@ -30,7 +30,7 @@ void GameSky::UseTime(void)
 	{
 		CreateDeletePhysicsObjects();
 
-		for (DWORD i = 0; i < m_SkyDescs.num_used; i++)
+		for (uint32_t i = 0; i < m_SkyDescs.num_used; i++)
 		{
 			CPhysicsObj *    object = m_Objs0C.array_data[i];
 			SkyDesc *        skydesc = &m_SkyDescs.array_data[i];
@@ -49,7 +49,7 @@ void GameSky::UseTime(void)
 #endif
 }
 
-CPhysicsObj *GameSky::MakeObject(DWORD id, Vec2D &tex_velocity, int after, int weather)
+CPhysicsObj *GameSky::MakeObject(uint32_t id, Vec2D &tex_velocity, int after, int weather)
 {
 #if INCLUDE_SKY_CODE
 	if (!ModelID)

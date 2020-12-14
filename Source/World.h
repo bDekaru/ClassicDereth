@@ -21,15 +21,15 @@ typedef struct TeleTownList_s
 	Position position;
 } TeleTownList_t;
 
-typedef std::unordered_map<DWORD, CPhysicsObj *> PhysObjMap;
+typedef std::unordered_map<uint32_t, CPhysicsObj *> PhysObjMap;
 typedef std::vector<CWeenieObject *> PhysObjVector;
-typedef std::unordered_map<DWORD, CWeenieObject *> WeenieMap;
+typedef std::unordered_map<uint32_t, CWeenieObject *> WeenieMap;
 typedef std::vector<CWeenieObject *> WeenieVector;
-typedef std::unordered_map<DWORD, CPlayerWeenie *> PlayerWeenieMap;
+typedef std::unordered_map<uint32_t, CPlayerWeenie *> PlayerWeenieMap;
 typedef std::vector<CPlayerWeenie *> PlayerWeenieVector;
 
 typedef std::vector<TeleTownList_s> TeletownVector;
-typedef std::map<DWORD, Position> LocationMap;
+typedef std::map<uint32_t, Position> LocationMap;
 typedef std::vector<class CWorldLandBlock *> LandblockVector;
 typedef std::unordered_map<WORD, class CWorldLandBlock *> LandblockMap;
 typedef std::map<WORD, DungeonDesc_t> DungeonDescMap;
@@ -38,12 +38,12 @@ class CNetDeliveryTargets
 {
 public:
 	// these can populate the values below
-	std::set<DWORD> _target_cell_pvs;
-	std::set<DWORD> _target_weenie_pvs;
+	std::set<uint32_t> _target_cell_pvs;
+	std::set<uint32_t> _target_weenie_pvs;
 
 	// these will be appended with the PVS of the above
-	std::set<DWORD> _target_cells;
-	std::set<DWORD> _target_players;
+	std::set<uint32_t> _target_cells;
+	std::set<uint32_t> _target_players;
 };
 
 class CWorld
@@ -52,7 +52,11 @@ public:
 	CWorld();
 	~CWorld();
 
+	void Init();
+
 	bool CreateEntity(CWeenieObject *, bool bMakeAware = true);
+
+	uint32_t CreateWorldID(CWeenieObject * pEntity);
 
 	void InsertTeleportLocation(TeleTownList_s l);
 	std::string GetTeleportList();
@@ -66,14 +70,16 @@ public:
 
 	void Think();
 
-	void SendNetMessage(CNetDeliveryTargets *target, void *_data, DWORD _len, WORD _group = OBJECT_MSG, DWORD ignore_ent = 0, BOOL _game_event = 0);
+	void SendNetMessage(CNetDeliveryTargets *target, void *_data, uint32_t _len, WORD _group = OBJECT_MSG, uint32_t ignore_ent = 0, BOOL _game_event = 0);
 
-	void BroadcastPVS(CPhysicsObj *physobj, void *_data, DWORD _len, WORD _group = OBJECT_MSG, DWORD ignore_ent = 0, BOOL _game_event = 0);
-	void BroadcastPVS(CWeenieObject *weenie, void *_data, DWORD _len, WORD _group = OBJECT_MSG, DWORD ignore_ent = 0, BOOL _game_event = 0);
-	void BroadcastPVS(const Position &pos, void *_data, DWORD _len, WORD _group = OBJECT_MSG, DWORD ignore_ent = 0, BOOL _game_event = 0);
-	void BroadcastPVS(DWORD dwCell, void *_data, DWORD _len, WORD _group = OBJECT_MSG, DWORD ignore_ent = 0, BOOL _game_event = 0);
-	void BroadcastGlobal(void *_data, DWORD _len, WORD _group, DWORD ignore_ent = 0, BOOL _game_event = 0);
-	void BroadcastGlobal(BinaryWriter *food, WORD _group, DWORD ignore_ent = 0, BOOL _game_event = 0, BOOL del = 1);
+	void BroadcastPVS(CPhysicsObj *physobj, void *_data, uint32_t _len, WORD _group = OBJECT_MSG, uint32_t ignore_ent = 0, BOOL _game_event = 0, bool ephemeral = false);
+	void BroadcastPVS(CWeenieObject *weenie, void *_data, uint32_t _len, WORD _group = OBJECT_MSG, uint32_t ignore_ent = 0, BOOL _game_event = 0, bool ephemeral = false);
+	void BroadcastPVS(const Position &pos, void *_data, uint32_t _len, WORD _group = OBJECT_MSG, uint32_t ignore_ent = 0, BOOL _game_event = 0, bool ephemeral = false);
+	void BroadcastPVS(uint32_t dwCell, void *_data, uint32_t _len, WORD _group = OBJECT_MSG, uint32_t ignore_ent = 0, BOOL _game_event = 0, bool ephemeral = false);
+	void BroadcastGlobal(void *_data, uint32_t _len, WORD _group, uint32_t ignore_ent = 0, BOOL _game_event = 0);
+	void BroadcastLocal(uint32_t cellid, std::string text);
+	void BroadcastLocal(uint32_t cellid, std::string text, LogTextType channel);
+	void BroadcastGlobal(BinaryWriter *food, WORD _group, uint32_t ignore_ent = 0, BOOL _game_event = 0, BOOL del = 1);
 
 	void ClearAllSpawns();
 	CWorldLandBlock *GetLandblock(WORD wHeader, bool bActivate = false);
@@ -89,15 +95,15 @@ public:
 
 	void JuggleEntity(WORD, CWeenieObject* pEntity);
 
-	CWeenieObject *FindObject(DWORD object_id, bool allowLandblockActivation = false);
-	bool FindObjectName(DWORD, std::string &name);
+	CWeenieObject *FindObject(uint32_t object_id, bool allowLandblockActivation = false, bool lockObject = false);
+	bool FindObjectName(uint32_t, std::string &name);
 	PlayerWeenieMap *GetPlayers();
-	DWORD GetNumPlayers();
-	std::string GetPlayerName(DWORD playerId, bool allowOffline = true);
-	DWORD GetPlayerId(const char *name, bool allowOffline = true);
-	CPlayerWeenie *FindPlayer(DWORD);
+	uint32_t GetNumPlayers();
+	std::string GetPlayerName(uint32_t playerId, bool allowOffline = true);
+	uint32_t GetPlayerId(const char *name, bool allowOffline = true);
+	CPlayerWeenie *FindPlayer(uint32_t);
 	CPlayerWeenie *FindPlayer(const char *);
-	CWeenieObject *FindWithinPVS(CWeenieObject *pSource, DWORD dwGUID);
+	CWeenieObject *FindWithinPVS(CWeenieObject *pSource, uint32_t dwGUID, bool allowOwnedByOthers = false);
 	void EnumNearby(const Position &position, float fRange, std::list<CWeenieObject *> *pResults);
 	void EnumNearby(CWeenieObject *pSource, float fRange, std::list<CWeenieObject *> *pResults);
 	void EnumNearbyPlayers(const Position &position, float fRange, std::list<CWeenieObject *> *pResults);
@@ -110,19 +116,24 @@ public:
 	void SetNewGameMode(class CGameMode *pGameMode);
 	class CGameMode *GetGameMode();
 
-	DWORD GenerateGUID(eGUIDClass type);
+	static uint32_t GenerateGUID(eGUIDClass type);
 
 	void EnsureRemoved(CWeenieObject *pEntity);
 
-	void BroadcastChatChannel(DWORD channel_id, CPlayerWeenie *sender, const std::string &message);
+	void BroadcastChatChannel(uint32_t channel_id, CPlayerWeenie *sender, const std::u16string &message);
 
 	void EnsureBlockIsTicking(CWorldLandBlock *pBlock);
 
 	std::string GetServerStatus();
-	DWORD m_SendPerformanceInfoToPlayer = 0;
+	uint32_t m_SendPerformanceInfoToPlayer = 0;
 
-	void NotifyEventStarted(const char *eventName);
-	void NotifyEventStopped(const char *eventName);
+	void NotifyEventStarted(std::string eventName, GameEventDef *event);
+	void NotifyEventStopped(std::string eventName, GameEventDef *event);
+
+	void AddToUsedMergedItems(uint32_t item);
+	bool IsItemInUse(uint32_t item);
+	void RemoveMergedItem(uint32_t item);
+
 
 private:
 	void LoadDungeonsFile();
@@ -153,7 +164,10 @@ private:
 
 	double m_fNextDebugValidate = 0.0;
 
-	std::unordered_multimap<std::string, DWORD> _eventWeenies;
+	std::unordered_multimap<std::string, uint32_t> _eventWeenies;
+
+	std::list<uint32_t> _usedMergedItems;
+	std::map<uint32_t, bool> _stackableOnGround;
 };
 
 

@@ -17,7 +17,7 @@ public:
 class QuestDefDB : public PackObj, public PackableJson
 {
 public:
-	virtual ~QuestDefDB() override { }
+	virtual ~QuestDefDB() = default;
 
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()

@@ -1,6 +1,6 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "World.h"
+#include "InferredCellData.h"
 #include "Client.h"
 #include "WeenieObject.h"
 #include "PhysicsObj.h"
@@ -14,12 +14,15 @@
 #include "Config.h"
 #include "Server.h"
 #include "House.h"
+#include "HouseManager.h"
+#include "GameEventManager.h"
 
 CWorld::CWorld()
 {
-	LOG(Temp, Normal, "Initializing World..\n");
-
-	ZeroMemory(m_pBlocks, sizeof(m_pBlocks));
+	WINLOG(Temp, Normal, "Initializing World..\n");
+	SERVER_INFO << "Initializing World..";
+	// ZeroMemory(m_pBlocks, sizeof(m_pBlocks));
+	memset(m_pBlocks, 0, sizeof(m_pBlocks));
 
 	LoadDungeonsFile();
 	LoadMOTD();
@@ -43,11 +46,11 @@ void CWorld::SaveWorld()
 
 CWorld::~CWorld()
 {
-	if (m_pGameMode)
-	{
-		delete m_pGameMode;
-		m_pGameMode = NULL;
-	}
+	//if (m_pGameMode)
+	//{
+	//	delete m_pGameMode;
+	//	m_pGameMode = NULL;
+	//}
 
 	for (auto block : m_vBlocks)
 	{
@@ -93,6 +96,14 @@ CWorld::~CWorld()
 	m_mDungeonDescs.clear();
 }
 
+void CWorld::Init()
+{
+	std::list<uint32_t> preload = g_pCellDataEx->GetAlwaysLoaded();
+	SERVER_INFO << "Preloading" << preload.size() << "blocks";
+	for (auto id : preload)
+		ActivateBlock(id >> 16)->NeverGoDormant();
+}
+
 Position CWorld::FindDungeonDrop()
 {
 	if (m_mDungeons.empty())
@@ -112,7 +123,7 @@ Position CWorld::FindDungeonDrop()
 
 Position CWorld::FindDungeonDrop(WORD wBlockID)
 {
-	LocationMap::iterator i = m_mDungeons.upper_bound(((DWORD(wBlockID) << 16) + 0x100) - 1);
+	LocationMap::iterator i = m_mDungeons.upper_bound(((uint32_t(wBlockID) << 16) + 0x100) - 1);
 
 	if ((i == m_mDungeons.end()) || (BLOCK_WORD(i->second.objcell_id) != wBlockID))
 	{
@@ -157,14 +168,14 @@ void CWorld::LoadDungeonsFile()
 		long lRead = (long)fread(pbData, sizeof(BYTE), lSize, wd);
 		BinaryReader input(pbData, lRead);
 
-		DWORD dwDungeonCount = input.ReadDWORD();
+		uint32_t dwDungeonCount = input.ReadUInt32();
 
 		if (!input.GetLastError())
 		{
-			for (DWORD i = 0; i < dwDungeonCount; i++)
+			for (uint32_t i = 0; i < dwDungeonCount; i++)
 			{
 				DungeonDesc_t dd;
-				dd.wBlockID = input.ReadWORD();
+				dd.wBlockID = input.ReadUInt16();
 				dd.szDungeonName = input.ReadString();
 				dd.szAuthor = input.ReadString();
 				dd.szDescription = input.ReadString();
@@ -173,9 +184,9 @@ void CWorld::LoadDungeonsFile()
 				if (input.GetLastError()) break;
 
 				// avoid using a buffer thats going to be deleted
-				dd.szDungeonName = _strdup(dd.szDungeonName);
-				dd.szAuthor = _strdup(dd.szAuthor);
-				dd.szDescription = _strdup(dd.szDescription);
+				dd.szDungeonName = strdup(dd.szDungeonName);
+				dd.szAuthor = strdup(dd.szAuthor);
+				dd.szDescription = strdup(dd.szDescription);
 
 				m_mDungeonDescs[dd.wBlockID] = dd;
 			}
@@ -193,7 +204,7 @@ void CWorld::SaveDungeonsFile()
 	{
 		BinaryWriter output;
 
-		output.Write<DWORD>((DWORD)m_mDungeonDescs.size());
+		output.Write<uint32_t>((uint32_t)m_mDungeonDescs.size());
 
 		for (DungeonDescMap::iterator i = m_mDungeonDescs.begin(); i != m_mDungeonDescs.end(); i++)
 		{
@@ -208,12 +219,13 @@ void CWorld::SaveDungeonsFile()
 		fclose(wd);
 	}
 	else
-		MsgBox(MB_ICONHAND, "Error opening WorldDesc file! Close NOW to avoid corruption!");
+		//MsgBox(MB_ICONHAND, "Error opening WorldDesc file! Close NOW to avoid corruption!");
+		SERVER_ERROR << "Error opening WorldDesc file! Close NOW to avoid corruption!";
 }
 
 BOOL CWorld::DungeonExists(WORD wBlockID)
 {
-	LocationMap::iterator i = m_mDungeons.upper_bound(((DWORD(wBlockID) << 16) + 0x100) - 1);
+	LocationMap::iterator i = m_mDungeons.upper_bound(((uint32_t(wBlockID) << 16) + 0x100) - 1);
 
 	if ((i == m_mDungeons.end()) || (BLOCK_WORD(i->second.objcell_id) != wBlockID))
 		return FALSE;
@@ -236,9 +248,18 @@ DungeonDesc_t* CWorld::GetDungeonDesc(const char* szDungeonName)
 	DungeonDescMap::iterator i = m_mDungeonDescs.begin();
 	DungeonDescMap::iterator iend = m_mDungeonDescs.end();
 
+	std::string dungeonName = "";
+	std::string searchName = szDungeonName;
+
 	while (i != iend)
 	{
-		if (!stricmp(szDungeonName, i->second.szDungeonName))
+		dungeonName = i->second.szDungeonName;
+
+		std::transform(dungeonName.begin(), dungeonName.end(), dungeonName.begin(), ::tolower);
+		std::transform(searchName.begin(), searchName.end(), searchName.begin(), ::tolower);
+
+
+		if (dungeonName.find(searchName) != std::string::npos)
 			return &i->second;
 
 		i++;
@@ -272,9 +293,9 @@ void CWorld::SetDungeonDesc(WORD wBlockID, const char* szDungeonName, const char
 
 	DungeonDesc_t dd;
 	dd.wBlockID = wBlockID;
-	dd.szDungeonName = _strdup(szDungeonName);
-	dd.szAuthor = _strdup(szAuthor);
-	dd.szDescription = _strdup(szDescription);
+	dd.szDungeonName = strdup(szDungeonName);
+	dd.szAuthor = strdup(szAuthor);
+	dd.szDescription = strdup(szDescription);
 	dd.position = position;
 
 	m_mDungeonDescs[wBlockID] = dd;
@@ -282,7 +303,7 @@ void CWorld::SetDungeonDesc(WORD wBlockID, const char* szDungeonName, const char
 
 void CWorld::ClearAllSpawns()
 {
-	for (DWORD i = 0; i < (256 * 256); i++)
+	for (uint32_t i = 0; i < (256 * 256); i++)
 	{
 		if (m_pBlocks[i])
 			m_pBlocks[i]->ClearSpawns();
@@ -309,7 +330,7 @@ CWorldLandBlock *CWorld::ActivateBlock(WORD wHeader)
 	pBlock = *ppBlock;
 	if (pBlock != NULL)
 	{
-		LOG(Temp, Normal, "Landblock already active!\n");
+		SERVER_INFO << "Landblock already active!";
 		return pBlock;
 	}
 #endif
@@ -330,7 +351,7 @@ bool CWorld::CreateEntity(CWeenieObject *pEntity, bool bMakeAware)
 		return false;
 
 	CWeenieObject *pExistingWeenie = FindObject(pEntity->GetID());
-	if (pExistingWeenie)
+    if (pExistingWeenie)
 	{
 		if (pExistingWeenie == pEntity)
 		{
@@ -339,7 +360,7 @@ bool CWorld::CreateEntity(CWeenieObject *pEntity, bool bMakeAware)
 		}
 		else
 		{
-			LOG_PRIVATE(World, Warning, "Trying to spawn second (different) weenie with existing ID 0x%08X! Deleting instead.\n", pEntity->GetID());
+			//LOG_PRIVATE(World, Warning, "Trying to spawn second (different) weenie with existing ID 0x%08X! Deleting instead.\n", pEntity->GetID());
 
 			// Already exists.
 			delete pEntity;
@@ -352,9 +373,18 @@ bool CWorld::CreateEntity(CWeenieObject *pEntity, bool bMakeAware)
 	if (!pEntity->m_Qualities.InqFloat(CREATION_TIMESTAMP_FLOAT, createTime))
 		pEntity->m_Qualities.SetFloat(CREATION_TIMESTAMP_FLOAT, Timer::cur_time);
 
+	int lifespan = pEntity->m_Qualities.GetInt(LIFESPAN_INT, 0);
+
+	if (lifespan && !pEntity->m_Qualities.GetInt(CREATION_TIMESTAMP_INT, 0))
+	{
+		time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+		pEntity->m_Qualities.SetInt(CREATION_TIMESTAMP_INT, t);
+		pEntity->_timeToRot = Timer::cur_time + lifespan;
+	}
+
 	if (!pEntity->GetID())
 	{
-		pEntity->SetID(GenerateGUID(eDynamicGUID));
+		pEntity->SetID(CreateWorldID(pEntity));
 	}
 
 	if (pEntity->AsPlayer() && pEntity->AsPlayer()->GetClient())
@@ -369,11 +399,14 @@ bool CWorld::CreateEntity(CWeenieObject *pEntity, bool bMakeAware)
 
 	m_mAllObjects[pEntity->GetID()] = pEntity;
 
-	std::string eventString;
-	if (pEntity->m_Qualities.InqString(GENERATOR_EVENT_STRING, eventString))
-	{
-		_eventWeenies.insert(std::pair<std::string, DWORD>(eventString, pEntity->GetID()));
-	}
+	//std::string eventString;
+	//if (pEntity->m_Qualities.InqString(GENERATOR_EVENT_STRING, eventString))
+	//{
+	//	_eventWeenies.insert(std::pair<std::string, uint32_t>(eventString, pEntity->GetID()));
+	//	GameEventDef *ed = g_pGameEventManager->GetEvent(eventString.c_str());
+	//	if (ed)
+	//		pEntity->CheckEventState(eventString, ed);
+	//}
 
 	pEntity->InitPhysicsObj();
 	pEntity->SetupWeenie();
@@ -418,7 +451,18 @@ bool CWorld::CreateEntity(CWeenieObject *pEntity, bool bMakeAware)
 	}
 
 	if (bMakeAware)
-		pEntity->MakeAware(pEntity);
+		pEntity->MakeAware(pEntity, true);
+
+	std::string eventString;
+	if (pEntity->m_Qualities.InqString(GENERATOR_EVENT_STRING, eventString))
+	{
+		_eventWeenies.insert(std::pair<std::string, uint32_t>(eventString, pEntity->GetID()));
+		GameEventDef *ed = g_pGameEventManager->GetEvent(eventString.c_str());
+		if (ed)
+			pEntity->CheckEventState(eventString, ed);
+	}
+	else
+		pEntity->InitCreateGenerator();
 
 	pEntity->PostSpawn();
 
@@ -428,10 +472,28 @@ bool CWorld::CreateEntity(CWeenieObject *pEntity, bool bMakeAware)
 	}
 
 #ifdef _DEBUG
-	LOG(World, Verbose, "Spawned ID 0x%08X \"%s\" memory object @ 0x%I64X\n", pEntity->GetID(), pEntity->GetName().c_str(), (DWORD64)pEntity);
+	SERVER_INFO << "Spawned ID" << pEntity->GetID() << "- " << pEntity->GetName().c_str() << "memory object @" << (uint64_t)pEntity;
 #endif
 
 	return true;
+}
+
+uint32_t CWorld::CreateWorldID(CWeenieObject * pEntity)
+{
+	bool useEphemeral = (pEntity->m_PhysicsState & MISSILE_PS)
+		// player corpses are invisible at create time
+		|| (pEntity->IsCorpse() && pEntity->m_Qualities.GetBool(VISIBILITY_BOOL, true))
+		|| pEntity->IsStuck()
+		;
+
+	if (pEntity->GetWorldTopLevelOwner() && pEntity->GetWorldTopLevelOwner()->m_Qualities.GetInt(MERCHANDISE_ITEM_TYPES_INT, 0) > 0)
+		useEphemeral = true;
+
+	uint32_t isPlayerRange = 0;
+	if(pEntity->m_Qualities.InqInstanceID(VICTIM_IID, isPlayerRange) && isPlayerRange >= 1342177280 && isPlayerRange <= 1610612735)
+		useEphemeral = false;
+
+	return GenerateGUID(useEphemeral ? eEphemeral : eDynamicGUID);
 }
 
 void CWorld::InsertTeleportLocation(TeleTownList_s l)
@@ -443,7 +505,7 @@ std::string CWorld::GetTeleportList()
 {
 	std::string result;
 
-	for each (TeleTownList_s var in m_vTeleTown)
+	for (TeleTownList_s var : m_vTeleTown)
 	{
 		result.append(var.m_teleString).append(", ");
 	}
@@ -459,12 +521,12 @@ TeleTownList_s CWorld::GetTeleportLocation(std::string location)
 {
 	TeleTownList_s val;
 	std::transform(location.begin(), location.end(), location.begin(), ::tolower);
-	for each (TeleTownList_s var in m_vTeleTown)
+	for (TeleTownList_s var : m_vTeleTown)
 	{
 		//Lets waste a bunch of time with this.. Hey, if its the first one on the list its O(1)
 		std::string town = var.m_teleString;
 		std::transform(town.begin(), town.end(), town.begin(), ::tolower);
-		if (town.find(location) != std::string::npos) {
+		if (town[0] == location[0] && town.find(location) != std::string::npos) {
 			val = var;
 			break;
 		}
@@ -474,7 +536,7 @@ TeleTownList_s CWorld::GetTeleportLocation(std::string location)
 
 void CWorld::InsertEntity(CWeenieObject *pEntity, BOOL bSilent)
 {
-	DWORD cell_id = pEntity->GetLandcell();
+	uint32_t cell_id = pEntity->GetLandcell();
 
 	if (cell_id && !pEntity->HasOwner())
 	{
@@ -526,7 +588,7 @@ void CWorld::JuggleEntity(WORD wOld, CWeenieObject* pEntity)
 
 			EnsureRemoved(pEntity);
 
-			DWORD RemoveObject[3];
+			uint32_t RemoveObject[3];
 			RemoveObject[0] = 0xF747;
 			RemoveObject[1] = pEntity->GetID();
 			RemoveObject[2] = pEntity->_instance_timestamp;
@@ -537,7 +599,7 @@ void CWorld::JuggleEntity(WORD wOld, CWeenieObject* pEntity)
 			pEntity->unset_parent();
 			pEntity->unparent_children();
 
-			if (DWORD generator_id = pEntity->InqIIDQuality(GENERATOR_IID, 0))
+			if (uint32_t generator_id = pEntity->InqIIDQuality(GENERATOR_IID, 0))
 			{
 				CWeenieObject *target = g_pWorld->FindObject(generator_id);
 				if (target)
@@ -554,12 +616,12 @@ PlayerWeenieMap *CWorld::GetPlayers()
 	return &m_mAllPlayers;
 }
 
-DWORD CWorld::GetNumPlayers()
+uint32_t CWorld::GetNumPlayers()
 {
-	return (DWORD)m_mAllPlayers.size();
+	return (uint32_t)m_mAllPlayers.size();
 }
 
-CWeenieObject *CWorld::FindObject(DWORD object_id, bool allowLandblockActivation)
+CWeenieObject *CWorld::FindObject(uint32_t object_id, bool allowLandblockActivation, bool lockObject)
 {
 	if (!object_id)
 		return NULL;
@@ -577,7 +639,7 @@ CWeenieObject *CWorld::FindObject(DWORD object_id, bool allowLandblockActivation
 
 		//try getting a valid cellId to search in
 		Position pos;
-		DWORD cellId = weenie->m_Position.objcell_id;
+		uint32_t cellId = weenie->m_Position.objcell_id;
 		if (!cellId && weenie->m_Qualities.InqPosition(LOCATION_POSITION, pos))
 			cellId = pos.objcell_id;
 		if (!cellId && weenie->m_Qualities.InqPosition(INSTANTIATION_POSITION, pos))
@@ -602,10 +664,11 @@ CWeenieObject *CWorld::FindObject(DWORD object_id, bool allowLandblockActivation
 	
 	if(result == m_mAllObjects.end())
 		return NULL;
+	
 	return result->second;
 }
 
-bool CWorld::FindObjectName(DWORD object_id, std::string &name)
+bool CWorld::FindObjectName(uint32_t object_id, std::string &name)
 {
 	WeenieMap::iterator result = m_mAllObjects.find(object_id);
 
@@ -619,7 +682,7 @@ bool CWorld::FindObjectName(DWORD object_id, std::string &name)
 //==================================================
 //Global, player search by GUID.
 //==================================================
-CPlayerWeenie *CWorld::FindPlayer(DWORD dwGUID)
+CPlayerWeenie *CWorld::FindPlayer(uint32_t dwGUID)
 {
 	PlayerWeenieMap::iterator result = m_mAllPlayers.find(dwGUID);
 
@@ -629,7 +692,7 @@ CPlayerWeenie *CWorld::FindPlayer(DWORD dwGUID)
 	return result->second;
 }
 
-std::string CWorld::GetPlayerName(DWORD playerId, bool allowOffline)
+std::string CWorld::GetPlayerName(uint32_t playerId, bool allowOffline)
 {
 	CPlayerWeenie *player = FindPlayer(playerId);
 
@@ -642,7 +705,7 @@ std::string CWorld::GetPlayerName(DWORD playerId, bool allowOffline)
 	return "";
 }
 
-DWORD CWorld::GetPlayerId(const char *name, bool allowOffline)
+uint32_t CWorld::GetPlayerId(const char *name, bool allowOffline)
 {
 	if (*name == '+')
 		name++;
@@ -663,6 +726,9 @@ DWORD CWorld::GetPlayerId(const char *name, bool allowOffline)
 //==================================================
 CPlayerWeenie *CWorld::FindPlayer(const char *target_name)
 {
+	if (!target_name)
+		return NULL;
+	
 	if (*target_name == '+')
 		target_name++;
 
@@ -678,7 +744,7 @@ CPlayerWeenie *CWorld::FindPlayer(const char *target_name)
 			if (*player_name == '+')
 				player_name++;
 
-			if (!_stricmp(target_name, player_name))
+			if (!stricmp(target_name, player_name))
 				return player;
 		}
 	}
@@ -686,11 +752,11 @@ CPlayerWeenie *CWorld::FindPlayer(const char *target_name)
 	return NULL;
 }
 
-void CWorld::SendNetMessage(CNetDeliveryTargets *target, void *data, DWORD len, WORD group, DWORD ignore_ent, BOOL game_event)
+void CWorld::SendNetMessage(CNetDeliveryTargets *target, void *data, uint32_t len, WORD group, uint32_t ignore_ent, BOOL game_event)
 {
 	UNFINISHED();
 
-	for (DWORD cell_id : target->_target_cell_pvs)
+	for (uint32_t cell_id : target->_target_cell_pvs)
 	{
 		CWorldLandBlock *landBlock = GetLandblock(cell_id >> 16, false);
 		if (!landBlock)
@@ -704,26 +770,26 @@ void CWorld::SendNetMessage(CNetDeliveryTargets *target, void *data, DWORD len, 
 	}
 }
 
-void CWorld::BroadcastPVS(CPhysicsObj *physobj, void *_data, DWORD _len, WORD _group, DWORD ignore_ent, BOOL _game_event)
+void CWorld::BroadcastPVS(CPhysicsObj *physobj, void *_data, uint32_t _len, WORD _group, uint32_t ignore_ent, BOOL _game_event, bool ephemeral)
 {
 	if (!physobj)
 		return;
 
 	CPhysicsObj *topLevel = physobj->parent ? physobj->parent : physobj;
 
-	DWORD cell_id;
+	uint32_t cell_id;
 
 	cell_id = topLevel->m_Position.objcell_id;
-	BroadcastPVS(cell_id, _data, _len, _group, ignore_ent, _game_event);
+	BroadcastPVS(cell_id, _data, _len, _group, ignore_ent, _game_event, ephemeral);
 
-	DWORD old_cell_id = topLevel->last_tick_cell_id;
+	uint32_t old_cell_id = topLevel->last_tick_cell_id;
 	if (cell_id != old_cell_id && old_cell_id)
 	{
-		BroadcastPVS(old_cell_id, _data, _len, _group, ignore_ent, _game_event);
+		BroadcastPVS(old_cell_id, _data, _len, _group, ignore_ent, _game_event, ephemeral);
 	}
 }
 
-void CWorld::BroadcastPVS(CWeenieObject *weenie, void *_data, DWORD _len, WORD _group, DWORD ignore_ent, BOOL _game_event)
+void CWorld::BroadcastPVS(CWeenieObject *weenie, void *_data, uint32_t _len, WORD _group, uint32_t ignore_ent, BOOL _game_event, bool ephemeral)
 {
 	if (!weenie)
 		return;
@@ -731,37 +797,37 @@ void CWorld::BroadcastPVS(CWeenieObject *weenie, void *_data, DWORD _len, WORD _
 	if (weenie->IsContained() ||
 	   (weenie->IsEquipped() && weenie->InqIntQuality(PARENT_LOCATION_INT, 0) == 0)) //we're equipped but we dont have a physical presence in the world, make sure to include us here.
 	{
-		DWORD topLevelID = weenie->GetTopLevelID();
+		uint32_t topLevelID = weenie->GetTopLevelID();
 		if (topLevelID != weenie->GetID() && ignore_ent != topLevelID)
 		{
 			CWeenieObject *owner = FindObject(topLevelID);
 
 			if (owner)
 			{
-				owner->SendNetMessage(_data, _len, _group, _game_event);
+				owner->SendNetMessage(_data, _len, _group, _game_event, ephemeral);
 
 				if (owner->AsContainer() != NULL && owner->AsContainer()->_openedById != 0)
 				{
 					CWeenieObject *openedBy = FindObject(owner->AsContainer()->_openedById);
 
 					if(openedBy)
-						openedBy->SendNetMessage(_data, _len, _group, _game_event);
+						openedBy->SendNetMessage(_data, _len, _group, _game_event, ephemeral);
 				}
 			}
 		}
 	}
 	else
 	{
-		BroadcastPVS((CPhysicsObj *)weenie, _data, _len, _group, ignore_ent, _game_event);
+		BroadcastPVS((CPhysicsObj *)weenie, _data, _len, _group, ignore_ent, _game_event, ephemeral);
 	}
 }
 
-void CWorld::BroadcastPVS(const Position &pos, void *_data, DWORD _len, WORD _group, DWORD ignore_ent, BOOL _game_event)
+void CWorld::BroadcastPVS(const Position &pos, void *_data, uint32_t _len, WORD _group, uint32_t ignore_ent, BOOL _game_event, bool ephemeral)
 {
-	BroadcastPVS(pos.objcell_id, _data, _len, _group, ignore_ent, _game_event);
+	BroadcastPVS(pos.objcell_id, _data, _len, _group, ignore_ent, _game_event, ephemeral);
 }
 
-void CWorld::BroadcastPVS(DWORD dwCell, void *_data, DWORD _len, WORD _group, DWORD ignore_ent, BOOL _game_event)
+void CWorld::BroadcastPVS(uint32_t dwCell, void *_data, uint32_t _len, WORD _group, uint32_t ignore_ent, BOOL _game_event, bool ephemeral)
 {
 	if (!dwCell)
 		return;
@@ -770,13 +836,13 @@ void CWorld::BroadcastPVS(DWORD dwCell, void *_data, DWORD _len, WORD _group, DW
 	WORD block = BLOCK_WORD(dwCell);
 	WORD cell = CELL_WORD(dwCell);
 
-	DWORD basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
-	DWORD basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
+	uint32_t basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
+	uint32_t basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
 
-	DWORD minx = basex;
-	DWORD maxx = basex;
-	DWORD miny = basey;
-	DWORD maxy = basey;
+	uint32_t minx = basex;
+	uint32_t maxx = basex;
+	uint32_t miny = basey;
+	uint32_t maxy = basey;
 
 	//if ( cell < 0xFF ) //indoor structure
 	{
@@ -793,25 +859,25 @@ void CWorld::BroadcastPVS(DWORD dwCell, void *_data, DWORD _len, WORD _group, DW
 	maxy = BLOCK_OFFSET(maxy);
 
 	CWorldLandBlock *pBlock = m_pBlocks[block];
-	if (pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell))
+	if ((pBlock && (dwCell & 0xFFFF) > 0x100) && !pBlock->PossiblyVisibleToOutdoors(dwCell)) //check if inside
 	{
 		// dungeons are usually contained in water blocks usually and we will only broadcast to them individually
-		pBlock->Broadcast(_data, _len, _group, ignore_ent, _game_event);
+		pBlock->Broadcast(_data, _len, _group, ignore_ent, _game_event, ephemeral);
 	}
 	else
 	{
-		for (DWORD xit = minx; xit <= maxx; xit += 0x100) {
-			for (DWORD yit = miny; yit <= maxy; yit += 1)
+		for (uint32_t xit = minx; xit <= maxx; xit += 0x100) {
+			for (uint32_t yit = miny; yit <= maxy; yit += 1)
 			{
 				CWorldLandBlock *pBlock = m_pBlocks[xit | yit];
 				if (pBlock)
-					pBlock->Broadcast(_data, _len, _group, ignore_ent, _game_event);
+					pBlock->Broadcast(_data, _len, _group, ignore_ent, _game_event, ephemeral);
 			}
 		}
 	}
 }
 
-void CWorld::BroadcastGlobal(BinaryWriter *writer, WORD group, DWORD ignore_ent, BOOL game_event, BOOL should_delete)
+void CWorld::BroadcastGlobal(BinaryWriter *writer, WORD group, uint32_t ignore_ent, BOOL game_event, BOOL should_delete)
 {
 	BroadcastGlobal(writer->GetData(), writer->GetSize(), group, ignore_ent, game_event);
 
@@ -821,7 +887,7 @@ void CWorld::BroadcastGlobal(BinaryWriter *writer, WORD group, DWORD ignore_ent,
 	}
 }
 
-void CWorld::BroadcastGlobal(void *_data, DWORD _len, WORD _group, DWORD ignore_ent, BOOL _game_event)
+void CWorld::BroadcastGlobal(void *_data, uint32_t _len, WORD _group, uint32_t ignore_ent, BOOL _game_event)
 {
 	for (auto &playerEntry : m_mAllPlayers)
 	{
@@ -835,38 +901,52 @@ void CWorld::BroadcastGlobal(void *_data, DWORD _len, WORD _group, DWORD ignore_
 	}
 }
 
+void CWorld::BroadcastLocal(uint32_t cellid, std::string text)
+{
+	BinaryWriter *textMsg = ServerText(text.c_str(), LTT_DEFAULT);
+	g_pWorld->BroadcastPVS(cellid, textMsg->GetData(), textMsg->GetSize(), PRIVATE_MSG, 0, false);
+	delete textMsg;
+}
+
+void CWorld::BroadcastLocal(uint32_t cellid, std::string text, LogTextType channel)
+{
+	BinaryWriter *textMsg = ServerText(text.c_str(), channel);
+	g_pWorld->BroadcastPVS(cellid, textMsg->GetData(), textMsg->GetSize(), PRIVATE_MSG, 0, false);
+	delete textMsg;
+}
+
 void CWorld::Test()
 {
-	LOG(Temp, Normal, "<CWorld::Test()>\n");
-	LOG(Temp, Normal, "Portal: v%lu, %lu files.\n", g_pPortal->GetVersion(), g_pPortal->GetFileCount());
-	LOG(Temp, Normal, "Cell: v%lu, %u files.\n", g_pCell->GetVersion(), g_pCell->GetFileCount());
-	LOG(Temp, Normal, "%u objects", m_mAllObjects.size());
-	LOG(Temp, Normal, "%u players:\n", m_mAllPlayers.size());
+	WINLOG(Temp, Normal, "<CWorld::Test()>\n");
+	WINLOG(Temp, Normal, "Portal: v%lu, %lu files.\n", g_pPortal->GetVersion(), g_pPortal->GetFileCount());
+	WINLOG(Temp, Normal, "Cell: v%lu, %u files.\n", g_pCell->GetVersion(), g_pCell->GetFileCount());
+	WINLOG(Temp, Normal, "%u objects", m_mAllObjects.size());
+	WINLOG(Temp, Normal, "%u players:\n", m_mAllPlayers.size());
 	for (PlayerWeenieMap::iterator pit = m_mAllPlayers.begin(); pit != m_mAllPlayers.end(); pit++)
 	{
 		CPlayerWeenie *pPlayer = pit->second;
-		LOG(Temp, Normal, "%08X %s\n", pPlayer->GetID(), pPlayer->GetName().c_str());
+		WINLOG(Temp, Normal, "%08X %s\n", pPlayer->GetID(), pPlayer->GetName().c_str());
 	}
-	LOG(Temp, Normal, "%u active blocks:\n", m_vBlocks.size());
+	WINLOG(Temp, Normal, "%u active blocks:\n", m_vBlocks.size());
 	for (LandblockVector::iterator it = m_vBlocks.begin(); it != m_vBlocks.end(); it++)
 	{
 		CWorldLandBlock *pBlock = *it;
-		LOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
+		WINLOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
 	}
-	LOG(Temp, Normal, "%u dormant blocks:\n", m_mDormantBlocks.size());
+	WINLOG(Temp, Normal, "%u dormant blocks:\n", m_mDormantBlocks.size());
 	for (LandblockMap::iterator it = m_mDormantBlocks.begin(); it != m_mDormantBlocks.end(); it++)
 	{
 		CWorldLandBlock *pBlock = it->second;
-		LOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
+		WINLOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
 	}
-	LOG(Temp, Normal, "%u unloaded blocks:\n", m_mUnloadedBlocks.size());
+	WINLOG(Temp, Normal, "%u unloaded blocks:\n", m_mUnloadedBlocks.size());
 	for (LandblockMap::iterator it = m_mUnloadedBlocks.begin(); it != m_mUnloadedBlocks.end(); it++)
 	{
 		CWorldLandBlock *pBlock = it->second;
-		LOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
+		WINLOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
 	}
 
-	LOG(Temp, Normal, "</CWorld::Test()>\n");
+	WINLOG(Temp, Normal, "</CWorld::Test()>\n");
 }
 
 void CWorld::RemoveEntity(CWeenieObject *pEntity)
@@ -874,8 +954,8 @@ void CWorld::RemoveEntity(CWeenieObject *pEntity)
 	if (!pEntity)
 		return;
 
-	if (m_pGameMode)
-		m_pGameMode->OnRemoveEntity(pEntity);
+	//if (m_pGameMode)
+	//	m_pGameMode->OnRemoveEntity(pEntity);
 
 	if (pEntity->AsPlayer() && g_pConfig->ShowLogins() && pEntity->m_Qualities.id == W_HUMAN_CLASS)
 	{
@@ -896,7 +976,7 @@ void CWorld::RemoveEntity(CWeenieObject *pEntity)
 
 		EnsureRemoved(pEntity);
 
-		if (DWORD generator_id = pEntity->InqIIDQuality(GENERATOR_IID, 0))
+		if (uint32_t generator_id = pEntity->InqIIDQuality(GENERATOR_IID, 0))
 		{
 			CWeenieObject *target = g_pWorld->FindObject(generator_id);
 			if (target)
@@ -937,7 +1017,7 @@ void CWorld::CheckDormantLandblocks()
 
 	unsigned int minNumToCleanup = 0;
 	if (m_mDormantBlocks.size() >= g_pConfig->MaxDormantLandblocks())
-		minNumToCleanup = (DWORD)(m_mDormantBlocks.size() - g_pConfig->MaxDormantLandblocks());
+		minNumToCleanup = (uint32_t)(m_mDormantBlocks.size() - g_pConfig->MaxDormantLandblocks());
 
 	double dormantCleanupTime = g_pConfig->DormantLandblockCleanupTime();
 
@@ -1058,18 +1138,18 @@ void CWorld::Think()
 		m_fLastSave = g_pGlobals->Time();
 	}
 
-	if (m_pGameMode)
-	{
-		m_pGameMode->Think();
-	}
+	//if (m_pGameMode)
+	//{
+	//	m_pGameMode->Think();
+	//}
 
-#ifdef _DEBUG
-	for (auto worldObject : m_mAllObjects)
-	{
-		if (worldObject.second)
-			worldObject.second->DebugValidate();
-	}
-#endif
+//#ifdef _DEBUG
+//	for (auto worldObject : m_mAllObjects)
+//	{
+//		if (worldObject.second)
+//			worldObject.second->DebugValidate();
+//	}
+//#endif
 }
 
 CGameMode *CWorld::GetGameMode()
@@ -1079,6 +1159,8 @@ CGameMode *CWorld::GetGameMode()
 
 void CWorld::SetNewGameMode(CGameMode *pGameMode)
 {
+	return;
+
 	if (pGameMode)
 	{
 		g_pWorld->BroadcastGlobal(ServerText(csprintf("Setting game mode to %s", pGameMode->GetName())), PRIVATE_MSG);
@@ -1102,24 +1184,24 @@ void CWorld::SetNewGameMode(CGameMode *pGameMode)
 void CWorld::EnumNearby(const Position &position, float fRange, std::list<CWeenieObject *> *pResults)
 {
 	// Enumerate nearby world objects
-	DWORD dwCell = position.objcell_id;
+	uint32_t dwCell = position.objcell_id;
 	WORD block = BLOCK_WORD(dwCell);
 	WORD cell = CELL_WORD(dwCell);
 
 	CWorldLandBlock *pBlock = m_pBlocks[block];
-	if (pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell))
+	if ((pBlock && (dwCell & 0xFFFF) > 0x100) && !pBlock->PossiblyVisibleToOutdoors(dwCell)) //check if inside
 	{
 		pBlock->EnumNearby(position, fRange, pResults);
 	}
 	else
 	{
-		DWORD basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
-		DWORD basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
+		uint32_t basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
+		uint32_t basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
 
-		DWORD minx = basex;
-		DWORD maxx = basex;
-		DWORD miny = basey;
-		DWORD maxy = basey;
+		uint32_t minx = basex;
+		uint32_t maxx = basex;
+		uint32_t miny = basey;
+		uint32_t maxy = basey;
 
 		//if ( cell < 0xFF ) // indoor structure
 		{
@@ -1135,8 +1217,8 @@ void CWorld::EnumNearby(const Position &position, float fRange, std::list<CWeeni
 		maxx = BLOCK_OFFSET(maxx) << 8;
 		maxy = BLOCK_OFFSET(maxy);
 
-		for (DWORD xit = minx; xit <= maxx; xit += 0x100) {
-			for (DWORD yit = miny; yit <= maxy; yit += 1)
+		for (uint32_t xit = minx; xit <= maxx; xit += 0x100) {
+			for (uint32_t yit = miny; yit <= maxy; yit += 1)
 			{
 				CWorldLandBlock *pBlock = m_pBlocks[xit | yit];
 				if (pBlock)
@@ -1152,24 +1234,24 @@ void CWorld::EnumNearby(const Position &position, float fRange, std::list<CWeeni
 void CWorld::EnumNearbyPlayers(const Position &position, float fRange, std::list<CWeenieObject *> *pResults)
 {
 	// Enumerate nearby world objects
-	DWORD dwCell = position.objcell_id;
+	uint32_t dwCell = position.objcell_id;
 	WORD block = BLOCK_WORD(dwCell);
 	WORD cell = CELL_WORD(dwCell);
 
 	CWorldLandBlock *pBlock = m_pBlocks[block];
-	if (pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell))
+	if ((pBlock && (dwCell & 0xFFFF) > 0x100) && !pBlock->PossiblyVisibleToOutdoors(dwCell)) //check if inside
 	{
 		pBlock->EnumNearbyPlayers(position, fRange, pResults);
 	}
 	else
 	{
-		DWORD basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
-		DWORD basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
+		uint32_t basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
+		uint32_t basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
 
-		DWORD minx = basex;
-		DWORD maxx = basex;
-		DWORD miny = basey;
-		DWORD maxy = basey;
+		uint32_t minx = basex;
+		uint32_t maxx = basex;
+		uint32_t miny = basey;
+		uint32_t maxy = basey;
 
 		//if ( cell < 0xFF ) // indoor structure
 		{
@@ -1185,8 +1267,8 @@ void CWorld::EnumNearbyPlayers(const Position &position, float fRange, std::list
 		maxx = BLOCK_OFFSET(maxx) << 8;
 		maxy = BLOCK_OFFSET(maxy);
 
-		for (DWORD xit = minx; xit <= maxx; xit += 0x100) {
-			for (DWORD yit = miny; yit <= maxy; yit += 1)
+		for (uint32_t xit = minx; xit <= maxx; xit += 0x100) {
+			for (uint32_t yit = miny; yit <= maxy; yit += 1)
 			{
 				CWorldLandBlock *pBlock = m_pBlocks[xit | yit];
 				if (pBlock)
@@ -1229,24 +1311,24 @@ void CWorld::EnumNearby(CWeenieObject *pSource, float fRange, std::list<CWeenieO
 	// Enumerate nearby world objects
 	if (pSource != NULL && !pSource->HasOwner())
 	{
-		DWORD dwCell = pSource->GetLandcell();
+		uint32_t dwCell = pSource->GetLandcell();
 		WORD block = BLOCK_WORD(dwCell);
 		WORD cell = CELL_WORD(dwCell);
 
 		CWorldLandBlock *pBlock = m_pBlocks[block];
-		if (pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell))
+		if ((pBlock && (dwCell & 0xFFFF) > 0x100) && !pBlock->PossiblyVisibleToOutdoors(dwCell)) //check if inside
 		{
 			pBlock->EnumNearby(pSource, fRange, pResults);
 		}
 		else
 		{
-			DWORD basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
-			DWORD basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
+			uint32_t basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
+			uint32_t basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
 
-			DWORD minx = basex;
-			DWORD maxx = basex;
-			DWORD miny = basey;
-			DWORD maxy = basey;
+			uint32_t minx = basex;
+			uint32_t maxx = basex;
+			uint32_t miny = basey;
+			uint32_t maxy = basey;
 
 			//if ( cell < 0xFF ) // indoor structure
 			{
@@ -1262,8 +1344,8 @@ void CWorld::EnumNearby(CWeenieObject *pSource, float fRange, std::list<CWeenieO
 			maxx = BLOCK_OFFSET(maxx) << 8;
 			maxy = BLOCK_OFFSET(maxy);
 
-			for (DWORD xit = minx; xit <= maxx; xit += 0x100) {
-				for (DWORD yit = miny; yit <= maxy; yit += 1)
+			for (uint32_t xit = minx; xit <= maxx; xit += 0x100) {
+				for (uint32_t yit = miny; yit <= maxy; yit += 1)
 				{
 					CWorldLandBlock *pBlock = m_pBlocks[xit | yit];
 					if (pBlock)
@@ -1281,24 +1363,24 @@ void CWorld::EnumNearbyPlayers(CWeenieObject *pSource, float fRange, std::list<C
 	// Enumerate nearby world objects
 	if (pSource != NULL && !pSource->HasOwner())
 	{
-		DWORD dwCell = pSource->GetLandcell();
+		uint32_t dwCell = pSource->GetLandcell();
 		WORD block = BLOCK_WORD(dwCell);
 		WORD cell = CELL_WORD(dwCell);
 
 		CWorldLandBlock *pBlock = m_pBlocks[block];
-		if (pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell))
+		if ((pBlock && (dwCell & 0xFFFF) > 0x100) && !pBlock->PossiblyVisibleToOutdoors(dwCell)) //check if inside
 		{
 			pBlock->EnumNearbyPlayers(pSource, fRange, pResults);
 		}
 		else
 		{
-			DWORD basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
-			DWORD basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
+			uint32_t basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
+			uint32_t basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
 
-			DWORD minx = basex;
-			DWORD maxx = basex;
-			DWORD miny = basey;
-			DWORD maxy = basey;
+			uint32_t minx = basex;
+			uint32_t maxx = basex;
+			uint32_t miny = basey;
+			uint32_t maxy = basey;
 
 			//if ( cell < 0xFF ) // indoor structure
 			{
@@ -1314,8 +1396,8 @@ void CWorld::EnumNearbyPlayers(CWeenieObject *pSource, float fRange, std::list<C
 			maxx = BLOCK_OFFSET(maxx) << 8;
 			maxy = BLOCK_OFFSET(maxy);
 
-			for (DWORD xit = minx; xit <= maxx; xit += 0x100) {
-				for (DWORD yit = miny; yit <= maxy; yit += 1)
+			for (uint32_t xit = minx; xit <= maxx; xit += 0x100) {
+				for (uint32_t yit = miny; yit <= maxy; yit += 1)
 				{
 					CWorldLandBlock *pBlock = m_pBlocks[xit | yit];
 					if (pBlock)
@@ -1328,7 +1410,7 @@ void CWorld::EnumNearbyPlayers(CWeenieObject *pSource, float fRange, std::list<C
 	}
 }
 
-CWeenieObject *CWorld::FindWithinPVS(CWeenieObject *source, DWORD object_id)
+CWeenieObject *CWorld::FindWithinPVS(CWeenieObject *source, uint32_t object_id, bool allowOwnedByOthers)
 {
 	if (!source || !object_id)
 		return NULL;
@@ -1339,17 +1421,17 @@ CWeenieObject *CWorld::FindWithinPVS(CWeenieObject *source, DWORD object_id)
 	//Find nearby world objects.
 	if (!source->HasOwner())
 	{
-		DWORD dwCell = source->GetLandcell();
+		uint32_t dwCell = source->GetLandcell();
 		WORD block = BLOCK_WORD(dwCell);
 		WORD cell = CELL_WORD(dwCell);
 
-		DWORD basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
-		DWORD basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
+		uint32_t basex = BASE_OFFSET(BLOCK_X(block), CELL_X(cell));
+		uint32_t basey = BASE_OFFSET(BLOCK_Y(block), CELL_Y(cell));
 
-		DWORD minx = basex;
-		DWORD maxx = basex;
-		DWORD miny = basey;
-		DWORD maxy = basey;
+		uint32_t minx = basex;
+		uint32_t maxx = basex;
+		uint32_t miny = basey;
+		uint32_t maxy = basey;
 
 		//if ( cell < 0xFF ) //indoor structure
 		{
@@ -1365,8 +1447,8 @@ CWeenieObject *CWorld::FindWithinPVS(CWeenieObject *source, DWORD object_id)
 		maxx = BLOCK_OFFSET(maxx) << 8;
 		maxy = BLOCK_OFFSET(maxy);
 
-		for (DWORD xit = minx; xit <= maxx; xit += 0x100) {
-			for (DWORD yit = miny; yit <= maxy; yit += 1)
+		for (uint32_t xit = minx; xit <= maxx; xit += 0x100) {
+			for (uint32_t yit = miny; yit <= maxy; yit += 1)
 			{
 				CWorldLandBlock *pBlock = m_pBlocks[xit | yit];
 				if (pBlock)
@@ -1383,7 +1465,7 @@ CWeenieObject *CWorld::FindWithinPVS(CWeenieObject *source, DWORD object_id)
 	{
 		if (CContainerWeenie *externalContainer = externalObject->GetWorldTopLevelContainer())
 		{
-			if (externalContainer->_openedById == source->GetID())
+			if (allowOwnedByOthers || externalContainer->_openedById == source->GetID())
 			{
 				return externalObject;
 			}
@@ -1406,7 +1488,7 @@ void CWorld::EnumerateDungeonsFromCellData()
 
 	while (i != iend)
 	{
-		DWORD dwID = i->first;
+		uint32_t dwID = i->first;
 
 		if (((dwID & 0xFFFF) >= 0xFFFE) || ((dwID & 0xFFFF) < 0x100))
 		{
@@ -1424,9 +1506,9 @@ void CWorld::EnumerateDungeonsFromCellData()
 		Frame drop;
 		bool bFoundDrop = false;
 
-		for (DWORD i = 0; i < pEnvCell->num_static_objects; i++)
+		for (uint32_t i = 0; i < pEnvCell->num_static_objects; i++)
 		{
-			DWORD setupID = pEnvCell->static_object_ids[i];
+			uint32_t setupID = pEnvCell->static_object_ids[i];
 			if ((setupID >= 0x02000C39 && setupID <= 0x02000C48) || (setupID == 0x02000F4A))
 			{
 				drop = pEnvCell->static_object_frames[i];
@@ -1438,9 +1520,9 @@ void CWorld::EnumerateDungeonsFromCellData()
 		/*
 		if (dropsFile)
 		{
-		for (DWORD i = 0; i < pEnvCell->num_static_objects; i++)
+		for (uint32_t i = 0; i < pEnvCell->num_static_objects; i++)
 		{
-		DWORD setupID = pEnvCell->static_object_ids[i];
+		uint32_t setupID = pEnvCell->static_object_ids[i];
 		if ((setupID >= 0x02000C39 && setupID <= 0x02000C48) || (setupID == 0x02000F4A))
 		{
 		fprintf(dropsFile, "%08X %f %f %f %f %f %f %f\n",
@@ -1467,7 +1549,7 @@ void CWorld::EnumerateDungeonsFromCellData()
 			dropPos.frame = drop;
 			m_mDungeons[dwID] = dropPos;
 
-			if (dwID < (DWORD)(0 - 0x10100))
+			if (dwID < (uint32_t)(0 - 0x10100))
 				i = pFiles->upper_bound(((dwID & 0xFFFF0000) + 0x10100) - 1);
 			else
 				break;
@@ -1478,17 +1560,12 @@ void CWorld::EnumerateDungeonsFromCellData()
 		}
 	}
 
-	/*
-	if (dropsFile)
-	fclose(dropsFile);
-	*/
-
 #endif
 }
 
-void CWorld::BroadcastChatChannel(DWORD channel_id, CPlayerWeenie *sender, const std::string &message)
+void CWorld::BroadcastChatChannel(uint32_t channel_id, CPlayerWeenie *sender, const std::u16string &message)
 {
-	DWORD sender_monarch_id = 0;
+	uint32_t sender_monarch_id = 0;
 	if (channel_id == Allegiance_ChatChannel)
 	{
 		sender_monarch_id = sender->InqIIDQuality(MONARCH_IID, 0);
@@ -1499,59 +1576,65 @@ void CWorld::BroadcastChatChannel(DWORD channel_id, CPlayerWeenie *sender, const
 	}
 
 	BinaryWriter chatPayload;
-	chatPayload.Write<DWORD>(channel_id);
+	chatPayload.Write<uint32_t>(channel_id);
 	chatPayload.AppendWStringFromString(sender->GetName());
-	chatPayload.AppendWStringFromString(message);
-	chatPayload.Write<DWORD>(12); // size of next data
-	chatPayload.Write<DWORD>(sender->GetID());
-	chatPayload.Write<DWORD>(0);
-	chatPayload.Write<DWORD>(2);
+	//chatPayload.AppendWStringFromString(message);
+	chatPayload.Write<std::u16string>(message);
+	chatPayload.Write<uint32_t>(12); // size of next data
+	chatPayload.Write<uint32_t>(sender->GetID());
+	chatPayload.Write<uint32_t>(0);
+	chatPayload.Write<uint32_t>(2);
 
 	BinaryWriter chatPackage;
-	chatPackage.Write<DWORD>(0xF7DE);
-	chatPackage.Write<DWORD>(chatPayload.GetSize() + 32);
-	chatPackage.Write<DWORD>(1); // type
-	chatPackage.Write<DWORD>(1);
-	chatPackage.Write<DWORD>(1);
-	chatPackage.Write<DWORD>(0xB0045);
-	chatPackage.Write<DWORD>(1);
-	chatPackage.Write<DWORD>(0xB0045);
-	chatPackage.Write<DWORD>(0);
-	chatPackage.Write<DWORD>(chatPayload.GetSize());
+	chatPackage.Write<uint32_t>(0xF7DE);
+	chatPackage.Write<uint32_t>(chatPayload.GetSize() + 32);
+	chatPackage.Write<uint32_t>(1); // type
+	chatPackage.Write<uint32_t>(1);
+	chatPackage.Write<uint32_t>(1);
+	chatPackage.Write<uint32_t>(0xB0045);
+	chatPackage.Write<uint32_t>(1);
+	chatPackage.Write<uint32_t>(0xB0045);
+	chatPackage.Write<uint32_t>(0);
+	chatPackage.Write<uint32_t>(chatPayload.GetSize());
 	chatPackage.Write(&chatPayload);
 
 	for (auto &entry : m_mAllPlayers)
 	{
 		CPlayerWeenie *player = entry.second;
 
-		BOOL bShouldHear = FALSE;
-
-		switch (channel_id)
+		if (player && !player->IsPlayerSquelched(sender->GetID(), true))
 		{
-		case General_ChatChannel:
-			bShouldHear = (player->GetCharacterOptions2() & HearGeneralChat_CharacterOptions2);
-			break;
-		case Trade_ChatChannel:
-			bShouldHear = (player->GetCharacterOptions2() & HearTradeChat_CharacterOptions2);
-			break;
-		case LFG_ChatChannel:
-			bShouldHear = (player->GetCharacterOptions2() & HearLFGChat_CharacterOptions2);
-			break;
-		case Roleplay_ChatChannel:
-			bShouldHear = (player->GetCharacterOptions2() & HearRoleplayChat_CharacterOptions2);
-			break;
-		case Allegiance_ChatChannel:
-			if (player->GetCharacterOptions() & HearAllegianceChat_CharacterOption)
+			BOOL bShouldHear = FALSE;
+
+			switch (channel_id)
 			{
-				if (sender_monarch_id && sender_monarch_id == player->InqIIDQuality(MONARCH_IID, 0))
-					bShouldHear = TRUE;
+			case General_ChatChannel:
+				bShouldHear = (player->GetCharacterOptions2() & HearGeneralChat_CharacterOptions2);
+				break;
+			case Trade_ChatChannel:
+				bShouldHear = (player->GetCharacterOptions2() & HearTradeChat_CharacterOptions2);
+				break;
+			case LFG_ChatChannel:
+				bShouldHear = (player->GetCharacterOptions2() & HearLFGChat_CharacterOptions2);
+				break;
+			case Roleplay_ChatChannel:
+				bShouldHear = (player->GetCharacterOptions2() & HearRoleplayChat_CharacterOptions2);
+				break;
+			case Allegiance_ChatChannel:
+				if (player->GetCharacterOptions() & HearAllegianceChat_CharacterOption)
+				{
+					if (sender_monarch_id && sender_monarch_id == player->InqIIDQuality(MONARCH_IID, 0))
+						bShouldHear = TRUE;
+					if (player->IsAllegGagged())
+						bShouldHear = FALSE;
+				}
+				break;
 			}
-			break;
-		}
 
-		if (bShouldHear)
-		{
-			player->SendNetMessage(&chatPackage, 4, FALSE, FALSE);
+			if (bShouldHear)
+			{
+				player->SendNetMessage(&chatPackage, 4, FALSE, FALSE);
+			}
 		}
 	}
 }
@@ -1561,22 +1644,22 @@ std::string CWorld::GetServerStatus()
 	std::string status;
 
 	extern CPhatServer *g_pPhatServer;
-	DWORD runTime = (DWORD)(g_pGlobals->Time() - g_pPhatServer->GetStartupTime());
-	DWORD runSeconds = runTime % 60;
+	uint32_t runTime = (uint32_t)(g_pGlobals->Time() - g_pPhatServer->GetStartupTime());
+	uint32_t runSeconds = runTime % 60;
 	runTime /= 60;
-	DWORD runMinutes = runTime % 60;
+	uint32_t runMinutes = runTime % 60;
 	runTime /= 60;
-	DWORD runHours = runTime;
+	uint32_t runHours = runTime;
 
 	status += csprintf("Server runtime: %uh %um %us\n", runHours, runMinutes, runSeconds);
-	status += csprintf("%u MB used, %u / %u MB physical mem free.\n", (DWORD)(GetProcessMemoryUsage() >> 20), (DWORD)(GetFreeMemory() >> 20), (DWORD)(GetTotalMemory() >> 20));
+	status += csprintf("%u MB used, %u / %u MB physical mem free.\n", (uint32_t)(GetProcessMemoryUsage() >> 20), (uint32_t)(GetFreeMemory() >> 20), (uint32_t)(GetTotalMemory() >> 20));
 
 	{
 		// check bucket health
-		DWORD biggestBucket = 0;
-		for (DWORD i = 0; i < m_mAllPlayers.bucket_count(); i++)
+		uint32_t biggestBucket = 0;
+		for (uint32_t i = 0; i < m_mAllPlayers.bucket_count(); i++)
 		{
-			DWORD bucketSize = (DWORD)m_mAllPlayers.bucket_size(i);
+			uint32_t bucketSize = (uint32_t)m_mAllPlayers.bucket_size(i);
 
 			if (bucketSize >= biggestBucket)
 				biggestBucket = bucketSize;
@@ -1586,12 +1669,12 @@ std::string CWorld::GetServerStatus()
 	}
 
 	{
-		std::map<DWORD64, CWorldLandBlock *> sortedBlocks;
+		std::map<uint64_t, CWorldLandBlock *> sortedBlocks;
 
 		unsigned int activeBlocks = 0;
 		unsigned int dormantPendingBlocks = 0;
 		unsigned int dormantBlocks = 0;
-		DWORD totalActiveObjects = 0;
+		uint32_t totalActiveObjects = 0;
 
 		// find the top 5 most active blocks
 		for (auto block : m_vBlocks)
@@ -1599,7 +1682,7 @@ std::string CWorld::GetServerStatus()
 			if (!block)
 				continue;
 
-			DWORD liveCount = block->LiveCount();
+			uint32_t liveCount = block->LiveCount();
 
 			switch (block->GetDormancyStatus())
 			{
@@ -1617,16 +1700,16 @@ std::string CWorld::GetServerStatus()
 			}
 
 			liveCount = (liveCount << 16) | block->PlayerCount();
-			sortedBlocks[((0xFFFFFFFF - ((DWORD64)liveCount)) << 32) | (DWORD64)block->GetHeader()] = block;
+			sortedBlocks[((0xFFFFFFFF - ((uint64_t)liveCount)) << 32) | (uint64_t)block->GetHeader()] = block;
 		}
 
 		{
 			// check bucket health
 			/*
-			DWORD biggestBucket = 0;
-			for (DWORD i = 0; i < m_mAllObjects.bucket_count(); i++)
+			uint32_t biggestBucket = 0;
+			for (uint32_t i = 0; i < m_mAllObjects.bucket_count(); i++)
 			{
-			DWORD bucketSize = (DWORD) m_mAllObjects.bucket_size(i);
+			uint32_t bucketSize = (uint32_t) m_mAllObjects.bucket_size(i);
 
 			if (bucketSize >= biggestBucket)
 			biggestBucket = bucketSize;
@@ -1638,14 +1721,14 @@ std::string CWorld::GetServerStatus()
 		}
 
 		status += csprintf("%u total blocks loaded. %u active. %u pending dormancy. %u dormant. %u unloaded.\n",
-			m_vBlocks.size() + m_vSpawns.size(), activeBlocks, dormantPendingBlocks, (DWORD)m_mDormantBlocks.size(), (DWORD)m_mUnloadedBlocks.size());
+			m_vBlocks.size() + m_vSpawns.size(), activeBlocks, dormantPendingBlocks, (uint32_t)m_mDormantBlocks.size(), (uint32_t)m_mUnloadedBlocks.size());
 
 		unsigned int numBlocksToShow = 5;
 		status += csprintf("Top %u most active blocks\n", numBlocksToShow);
 		for (auto block : sortedBlocks)
 		{
-			DWORD numObjects = (0xFFFFFFFF - (DWORD)(block.first >> 32));
-			DWORD blockID = (block.first & 0xFFFFFFFF);
+			uint32_t numObjects = (0xFFFFFFFF - (uint32_t)(block.first >> 32));
+			uint32_t blockID = (block.first & 0xFFFFFFFF);
 
 			status += csprintf("%04X - %u objects %u players\n", blockID, HIWORD(numObjects), LOWORD(numObjects));
 			numBlocksToShow--;
@@ -1658,19 +1741,19 @@ std::string CWorld::GetServerStatus()
 	return status;
 }
 
-DWORD CWorld::GenerateGUID(eGUIDClass type)
+uint32_t CWorld::GenerateGUID(eGUIDClass type)
 {
-	DWORD new_iid = g_pObjectIDGen->GenerateGUID(type);
+	uint32_t new_iid = g_pObjectIDGen->GenerateGUID(type);
 
-	while (FindObject(new_iid))
-	{
-		new_iid = g_pObjectIDGen->GenerateGUID(type);
-	}
+	//while (FindObject(new_iid))
+	//{
+	//	new_iid = g_pObjectIDGen->GenerateGUID(type);
+	//}
 
 	return new_iid;
 }
 
-void CWorld::NotifyEventStarted(const char *eventName)
+void CWorld::NotifyEventStarted(std::string eventName, GameEventDef *event)
 {
 	auto result = _eventWeenies.equal_range(eventName);
 
@@ -1678,12 +1761,12 @@ void CWorld::NotifyEventStarted(const char *eventName)
 	{
 		if (CWeenieObject *weenie = FindObject(it->second))
 		{
-			weenie->CheckEventState();
+			weenie->CheckEventState(eventName, event);
 		}
 	}
 }
 
-void CWorld::NotifyEventStopped(const char *eventName)
+void CWorld::NotifyEventStopped(std::string eventName, GameEventDef *event)
 {
 	auto result = _eventWeenies.equal_range(eventName);
 
@@ -1691,7 +1774,30 @@ void CWorld::NotifyEventStopped(const char *eventName)
 	{
 		if (CWeenieObject *weenie = FindObject(it->second))
 		{
-			weenie->CheckEventState();
+			weenie->CheckEventState(eventName, event);
 		}
 	}
 }
+
+void CWorld::AddToUsedMergedItems(uint32_t item)
+{
+	_stackableOnGround.try_emplace(item, false);
+}
+
+bool CWorld::IsItemInUse(uint32_t item)
+{
+	std::map<uint32_t, bool>::const_iterator it = _stackableOnGround.find(item);
+	if (it == _stackableOnGround.end())
+		return false;
+	if (it->second == true)
+		return true;
+	_stackableOnGround[item] = true;
+	return false;
+}
+
+void CWorld::RemoveMergedItem(uint32_t item)
+{
+	_stackableOnGround.erase(item);
+}
+
+

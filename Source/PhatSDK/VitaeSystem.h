@@ -4,7 +4,7 @@
 class VitaeSystem
 {
 public:
-	static DWORD64 VitaeCPPoolThreshold(float cur_vitae, unsigned int level);
-	static bool DetermineNewVitaeLevel(float cur_vitae, unsigned int level, DWORD64 *xpPool, float *newVitae); // custom
+	static uint64_t VitaeCPPoolThreshold(float cur_vitae, unsigned int level);
+	static bool DetermineNewVitaeLevel(float cur_vitae, unsigned int level, uint64_t *xpPool, float *newVitae); // custom
 };
 

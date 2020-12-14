@@ -1,6 +1,15 @@
 
 #pragma once
 
+enum FriendsUpdateType
+{
+	FRIENDS_UPDATE = 0,
+	FRIENDS_UPDATE_ADD = 1,
+	FRIENDS_UPDATE_REMOVE = 2,
+	FRIENDS_UPDATE_REMOVE_SILENT = 3,
+	FRIENDS_UPDATE_ONLINE_STATUS = 4
+};
+
 enum BondedStatusEnum
 {
 	Destroy_BondedStatus = 0XFFFFFFFE,
@@ -21,23 +30,23 @@ enum RadarEnum {
 
 enum ITEM_USEABLE {
 	USEABLE_UNDEF = 0,
-	USEABLE_NO = (1 << 0),
-	USEABLE_SELF = (1 << 1),
-	USEABLE_WIELDED = (1 << 2),
-	USEABLE_CONTAINED = (1 << 3),
-	USEABLE_VIEWED = (1 << 4),
-	USEABLE_REMOTE = (1 << 5),
-	USEABLE_NEVER_WALK = (1 << 6),
-	USEABLE_OBJSELF = (1 << 7),
-	USEABLE_CONTAINED_VIEWED = 24,
-	USEABLE_CONTAINED_VIEWED_REMOTE = 56,
-	USEABLE_CONTAINED_VIEWED_REMOTE_NEVER_WALK = 120,
-	USEABLE_VIEWED_REMOTE = 48,
-	USEABLE_VIEWED_REMOTE_NEVER_WALK = 112,
-	USEABLE_REMOTE_NEVER_WALK = 96,
-	USEABLE_SOURCE_WIELDED_TARGET_WIELDED = 262148,
-	USEABLE_SOURCE_WIELDED_TARGET_CONTAINED = 524292,
-	USEABLE_SOURCE_WIELDED_TARGET_VIEWED = 1048580,
+	USEABLE_NO = 0x1,
+	USEABLE_SELF = 0x2,
+	USEABLE_WIELDED = 0x4,
+	USEABLE_CONTAINED = 0x8,
+	USEABLE_VIEWED = 0x10,
+	USEABLE_CONTAINED_VIEWED = 0x18,
+	USEABLE_REMOTE = 0x20,
+	USEABLE_VIEWED_REMOTE = 0x30,
+	USEABLE_CONTAINED_VIEWED_REMOTE = 0x38,
+	USEABLE_NEVER_WALK = 0x40,
+	USEABLE_REMOTE_NEVER_WALK = 0x60,
+	USEABLE_VIEWED_REMOTE_NEVER_WALK = 0x70,
+	USEABLE_CONTAINED_VIEWED_REMOTE_NEVER_WALK = 0x78,
+	USEABLE_OBJSELF = 0x80,
+	USEABLE_SOURCE_WIELDED_TARGET_WIELDED = 0x40004,
+	USEABLE_SOURCE_WIELDED_TARGET_CONTAINED = 0x80004,
+	USEABLE_SOURCE_WIELDED_TARGET_VIEWED = 0x100004,
 	USEABLE_SOURCE_WIELDED_TARGET_REMOTE = 2097156,
 	USEABLE_SOURCE_WIELDED_TARGET_REMOTE_NEVER_WALK = 6291460,
 	USEABLE_SOURCE_CONTAINED_TARGET_WIELDED = 262152,
@@ -696,6 +705,7 @@ enum INVENTORY_LOC
 	UPPER_LEG_WEAR_LOC = 0x40,
 	LOWER_LEG_WEAR_LOC = 0x80,
 	FOOT_WEAR_LOC = 0x100,
+	FOOT_LOWERLEG_BOOTS_LOC = 0x180,
 	CHEST_ARMOR_LOC = 0x200,
 	ABDOMEN_ARMOR_LOC = 0x400,
 	UPPER_ARM_ARMOR_LOC = 0x800,
@@ -727,6 +737,16 @@ enum INVENTORY_LOC
 	READY_SLOT_LOC = 0x3F00000,
 	WEAPON_LOC = 0x2500000,
 	WEAPON_READY_SLOT_LOC = 0x3500000,
+	CHEST_ABS_LOC = 0x600,
+	CHEST_UPPERARM_LOC = 0xA00,
+	CHEST_UPPERARM_ABS_LOC = 0xE00,
+	UPPERARM_LOWERARM_LOC = 0x1800,
+	CHEST_UPPERARM_LOWERARM_LOC = 0x1A00,
+	CHEST_UPPERARM_LOWERARM_ABS_LOC = 0x1E00,
+	ABS_UPPERLEG_LOC = 0x2400,
+	LOWERLEG_FOOT_LOC = 0x4100,
+	UPPERLEG_LOWERLEG_LOC = 0x6000,
+	ABS_UPPERLEG_LOWERLEG_LOC = 0x6400,
 	ALL_LOC = 0x7FFFFFFF,
 	CAN_GO_IN_READY_SLOT_LOC = 0x7FFFFFFF,
 	FORCE_INVENTORY_LOC_32_BIT = 0x7FFFFFFF,
@@ -845,27 +865,27 @@ enum WErrorType
 	WERROR_CORRUPT_QUALITY,
 	WERROR_BAD_CONTEXT,
 	WERROR_NO_EPHSEQ_MANAGER,
-	WERROR_BAD_MOVEMENT_EVENT,
+	WERROR_BAD_MOVEMENT_EVENT, // You failed to go to non-combat mode.
 	WERROR_CANNOT_CREATE_NEW_OBJECT,
 	WERROR_NO_CONTROLLER_OBJECT,
 	WERROR_CANNOT_SEND_EVENT,
 	WERROR_PHYSICS_CANT_TRANSITION,
 	WERROR_PHYSICS_MAX_DISTANCE_EXCEEDED,
-	WERROR_ACTIONS_LOCKED,
-	WERROR_EXTERNAL_ACTIONS_LOCKED,
+	WERROR_ACTIONS_LOCKED, // You're too busy!
+	WERROR_EXTERNAL_ACTIONS_LOCKED, //  is too busy to accept gifts right now.\n
 	WERROR_CANNOT_SEND_MESSAGE,
-	WERROR_ILLEGAL_INVENTORY_TRANSACTION,
+	WERROR_ILLEGAL_INVENTORY_TRANSACTION, // You must control both objects!
 	WERROR_EXTERNAL_WEENIE_OBJECT,
 	WERROR_INTERNAL_WEENIE_OBJECT,
-	WERROR_MOTION_FAILURE,
-	WERROR_NO_CONTACT,
+	WERROR_MOTION_FAILURE, // Unable to move to object!
+	WERROR_NO_CONTACT, // You can't jump while in the air
 	WERROR_INQ_CYL_SPHERE_FAILURE,
-	WERROR_BAD_COMMAND,
+	WERROR_BAD_COMMAND, // That is not a valid command.
 	WERROR_CARRYING_ITEM,
-	WERROR_FROZEN,
-	WERROR_STUCK,
-	WERROR_OVERLOAD,
-	WERROR_EXTERNAL_OVERLOAD,
+	WERROR_FROZEN, // The item is under someone else's control!
+	WERROR_STUCK, // You cannot pick that up!
+	WERROR_OVERLOAD, // You are too encumbered to carry that!
+	WERROR_EXTERNAL_OVERLOAD, //  cannot carry anymore.\n
 	WERROR_BAD_CONTAIN,
 	WERROR_BAD_PARENT,
 	WERROR_BAD_DROP,
@@ -876,15 +896,15 @@ enum WErrorType
 	WERROR_MSG_UNDERFLOW,
 	WERROR_MSG_OVERFLOW,
 	WERROR_MSG_CALLBACK_FAILED,
-	WERROR_INTERRUPTED,
-	WERROR_OBJECT_GONE,
-	WERROR_NO_OBJECT,
-	WERROR_CANT_GET_THERE,
-	WERROR_DEAD,
+	WERROR_INTERRUPTED, // Action cancelled!
+	WERROR_OBJECT_GONE, // Unable to move to object!
+	WERROR_NO_OBJECT, // Unable to move to object!
+	WERROR_CANT_GET_THERE, // Unable to move to object!
+	WERROR_DEAD, // You can't do that... you're dead!
 	WERROR_I_LEFT_THE_WORLD,
 	WERROR_I_TELEPORTED,
-	WERROR_TOO_FAR,
-	WERROR_STAMINA_TOO_LOW,
+	WERROR_TOO_FAR, // You charged too far!
+	WERROR_STAMINA_TOO_LOW, // You are too tired to do that!
 	WERROR_CANT_CROUCH_IN_COMBAT,
 	WERROR_CANT_SIT_IN_COMBAT,
 	WERROR_CANT_LIE_DOWN_IN_COMBAT,
@@ -894,84 +914,84 @@ enum WErrorType
 	WERROR_TOO_MANY_ACTIONS,
 	WERROR_HIDDEN,
 	WERROR_GENERAL_MOVEMENT_FAILURE,
-	WERROR_CANT_JUMP_POSITION,
-	WERROR_CANT_JUMP_LOAD,
-	WERROR_SELF_INFLICTED_DEATH,
+	WERROR_CANT_JUMP_POSITION, // You can't jump from this position
+	WERROR_CANT_JUMP_LOAD, // You're too loaded down to jump
+	WERROR_SELF_INFLICTED_DEATH, // Ack! You killed yourself!\n
 	WERROR_MSG_RESPONSE_FAILURE,
 	WERROR_OBJECT_IS_STATIC,
-	WERROR_PK_INVALID_STATUS,
-	WERROR_PK_PROTECTED_ATTACKER,
-	WERROR_PK_PROTECTED_TARGET,
-	WERROR_PK_UNPROTECTED_TARGET,
-	WERROR_PK_NPK_ATTACKER,
-	WERROR_PK_NPK_TARGET,
-	WERROR_PK_WRONG_KIND,
-	WERROR_PK_CROSS_HOUSE_BOUNDARY,
+	WERROR_PK_INVALID_STATUS, // Invalid PK status!
+	WERROR_PK_PROTECTED_ATTACKER, // You fail to affect %s because you cannot affect anyone!\n
+	WERROR_PK_PROTECTED_TARGET, // You fail to affect %s because $s cannot be harmed!\n
+	WERROR_PK_UNPROTECTED_TARGET, // You fail to affect %s because beneficial spells do not affect %s!\n
+	WERROR_PK_NPK_ATTACKER, // You fail to affect %s because you are not a player killer!\n
+	WERROR_PK_NPK_TARGET, // You fail to affect %s because %s is not a player killer!\n
+	WERROR_PK_WRONG_KIND, // You fail to affect %s because you are not the same sort of player killer as %s!\n
+	WERROR_PK_CROSS_HOUSE_BOUNDARY, // You fail to affect %s because you are acting across a house boundary!\n
 	WERROR_INVALID_XP_AMOUNT = 1001,
 	WERROR_INVALID_PP_CALCULATION,
 	WERROR_INVALID_CP_CALCULATION,
 	WERROR_UNHANDLED_STAT_ANSWER,
 	WERROR_HEART_ATTACK,
-	WERROR_CLOSED,
-	WERROR_GIVE_NOT_ALLOWED,
-	WERROR_CHANGE_COMBAT_MODE_FAILURE,
+	WERROR_CLOSED, // The container is closed!
+	WERROR_GIVE_NOT_ALLOWED, //  is not accepting gifts right now.\n
+	WERROR_CHANGE_COMBAT_MODE_FAILURE, // You failed to go to non-combat mode.
 	WERROR_INVALID_INVENTORY_LOCATION,
 	WERROR_FULL_INVENTORY_LOCATION,
 	WERROR_CONFLICTING_INVENTORY_LOCATION,
 	WERROR_ITEM_NOT_PENDING,
 	WERROR_BE_WIELDED_FAILURE,
 	WERROR_BE_DROPPED_FAILURE,
-	WERROR_COMBAT_FATIGUE,
-	WERROR_COMBAT_OUT_OF_AMMO,
-	WERROR_COMBAT_MISFIRE,
-	WERROR_BAD_MISSILE_CALCULATIONS,
+	WERROR_COMBAT_FATIGUE, // You are too fatigued to attack!
+	WERROR_COMBAT_OUT_OF_AMMO, // You are out of ammunition!
+	WERROR_COMBAT_MISFIRE, // Your missile attack misfired!
+	WERROR_BAD_MISSILE_CALCULATIONS, // You've attempted an impossible spell path!
 	WERROR_MAGIC_INCOMPLETE_ANIM_LIST,
 	WERROR_MAGIC_INVALID_SPELL_TYPE,
 	WERROR_MAGIC_INQ_POSITION_AND_VELOCITY_FAILURE,
-	WERROR_MAGIC_UNLEARNED_SPELL,
-	WERROR_MAGIC_BAD_TARGET_TYPE,
-	WERROR_MAGIC_MISSING_COMPONENTS,
-	WERROR_MAGIC_INSUFFICIENT_MANA,
-	WERROR_MAGIC_FIZZLE,
-	WERROR_MAGIC_MISSING_TARGET,
-	WERROR_MAGIC_MISFIRED_PROJECTILE_SPELL,
+	WERROR_MAGIC_UNLEARNED_SPELL, // You don't know that spell!
+	WERROR_MAGIC_BAD_TARGET_TYPE, // Incorrect target type
+	WERROR_MAGIC_MISSING_COMPONENTS, // You don't have all the components for this spell.
+	WERROR_MAGIC_INSUFFICIENT_MANA, // You don't have enough Mana to cast this spell.
+	WERROR_MAGIC_FIZZLE, // Your spell fizzled.\n
+	WERROR_MAGIC_MISSING_TARGET, // Your spell's target is missing!
+	WERROR_MAGIC_MISFIRED_PROJECTILE_SPELL, // Your projectile spell mislaunched!
 	WERROR_MAGIC_SPELLBOOK_ADDSPELL_FAILURE,
 	WERROR_MAGIC_TARGET_OUT_OF_RANGE,
-	WERROR_MAGIC_NON_OUTDOOR_SPELL_CAST_OUTSIDE,
-	WERROR_MAGIC_NON_INDOOR_SPELL_CAST_INSIDE,
+	WERROR_MAGIC_NON_OUTDOOR_SPELL_CAST_OUTSIDE, // Your spell cannot be cast outside
+	WERROR_MAGIC_NON_INDOOR_SPELL_CAST_INSIDE, // Your spell cannot be cast inside
 	WERROR_MAGIC_GENERAL_FAILURE,
-	WERROR_MAGIC_UNPREPARED,
-	WERROR_ALLEGIANCE_PATRON_EXISTS,
-	WERROR_ALLEGIANCE_INSUFFICIENT_CP,
+	WERROR_MAGIC_UNPREPARED, // You are unprepared to cast a spell
+	WERROR_ALLEGIANCE_PATRON_EXISTS, // You've already sworn your Allegiance
+	WERROR_ALLEGIANCE_INSUFFICIENT_CP, // You don't have enough experience available to swear Allegiance
 	WERROR_ALLEGIANCE_IGNORING_REQUESTS,
 	WERROR_ALLEGIANCE_SQUELCHED,
 	WERROR_ALLEGIANCE_MAX_DISTANCE_EXCEEDED,
 	WERROR_ALLEGIANCE_ILLEGAL_LEVEL,
 	WERROR_ALLEGIANCE_BAD_CREATION,
 	WERROR_ALLEGIANCE_PATRON_BUSY,
-	WERROR_ALLEGIANCE_ADD_HIERARCHY_FAILURE,
-	WERROR_ALLEGIANCE_NONEXISTENT,
+	WERROR_ALLEGIANCE_ADD_HIERARCHY_FAILURE, // %s is already one of your followers
+	WERROR_ALLEGIANCE_NONEXISTENT, // You are not in an allegiance!
 	WERROR_ALLEGIANCE_REMOVE_HIERARCHY_FAILURE,
-	WERROR_ALLEGIANCE_MAX_VASSALS,
+	WERROR_ALLEGIANCE_MAX_VASSALS, // %s cannot have any more Vassals
 	WERROR_FELLOWSHIP_IGNORING_REQUESTS,
 	WERROR_FELLOWSHIP_SQUELCHED,
 	WERROR_FELLOWSHIP_MAX_DISTANCE_EXCEEDED,
 	WERROR_FELLOWSHIP_MEMBER,
 	WERROR_FELLOWSHIP_ILLEGAL_LEVEL,
 	WERROR_FELLOWSHIP_RECRUIT_BUSY,
-	WERROR_FELLOWSHIP_NOT_LEADER,
-	WERROR_FELLOWSHIP_FULL,
-	WERROR_FELLOWSHIP_UNCLEAN_NAME,
+	WERROR_FELLOWSHIP_NOT_LEADER, // You must be the leader of a Fellowship
+	WERROR_FELLOWSHIP_FULL, // Your Fellowship is full
+	WERROR_FELLOWSHIP_UNCLEAN_NAME, // That Fellowship name is not permitted
 	WERROR_LEVEL_TOO_LOW,
 	WERROR_LEVEL_TOO_HIGH,
-	WERROR_CHAN_INVALID,
-	WERROR_CHAN_SECURITY,
-	WERROR_CHAN_ALREADY_ACTIVE,
-	WERROR_CHAN_NOT_ACTIVE,
+	WERROR_CHAN_INVALID, // That channel doesn't exist.
+	WERROR_CHAN_SECURITY, // You can't use that channel.
+	WERROR_CHAN_ALREADY_ACTIVE, // You're already on that channel.
+	WERROR_CHAN_NOT_ACTIVE, // You're not currently on that channel.
 	WERROR_ATTUNED_ITEM,
-	WERROR_MERGE_BAD,
-	WERROR_MERGE_ENCHANTED,
-	WERROR_UNCONTROLLED_STACK,
+	WERROR_MERGE_BAD, // You cannot merge different stacks!
+	WERROR_MERGE_ENCHANTED, // You cannot merge enchanted items!
+	WERROR_UNCONTROLLED_STACK, // You must control at least one stack!
 	WERROR_CURRENTLY_ATTACKING,
 	WERROR_MISSILE_ATTACK_NOT_OK,
 	WERROR_TARGET_NOT_ACQUIRED,
@@ -980,26 +1000,26 @@ enum WErrorType
 	WERROR_UNWIELD_FAILURE,
 	WERROR_LAUNCH_FAILURE,
 	WERROR_RELOAD_FAILURE,
-	WERROR_CRAFT_UNABLE_TO_MAKE_CRAFTREQ,
-	WERROR_CRAFT_ANIMATION_FAILED,
-	WERROR_CRAFT_NO_MATCH_WITH_NUMPREOBJ,
-	WERROR_CRAFT_GENERAL_ERROR_UI_MSG,
+	WERROR_CRAFT_UNABLE_TO_MAKE_CRAFTREQ, // Your craft attempt fails.
+	WERROR_CRAFT_ANIMATION_FAILED, // Your craft attempt fails.
+	WERROR_CRAFT_NO_MATCH_WITH_NUMPREOBJ, // Given that number of items, you cannot craft anything.
+	WERROR_CRAFT_GENERAL_ERROR_UI_MSG, // Your craft attempt fails.
 	WERROR_CRAFT_GENERAL_ERROR_NO_UI_MSG,
-	WERROR_CRAFT_FAILED_REQUIREMENTS,
-	WERROR_CRAFT_DONT_CONTAIN_EVERYTHING,
-	WERROR_CRAFT_ALL_OBJECTS_NOT_FROZEN,
-	WERROR_CRAFT_NOT_IN_PEACE_MODE,
-	WERROR_CRAFT_NOT_HAVE_SKILL,
-	WERROR_HANDS_NOT_FREE,
-	WERROR_PORTAL_NOT_LINKABLE,
-	WERROR_QUEST_SOLVED_TOO_RECENTLY,
-	WERROR_QUEST_SOLVED_MAX_TIMES,
+	WERROR_CRAFT_FAILED_REQUIREMENTS, // Either you or one of the items involved does not pass the requirements for this craft interaction.
+	WERROR_CRAFT_DONT_CONTAIN_EVERYTHING, // You do not have all the neccessary items.
+	WERROR_CRAFT_ALL_OBJECTS_NOT_FROZEN, // Not all the items are available.
+	WERROR_CRAFT_NOT_IN_PEACE_MODE, // You must be at rest in peace mode to do trade skills.
+	WERROR_CRAFT_NOT_HAVE_SKILL, // You are not trained in that trade skill.
+	WERROR_HANDS_NOT_FREE, // Your hands must be free.
+	WERROR_PORTAL_NOT_LINKABLE, // You cannot link to that portal!\n
+	WERROR_QUEST_SOLVED_TOO_RECENTLY, // You have solved this quest too recently!\n
+	WERROR_QUEST_SOLVED_MAX_TIMES, // You have solved this quest too many times!\n
 	WERROR_QUEST_UNKNOWN,
 	WERROR_QUEST_TABLE_CORRUPT,
 	WERROR_QUEST_BAD,
 	WERROR_QUEST_DUPLICATE,
 	WERROR_QUEST_UNSOLVED,
-	WERROR_QUEST_RESRICTION_UNSOLVED,
+	WERROR_QUEST_RESRICTION_UNSOLVED, // This item requires you to complete a specific quest before you can pick it up!\n
 	WERROR_QUEST_SOLVED_TOO_LONG_AGO,
 	WERROR_TRADE_IGNORING_REQUESTS = 1100,
 	WERROR_TRADE_SQUELCHED,
@@ -1017,291 +1037,291 @@ enum WErrorType
 	WERROR_TRADE_EMPTY,
 	WERROR_TRADE_ALREADY_ACCEPTED,
 	WERROR_TRADE_OUT_OF_SYNC,
-	WERROR_PORTAL_PK_NOT_ALLOWED,
-	WERROR_PORTAL_NPK_NOT_ALLOWED,
-	WERROR_HOUSE_ABANDONED,
-	WERROR_HOUSE_EVICTED,
+	WERROR_PORTAL_PK_NOT_ALLOWED, // Player killers may not interact with that portal!\n
+	WERROR_PORTAL_NPK_NOT_ALLOWED, // Non-player killers may not interact with that portal!\n
+	WERROR_HOUSE_ABANDONED, // You do not own a house!
+	WERROR_HOUSE_EVICTED, // You do not own a house!
 	WERROR_HOUSE_ALREADY_OWNED,
 	WERROR_HOUSE_BUY_FAILED,
 	WERROR_HOUSE_RENT_FAILED,
 	WERROR_HOOKED,
 	WERROR_MAGIC_INVALID_POSITION = 1125,
-	WERROR_PORTAL_ACDM_ONLY,
+	WERROR_PORTAL_ACDM_ONLY, // You must purchase Asheron's Call: Dark Majesty to interact with that portal.\n
 	WERROR_INVALID_AMMO_TYPE,
 	WERROR_SKILL_TOO_LOW,
-	WERROR_HOUSE_MAX_NUMBER_HOOKS_USED,
-	WERROR_TRADE_AI_DOESNT_WANT,
+	WERROR_HOUSE_MAX_NUMBER_HOOKS_USED, // You have used all the hooks you are allowed to use for this house.\n
+	WERROR_TRADE_AI_DOESNT_WANT, //  %s doesn't know what to do with that.\n
 	WERROR_HOOK_HOUSE_NOTE_OWNED,
-	WERROR_PORTAL_QUEST_RESTRICTED = 1140,
+	WERROR_PORTAL_QUEST_RESTRICTED = 1140, // You must complete a quest to interact with that portal.\n
 	WERROR_HOUSE_NO_ALLEGIANCE = 1150,
-	WERROR_NO_HOUSE,
-	WERROR_HOUSE_NO_MANSION_NO_POSITION,
-	WERROR_HOUSE_NOT_A_MANSION,
-	WERROR_HOUSE_NOT_ALLOWED_IN,
-	WERROR_HOUSE_UNDER_MIN_LEVEL = 1160,
-	WERROR_HOUSE_OVER_MAX_LEVEL,
-	WERROR_HOUSE_NOT_A_MONARCH,
-	WERROR_HOUSE_UNDER_MIN_RANK,
-	WERROR_HOUSE_OVER_MAX_RANK,
+	WERROR_NO_HOUSE, // You must own a house to use this command.
+	WERROR_HOUSE_NO_MANSION_NO_POSITION, // Your monarch does not own a mansion or a villa!
+	WERROR_HOUSE_NOT_A_MANSION, // Your monarch does not own a mansion or a villa!
+	WERROR_HOUSE_NOT_ALLOWED_IN, // Your monarch has closed the mansion to the Allegiance.
+	WERROR_HOUSE_UNDER_MIN_LEVEL = 1160, // You must be above level %s to purchase this dwelling.\n
+	WERROR_HOUSE_OVER_MAX_LEVEL, // You must be at or below level %s to purchase this dwelling.\n
+	WERROR_HOUSE_NOT_A_MONARCH, // You must be a monarch to purchase this dwelling.\n
+	WERROR_HOUSE_UNDER_MIN_RANK, // You must be above allegiance rank %s to purchase this dwelling.\n
+	WERROR_HOUSE_OVER_MAX_RANK, // You must be at or below allegiance rank %s to purchase this dwelling.\n
 	WERROR_ALLEGIANCE_DECLINED,
-	WERROR_ALLEGIANCE_TIMEOUT,
-	WERROR_CONFIRMATION_IN_PROGRESS,
-	WERROR_MONARCH_ONLY,
-	WERROR_ALLEGIANCE_BOOT_EMPTY_NAME,
-	WERROR_ALLEGIANCE_BOOT_SELF,
-	WERROR_NO_SUCH_CHARACTER,
-	WERROR_ALLEGIANCE_TARGET_NOT_A_MEMBER,
-	WERROR_ALLEGIANCE_REMOVE_NO_PATRON,
-	WERROR_ALLEGIANCE_OFFLINE_DISSOLVED,
-	WERROR_ALLEGIANCE_OFFLINE_DISMISSED,
-	WERROR_MOVED_TOO_FAR,
-	WERROR_TELETO_INVALID_POSITION,
-	WERROR_ACDM_ONLY,
-	WERROR_LIFESTONE_LINK_FAILED,
-	WERROR_LIFESTONE_LINK_TOO_FAR,
-	WERROR_LIFESTONE_LINK_SUCCESS,
-	WERROR_LIFESTONE_RECALL_NO_LINK,
-	WERROR_LIFESTONE_RECALL_FAILED,
-	WERROR_PORTAL_LINK_FAILED,
-	WERROR_PORTAL_LINK_SUCCESS,
-	WERROR_PORTAL_RECALL_FAILED,
-	WERROR_PORTAL_RECALL_NO_LINK,
-	WERROR_PORTAL_SUMMON_FAILED,
-	WERROR_PORTAL_SUMMON_NO_LINK,
-	WERROR_PORTAL_TELEPORT_FAILED,
-	WERROR_PORTAL_TOO_RECENTLY,
-	WERROR_PORTAL_ADVOCATE_ONLY,
+	WERROR_ALLEGIANCE_TIMEOUT, // Your offer of Allegiance has been ignored.
+	WERROR_CONFIRMATION_IN_PROGRESS, // You are already involved in something!
+	WERROR_MONARCH_ONLY, // You must be a monarch to use this command.
+	WERROR_ALLEGIANCE_BOOT_EMPTY_NAME, // You must specify a character to boot.
+	WERROR_ALLEGIANCE_BOOT_SELF, // You can't boot yourself!
+	WERROR_NO_SUCH_CHARACTER, // That character does not exist.
+	WERROR_ALLEGIANCE_TARGET_NOT_A_MEMBER, // That person is not a member of your Allegiance!
+	WERROR_ALLEGIANCE_REMOVE_NO_PATRON, // No patron from which to break!
+	WERROR_ALLEGIANCE_OFFLINE_DISSOLVED, // Your Allegiance has been dissolved!\n
+	WERROR_ALLEGIANCE_OFFLINE_DISMISSED, // Your patron's Allegiance to you has been broken!\n
+	WERROR_MOVED_TOO_FAR, // You have moved too far!
+	WERROR_TELETO_INVALID_POSITION, // That is not a valid destination!
+	WERROR_ACDM_ONLY, // You must purchase Asheron's Call -- Dark Majesty to use this function.
+	WERROR_LIFESTONE_LINK_FAILED, // You fail to link with the lifestone!\n
+	WERROR_LIFESTONE_LINK_TOO_FAR, // You wandered too far to link with the lifestone!\n
+	WERROR_LIFESTONE_LINK_SUCCESS, // You successfully link with the lifestone!\n
+	WERROR_LIFESTONE_RECALL_NO_LINK, // You must have linked with a lifestone in order to recall to it!\n
+	WERROR_LIFESTONE_RECALL_FAILED, // You fail to recall to the lifestone!\n
+	WERROR_PORTAL_LINK_FAILED, // You fail to link with the portal!\n
+	WERROR_PORTAL_LINK_SUCCESS, // You successfully link with the portal!\n
+	WERROR_PORTAL_RECALL_FAILED, // You fail to recall to the portal!\n
+	WERROR_PORTAL_RECALL_NO_LINK, // You must have linked with a portal in order to recall to it!\n
+	WERROR_PORTAL_SUMMON_FAILED, // You fail to summon the portal!\n
+	WERROR_PORTAL_SUMMON_NO_LINK, // You must have linked with a portal in order to summon it!\n
+	WERROR_PORTAL_TELEPORT_FAILED, // You fail to teleport!\n
+	WERROR_PORTAL_TOO_RECENTLY, // You have been teleported too recently!\n
+	WERROR_PORTAL_ADVOCATE_ONLY, // You must be an Advocate to interact with that portal.\n
 	WERROR_PORTAL_AIS_NOT_ALLOWED,
-	WERROR_PORTAL_PLAYERS_NOT_ALLOWED,
-	WERROR_PORTAL_LEVEL_TOO_LOW,
-	WERROR_PORTAL_LEVEL_TOO_HIGH,
-	WERROR_PORTAL_NOT_RECALLABLE,
-	WERROR_PORTAL_NOT_SUMMONABLE,
-	WERROR_CHEST_ALREADY_UNLOCKED,
-	WERROR_CHEST_NOT_LOCKABLE,
-	WERROR_CHEST_ALREADY_OPEN,
-	WERROR_CHEST_WRONG_KEY,
-	WERROR_CHEST_USED_TOO_RECENTLY,
-	WERROR_DONT_KNOW_LOCKPICKING,
-	WERROR_ALLEGIANCE_INFO_EMPTY_NAME,
-	WERROR_ALLEGIANCE_INFO_SELF,
-	WERROR_ALLEGIANCE_INFO_TOO_RECENT,
-	WERROR_ABUSE_NO_SUCH_CHARACTER,
-	WERROR_ABUSE_REPORTED_SELF,
-	WERROR_ABUSE_COMPLAINT_HANDLED,
-	WERROR_SALVAGE_DONT_OWN_TOOL = 1213,
-	WERROR_SALVAGE_DONT_OWN_LOOT,
-	WERROR_SALVAGE_NOT_SUITABLE,
-	WERROR_SALVAGE_WRONG_MATERIAL,
-	WERROR_SALVAGE_CREATION_FAILED,
-	WERROR_SALVAGE_INVALID_LOOT_LIST,
-	WERROR_SALVAGE_TRADING_LOOT,
-	WERROR_PORTAL_HOUSE_RESTRICTED,
-	WERROR_ACTIVATION_RANK_TOO_LOW,
-	WERROR_ACTIVATION_WRONG_RACE,
-	WERROR_ACTIVATION_ARCANE_LORE_TOO_LOW,
-	WERROR_ACTIVATION_NOT_ENOUGH_MANA,
-	WERROR_ACTIVATION_SKILL_TOO_LOW,
-	WERROR_ACTIVATION_NOT_CRAFTSMAN,
-	WERROR_ACTIVATION_NOT_SPECIALIZED,
-	WERROR_PORTAL_PK_ATTACKED_TO_RECENTLY,
+	WERROR_PORTAL_PLAYERS_NOT_ALLOWED, // Players may not interact with that portal.\n
+	WERROR_PORTAL_LEVEL_TOO_LOW, // You are not powerful enough to interact with that portal!\n
+	WERROR_PORTAL_LEVEL_TOO_HIGH, // You are too powerful to interact with that portal!\n
+	WERROR_PORTAL_NOT_RECALLABLE, // You cannot recall to that portal!\n
+	WERROR_PORTAL_NOT_SUMMONABLE, // You cannot summon that portal!\n
+	WERROR_CHEST_ALREADY_UNLOCKED, // The lock is already unlocked.
+	WERROR_CHEST_NOT_LOCKABLE, // You can't lock or unlock that!
+	WERROR_CHEST_ALREADY_OPEN, // You can't lock or unlock what is open!
+	WERROR_CHEST_WRONG_KEY, // The key doesn't fit this lock.\n
+	WERROR_CHEST_USED_TOO_RECENTLY, // The lock has been used too recently.
+	WERROR_DONT_KNOW_LOCKPICKING, // You aren't trained in lockpicking!
+	WERROR_ALLEGIANCE_INFO_EMPTY_NAME, // You must specify a character to query.
+	WERROR_ALLEGIANCE_INFO_SELF, // Please use the allegiance panel to view your own information.
+	WERROR_ALLEGIANCE_INFO_TOO_RECENT, // You have used that command too recently.
+	WERROR_ABUSE_NO_SUCH_CHARACTER, // SendNotice_AbuseReportResponse
+	WERROR_ABUSE_REPORTED_SELF, // SendNotice_AbuseReportResponse
+	WERROR_ABUSE_COMPLAINT_HANDLED, // SendNotice_AbuseReportResponse
+	WERROR_SALVAGE_DONT_OWN_TOOL = 1213, // You do not own that salvage tool!\n
+	WERROR_SALVAGE_DONT_OWN_LOOT, // You do not own that item!\n
+	WERROR_SALVAGE_NOT_SUITABLE, // The %s was not suitable for salvaging.
+	WERROR_SALVAGE_WRONG_MATERIAL, // The %s contains the wrong material.
+	WERROR_SALVAGE_CREATION_FAILED, // The material cannot be created.\n
+	WERROR_SALVAGE_INVALID_LOOT_LIST, // The list of items you are attempting to salvage is invalid.\n
+	WERROR_SALVAGE_TRADING_LOOT, // You cannot salvage items that you are trading!\n
+	WERROR_PORTAL_HOUSE_RESTRICTED, // You must be a guest in this house to interact with that portal.\n
+	WERROR_ACTIVATION_RANK_TOO_LOW, // Your Allegiance Rank is too low to use that item's magic.
+	WERROR_ACTIVATION_WRONG_RACE, // You must be %s to use that item's magic.
+	WERROR_ACTIVATION_ARCANE_LORE_TOO_LOW, // Your Arcane Lore skill is too low to use that item's magic.
+	WERROR_ACTIVATION_NOT_ENOUGH_MANA, // That item doesn't have enough Mana.
+	WERROR_ACTIVATION_SKILL_TOO_LOW, // Your %s is too low to use that item's magic.
+	WERROR_ACTIVATION_NOT_CRAFTSMAN, // Only %s may use that item's magic.
+	WERROR_ACTIVATION_NOT_SPECIALIZED, // You must have %s specialized to use that item's magic.
+	WERROR_PORTAL_PK_ATTACKED_TOO_RECENTLY, // You have been involved in a player killer battle too recently to do that!\n
 	WERROR_TRADE_AI_REFUSE_EMOTE,
-	WERROR_TRADE_AI_REFUSE_EMOTE_FAILED_TOO_BUSY,
-	WERROR_TRADE_AI_TOO_MANY,
-	WERROR_SKILL_ALTERATION_FAILED,
-	WERROR_SKILL_ALTERATION_RAISE_NOT_TRAINED,
-	WERROR_SKILL_ALTERATION_RAISE_NOT_ENOUGH_CREDITS,
-	WERROR_SKILL_ALTERATION_WRAP_AROUND,
-	WERROR_SKILL_ALTERATION_LOWER_UNTRAINED,
-	WERROR_SKILL_ALTERATION_ILLEGAL_WIELDED_ITEMS,
-	WERROR_SKILL_ALTERATION_SPEC_SUCCEEDED,
-	WERROR_SKILL_ALTERATION_UNSPEC_SUCCEEDED,
-	WERROR_SKILL_ALTERATION_UNTRAIN_SUCCEEDED,
-	WERROR_SKILL_ALTERATION_UNTRAIN_RACIAL_SUCCEEDED,
-	WERROR_SKILL_ALTERATION_RAISE_TOO_MANY_SPEC_CREDITS,
+	WERROR_TRADE_AI_REFUSE_EMOTE_FAILED_TOO_BUSY, //  is too busy to accept gifts right now.\n
+	WERROR_TRADE_AI_TOO_MANY, //  cannot accept stacked objects. Try giving one at a time.\n
+	WERROR_SKILL_ALTERATION_FAILED, // You have failed to alter your skill.\n
+	WERROR_SKILL_ALTERATION_RAISE_NOT_TRAINED, // Your %s skill must be trained, not untrained or specialized, in order to be altered in this way!\n
+	WERROR_SKILL_ALTERATION_RAISE_NOT_ENOUGH_CREDITS, // You do not have enough skill credits to specialize your %s skill.\n
+	WERROR_SKILL_ALTERATION_WRAP_AROUND, // You have too many available experience points to be able to absorb the experience points from your %s skill. Please spend some of your experience points and try again.\n
+	WERROR_SKILL_ALTERATION_LOWER_UNTRAINED, // Your %s skill is already untrained!\n
+	WERROR_SKILL_ALTERATION_ILLEGAL_WIELDED_ITEMS, // You are currently wielding items which require a certain level of %s. Your %s skill cannot be lowered while you are wielding these items. Please remove these items and try again.\n
+	WERROR_SKILL_ALTERATION_SPEC_SUCCEEDED, // You have succeeded in specializing your %s skill!\n
+	WERROR_SKILL_ALTERATION_UNSPEC_SUCCEEDED, // You have succeeded in lowering your %s skill from specialized to trained!\n
+	WERROR_SKILL_ALTERATION_UNTRAIN_SUCCEEDED, // You have succeeded in untraining your %s skill!\n
+	WERROR_SKILL_ALTERATION_UNTRAIN_RACIAL_SUCCEEDED, // Although you cannot untrain your %s skill, you have succeeded in recovering all the experience you had invested in it.\n
+	WERROR_SKILL_ALTERATION_RAISE_TOO_MANY_SPEC_CREDITS, // You have too many credits invested in specialized skills already! Before you can specialize your %s skill, you will need to unspecialize some other skill.\n
 	WERROR_FELLOWSHIP_DECLINED,
 	WERROR_FELLOWSHIP_TIMEOUT,
-	WERROR_ATTRIBUTE_ALTERATION_FAILED,
-	WERROR_ATTRIBUTE_TRANSFER_FROM_TOO_LOW,
-	WERROR_ATTRIBUTE_TRANSFER_TO_TOO_HIGH,
-	WERROR_ATTRIBUTE_ALTERATION_ILLEGAL_WIELDED_ITEMS,
-	WERROR_ATTRIBUTE_ALTERATION_SUCCEEDED,
-	WERROR_HOUSE_DYNAMIC_HOOK_ADD,
-	WERROR_HOUSE_WRONG_HOOK_TYPE,
-	WERROR_HOUSE_DYNAMIC_STORAGE_ADD,
-	WERROR_HOUSE_DYNAMIC_HOOK_CLOSE,
-	WERROR_HOUSE_DYNAMIC_STORAGE_CLOSE,
-	WERROR_ALLEGIANCE_OWNS_MANSION,
-	WERROR_HOOK_ITEM_ON_HOOK_NOT_USEABLE,
-	WERROR_HOOK_ITEM_ON_HOOK_NOT_USEABLE_OWNER,
-	WERROR_HOOKER_NOT_USEABLE_OFF_HOOK,
-	WERROR_MIDAIR,
-	WERROR_PK_SWITCH_RECOVERING,
-	WERROR_PK_SWITCH_ADVOCATE,
-	WERROR_PK_SWITCH_MIN_LEVEL,
-	WERROR_PK_SWITCH_MAX_LEVEL,
-	WERROR_PK_SWITCH_RECENT_KILL,
-	WERROR_PK_SWITCH_AUTO_PK,
-	WERROR_PK_SWITCH_RESPITE,
-	WERROR_PORTAL_PKLITE_NOT_ALLOWED,
-	WERROR_PK_PROTECTED_ATTACKER_PASSIVE,
-	WERROR_PK_PROTECTED_TARGET_PASSIVE,
-	WERROR_PK_NPK_ATTACKER_PASSIVE,
-	WERROR_PK_NPK_TARGET_PASSIVE,
-	WERROR_PK_WRONG_KIND_PASSIVE,
-	WERROR_PK_CROSS_HOUSE_BOUNDARY_PASSIVE,
-	WERROR_MAGIC_INVALID_TARGET,
-	WERROR_MAGIC_INVALID_TARGET_PASSIVE,
-	WERROR_HEAL_NOT_TRAINED,
-	WERROR_HEAL_DONT_OWN_KIT,
-	WERROR_HEAL_CANT_HEAL_THAT,
-	WERROR_HEAL_FULL_HEALTH,
-	WERROR_HEAL_NOT_READY,
-	WERROR_HEAL_PLAYERS_ONLY,
-	WERROR_LIFESTONE_PROTECTION,
-	WERROR_PORTAL_PROTECTION,
-	WERROR_PK_SWITCH_PKLITE_OFF,
-	WERROR_DEATH_TOO_CLOSE_TO_SANCTUARY,
-	WERROR_TRADE_IN_PROGRESS,
-	WERROR_PK_SWITCH_PKLITE_ON_PK,
-	WERROR_PK_SWITCH_PKLITE_ON,
-	WERROR_MAGIC_NO_SUITABLE_ALTERNATE_TARGET,
-	WERROR_MAGIC_NO_SUITABLE_ALTERNATE_TARGET_PASSIVE,
-	WERROR_FELLOWSHIP_NOW_OPEN,
-	WERROR_FELLOWSHIP_NOW_CLOSED,
-	WERROR_FELLOWSHIP_NEW_LEADER,
-	WERROR_FELLOWSHIP_NO_LONGER_LEADER,
-	WERROR_FELLOWSHIP_NO_FELLOWSHIP,
-	WERROR_HOUSE_MAX_HOOK_GROUP_REACHED,
+	WERROR_ATTRIBUTE_ALTERATION_FAILED, // You have failed to alter your attributes.\n
+	WERROR_ATTRIBUTE_TRANSFER_FROM_TOO_LOW, // \n
+	WERROR_ATTRIBUTE_TRANSFER_TO_TOO_HIGH, // \n
+	WERROR_ATTRIBUTE_ALTERATION_ILLEGAL_WIELDED_ITEMS, // You are currently wielding items which require a certain level of skill. Your attributes cannot be transferred while you are wielding these items. Please remove these items and try again.\n
+	WERROR_ATTRIBUTE_ALTERATION_SUCCEEDED, // You have succeeded in transferring your attributes!\n
+	WERROR_HOUSE_DYNAMIC_HOOK_ADD, // This hook is a duplicated housing object. You may not add items to a duplicated housing object. Please empty the hook and allow it to reset.\n
+	WERROR_HOUSE_WRONG_HOOK_TYPE, // That item is of the wrong type to be placed on this hook.\n
+	WERROR_HOUSE_DYNAMIC_STORAGE_ADD, // This chest is a duplicated housing object. You may not add items to a duplicated housing object. Please empty everything -- including backpacks -- out of the chest and allow the chest to reset.\n
+	WERROR_HOUSE_DYNAMIC_HOOK_CLOSE, // This hook was a duplicated housing object. Since it is now empty, it will be deleted momentarily. Once it is gone, it is safe to use the other, non-duplicated hook that is here.\n
+	WERROR_HOUSE_DYNAMIC_STORAGE_CLOSE, // This chest was a duplicated housing object. Since it is now empty, it will be deleted momentarily. Once it is gone, it is safe to use the other, non-duplicated chest that is here.\n
+	WERROR_ALLEGIANCE_OWNS_MANSION, // You cannot swear allegiance to anyone because you own a monarch-only house. Please abandon your house and try again.\n
+	WERROR_HOOK_ITEM_ON_HOOK_NOT_USEABLE, // The %s cannot be used while on a hook and only the owner may open the hook.\n
+	WERROR_HOOK_ITEM_ON_HOOK_NOT_USEABLE_OWNER, // The %s cannot be used while on a hook, use the '@house hooks on' command to make the hook openable.\n
+	WERROR_HOOKER_NOT_USEABLE_OFF_HOOK, // The %s can only be used while on a hook.\n
+	WERROR_MIDAIR, // You can't do that while in the air!
+	WERROR_PK_SWITCH_RECOVERING, // You cannot modify your player killer status while you are recovering from a PK death.\n
+	WERROR_PK_SWITCH_ADVOCATE, // Advocates may not change their player killer status!\n
+	WERROR_PK_SWITCH_MIN_LEVEL, //Your level is too low to change your player killer status with this object.\n
+	WERROR_PK_SWITCH_MAX_LEVEL, // Your level is too high to change your player killer status with this object.\n
+	WERROR_PK_SWITCH_RECENT_KILL, // You feel a harsh dissonance, and you sense that an act of killing you have committed recently is interfering with the conversion.\n
+	WERROR_PK_SWITCH_AUTO_PK, // Bael'Zharon's power flows through you again. You are once more a player killer.\n
+	WERROR_PK_SWITCH_RESPITE, // Bael'Zharon has granted you respite after your moment of weakness. You are temporarily no longer a player killer.\n
+	WERROR_PORTAL_PKLITE_NOT_ALLOWED, // Lite Player Killers may not interact with that portal!\n
+	WERROR_PK_PROTECTED_ATTACKER_PASSIVE, // %s fails to affect you because $s cannot affect anyone!\n
+	WERROR_PK_PROTECTED_TARGET_PASSIVE, // %s fails to affect you because you cannot be harmed!\n
+	WERROR_PK_NPK_ATTACKER_PASSIVE, // %s fails to affect you because %s is not a player killer!\n
+	WERROR_PK_NPK_TARGET_PASSIVE, //  fails to affect you because you are not a player killer!\n
+	WERROR_PK_WRONG_KIND_PASSIVE, //  fails to affect you because you are not the same sort of player killer as 
+	WERROR_PK_CROSS_HOUSE_BOUNDARY_PASSIVE, //  fails to affect you across a house boundary!\n
+	WERROR_MAGIC_INVALID_TARGET, // %s is an invalid target.\n
+	WERROR_MAGIC_INVALID_TARGET_PASSIVE, // You are an invalid target for the spell of %s.\n
+	WERROR_HEAL_NOT_TRAINED, // You aren't trained in healing!
+	WERROR_HEAL_DONT_OWN_KIT, // You don't own that healing kit!
+	WERROR_HEAL_CANT_HEAL_THAT, // You can't heal that!
+	WERROR_HEAL_FULL_HEALTH, // %s is already at full health!
+	WERROR_HEAL_NOT_READY, // You aren't ready to heal!
+	WERROR_HEAL_PLAYERS_ONLY, // You can only use Healing Kits on player characters.
+	WERROR_LIFESTONE_PROTECTION, // The Lifestone's magic protects you from the attack!\n
+	WERROR_PORTAL_PROTECTION, // The portal's residual energy protects you from the attack!\n
+	WERROR_PK_SWITCH_PKLITE_OFF, // You are enveloped in a feeling of warmth as you are brought back into the protection of the Light. You are once again a Non-Player Killer.\n
+	WERROR_DEATH_TOO_CLOSE_TO_SANCTUARY, // You're too close to your sanctuary!
+	WERROR_TRADE_IN_PROGRESS, // You can't do that -- you're trading!
+	WERROR_PK_SWITCH_PKLITE_ON_PK, // Only Non-Player Killers may enter PK Lite. Please see @help pklite for more details about this command.\n
+	WERROR_PK_SWITCH_PKLITE_ON, // A cold wind touches your heart. You are now a Player Killer Lite.\n
+	WERROR_MAGIC_NO_SUITABLE_ALTERNATE_TARGET, //  has no appropriate targets equipped for this spell.\n
+	WERROR_MAGIC_NO_SUITABLE_ALTERNATE_TARGET_PASSIVE, // You have no appropriate targets equipped for %s's spell.\n
+	WERROR_FELLOWSHIP_NOW_OPEN, //  is now an open fellowship; anyone may recruit new members.\n
+	WERROR_FELLOWSHIP_NOW_CLOSED, //  is now a closed fellowship.\n
+	WERROR_FELLOWSHIP_NEW_LEADER, //  is now the leader of this fellowship.\n
+	WERROR_FELLOWSHIP_NO_LONGER_LEADER, // You have passed leadership of the fellowship to %s\n
+	WERROR_FELLOWSHIP_NO_FELLOWSHIP, // You do not belong to a Fellowship.
+	WERROR_HOUSE_MAX_HOOK_GROUP_REACHED, // You may not hook any more %s on your house. You already have the maximum number of %s hooked or you are not permitted to hook any on your type of house.\n
 	WERROR_HOUSE_MAX_HOOK_GROUP_REACHED_SILENT,
-	WERROR_HOUSE_NOW_USING_MAX_HOOKS,
-	WERROR_HOUSE_NO_LONGER_USING_MAX_HOOKS,
-	WERROR_HOUSE_NOW_USING_MAX_IN_HOOKGROUP,
-	WERROR_HOUSE_NO_LONGER_USING_MAX_IN_HOOKGROUP,
-	WERROR_HOOK_NOT_PERMITED_TO_USE_HOOK,
-	WERROR_FELLOWSHIP_NOT_CLOSE_ENOUGH_LEVEL,
-	WERROR_FELLOWSHIP_LOCKED_RECRUITER,
-	WERROR_FELLOWSHIP_LOCKED_RECRUITEE,
-	WERROR_ACTIVATION_NOT_ALLOWED_NO_NAME,
-	WERROR_CHAT_ENTERED_TURBINE_CHAT_ROOM,
-	WERROR_CHAT_LEFT_TURBINE_CHAT_ROOM,
+	WERROR_HOUSE_NOW_USING_MAX_HOOKS, // You are now using the maximum number of hooks. You cannot use another hook until you take an item off one of your hooks.\n
+	WERROR_HOUSE_NO_LONGER_USING_MAX_HOOKS, // You are no longer using the maximum number of hooks. You may again add items to your hooks.\n
+	WERROR_HOUSE_NOW_USING_MAX_IN_HOOKGROUP, // You now have the maximum number of %s hooked. You cannot hook any additional %s until you remove one or more from your house.\n
+	WERROR_HOUSE_NO_LONGER_USING_MAX_IN_HOOKGROUP, // You no longer have the maximum number of %s hooked. You may hook additional %s.\n
+	WERROR_HOOK_NOT_PERMITED_TO_USE_HOOK, // You are not permitted to use that hook.\n
+	WERROR_FELLOWSHIP_NOT_CLOSE_ENOUGH_LEVEL, //  is not close enough to your level.\n
+	WERROR_FELLOWSHIP_LOCKED_RECRUITER, // This fellowship is locked; %s cannot be recruited into the fellowship.\n
+	WERROR_FELLOWSHIP_LOCKED_RECRUITEE, // The fellowship is locked, you were not added to the fellowship.\n
+	WERROR_ACTIVATION_NOT_ALLOWED_NO_NAME, // Only the original owner may use that item's magic.
+	WERROR_CHAT_ENTERED_TURBINE_CHAT_ROOM, // You have entered the %s channel.\n
+	WERROR_CHAT_LEFT_TURBINE_CHAT_ROOM, // You have left the %s channel.\n
 	WERROR_CHAT_NOW_USING_TURBINE_CHAT,
-	WERROR_ADMIN_IS_DEAF,
-	WERROR_ADMIN_DEAF_TO_MESSAGE,
-	WERROR_LOUD_LIST_IS_FULL,
-	WERROR_CHARACTER_ADDED_LOUD_LIST,
-	WERROR_CHARACTER_REMOVED_LOUD_LIST,
-	WERROR_DEAF_MODE_ON,
-	WERROR_DEAF_MODE_OFF,
-	WERROR_FAILED_MUTE,
-	WERROR_CRAFT_CHICKEN_OUT_MSG,
-	WERROR_CRAFT_NO_CHANCE,
-	WERROR_FELLOWSHIP_FELLOW_LOCKED_CAN_NOT_OPEN,
-	WERROR_TRADE_COMPLETE,
-	WERROR_SALVAGE_NOT_A_TOOL,
-	WERROR_CHARACTER_NOT_AVAILABLE,
-	WERROR_SNOOP_STARTED,
-	WERROR_SNOOP_STOPED,
-	WERROR_SNOOP_FAILED,
-	WERROR_SNOOP_UNAUTHORIZED,
-	WERROR_SNOOP_ALREADY_SNOOPED_ON,
-	WERROR_CHARACTER_IN_LIMBO_MSG_NOT_RECIVED,
-	WERROR_HOUSE_PURCHASE_TOO_SOON,
-	WERROR_ALLEGIANCE_I_AM_BOOTED_FROM_CHAT,
-	WERROR_ALLEGIANCE_TARGET_BOOTED_FROM_CHAT,
-	WERROR_ALLEGIANCE_NOT_AUTHORIZED,
-	WERROR_ALLEGIANCE_CHAR_ALREADY_BANNED,
-	WERROR_ALLEGIANCE_CHAR_NOT_BANNED,
-	WERROR_ALLEGIANCE_CHAR_NOT_UNBANNED,
-	WERROR_ALLEGIANCE_CHAR_BANNED_SUCCESSFULLY,
-	WERROR_ALLEGIANCE_CHAR_UNBANNED_SUCCESSFULLY,
-	WERROR_ALLEGIANCE_LIST_BANNED_CHARACTERS,
-	WERROR_ALLEGIANCE_BANNED = 1342,
-	WERROR_ALLEGIANCE_YOU_ARE_BANNED,
-	WERROR_ALLEGIANCE_BANNED_LIST_FULL,
-	WERROR_ALLEGIANCE_OFFICER_SET,
-	WERROR_ALLEGIANCE_OFFICER_NOT_SET,
-	WERROR_ALLEGIANCE_OFFICER_REMOVED,
-	WERROR_ALLEGIANCE_OFFICER_NOT_REMOVED,
-	WERROR_ALLEGIANCE_OFFICER_FULL,
-	WERROR_ALLEGIANCE_OFFICERS_CLEARED,
-	WERROR_CHAT_MUST_WAIT_TO_COMMUNICATE,
-	WERROR_CHAT_NO_JOIN_CHANNEL_WHILE_GAGGED,
-	WERROR_ALLEGIANCE_YOU_ARE_NOW_AN_OFFICER,
-	WERROR_ALLEGIANCE_YOU_ARE_NO_LONGER_AN_OFFICER,
-	WERROR_ALLEGIANCE_OFFICER_ALREADY_OFFICER,
-	WERROR_ALLEGIANCE_HOMETOWN_NOT_SET,
-	WERROR_ALREADY_BEING_USED,
-	WERROR_HOOK_EMPTY_NOT_OWNER,
-	WERROR_HOOK_EMPTY_OWNER,
-	WERROR_MISSILE_OUT_OF_RANGE,
-	WERROR_CHAT_NOT_LISTENING_TO_CHANNEL,
-	WERROR_ACTOD_ONLY,
-	WERROR_ITEM_ACTOD_ONLY,
-	WERROR_PORTAL_ACTOD_ONLY,
-	WERROR_QUEST_ACTOD_ONLY,
-	WERROR_AUGMENTATION_FAILED,
-	WERROR_AUGMENTATION_TOO_MANY_TIMES,
-	WERROR_AUGMENTATION_FAMILY_TOO_MANY_TIMES,
-	WERROR_AUGMENTATION_NOT_ENOUGH_XP,
-	WERROR_AUGMENTATION_SKILL_NOT_TRAINED,
-	WERROR_AUGMENTATION_SUCCEEDED,
-	WERROR_SKILL_ALTERATION_UNTRAIN_AUGMENTED_SUCCEEDED,
-	WERROR_PORTAL_RECALLS_DISABLED,
-	WERROR_AFK,
-	WERROR_PK_ONLY,
-	WERROR_PKL_ONLY,
-	WERROR_FRIENDS_EXCEEDED_MAX,
-	WERROR_FRIENDS_ALREADY_FRIEND,
-	WERROR_FRIENDS_NOT_FRIEND,
-	WERROR_HOUSE_NOT_OWNER,
-	WERROR_ALLEGIANCE_NAME_EMPTY,
-	WERROR_ALLEGIANCE_NAME_TOO_LONG,
-	WERROR_ALLEGIANCE_NAME_BAD_CHARACTER,
-	WERROR_ALLEGIANCE_NAME_NOT_APPROPRIATE,
-	WERROR_ALLEGIANCE_NAME_IN_USE,
-	WERROR_ALLEGIANCE_NAME_TIMER,
-	WERROR_ALLEGIANCE_NAME_CLEARED,
-	WERROR_ALLEGIANCE_NAME_SAME_NAME,
-	WERROR_ALLEGIANCE_OFFICER_ALREADY_MONARCH,
-	WERROR_ALLEGIANCE_OFFICER_TITLE_SET,
-	WERROR_ALLEGIANCE_OFFICER_INVALID_LEVEL,
-	WERROR_ALLEGIANCE_OFFICER_TITLE_NOT_APPROPRIATE,
-	WERROR_ALLEGIANCE_OFFICER_TITLE_TOO_LONG,
-	WERROR_ALLEGIANCE_OFFICER_TITLE_CLEARED,
-	WERROR_ALLEGIANCE_OFFICER_TITLE_BAD_CHARACTER,
-	WERROR_ALLEGIANCE_LOCK_DISPLAY,
-	WERROR_ALLEGIANCE_LOCK_SET,
-	WERROR_ALLEGIANCE_LOCK_PREVENTS_PATRON,
-	WERROR_ALLEGIANCE_LOCK_PREVENTS_VASSAL,
-	WERROR_ALLEGIANCE_LOCK_APPROVED_DISPLAY,
-	WERROR_ALLEGIANCE_LOCK_NO_APPROVED,
-	WERROR_ALLEGIANCE_TARGET_ALREADY_A_MEMBER,
-	WERROR_ALLEGIANCE_APPROVED_SET,
-	WERROR_ALLEGIANCE_APPROVED_CLEARED,
-	WERROR_ALLEGIANCE_GAG_ALREADY,
-	WERROR_ALLEGIANCE_GAG_NOT_ALREADY,
-	WERROR_ALLEGIANCE_GAG_TARGET,
-	WERROR_ALLEGIANCE_GAG_OFFICER,
-	WERROR_ALLEGIANCE_GAG_AUTO_UNGAG,
-	WERROR_ALLEGIANCE_GAG_UNGAG_TARGET,
-	WERROR_ALLEGIANCE_GAG_UNGAG_OFFICER,
-	WERROR_TOO_MANY_UNIQUE_ITEMS,
-	WERROR_HERITAGE_REQUIRES_SPECIFIC_ARMOR,
-	WERROR_SPECIFIC_ARMOR_REQUIRES_HERITAGE,
-	WERROR_NOT_OLTHOI_INTERACTION,
-	WERROR_NOT_OLTHOI_LIFESTONE,
-	WERROR_NOT_OLTHOI_VENDOR,
-	WERROR_NOT_OLTHOI_NPC,
-	WERROR_NO_OLTHOI_FELLOWSHIP,
-	WERROR_NO_OLTHOI_ALLEGIANCE,
-	WERROR_ITEM_INTERACTION_RESTRICTED,
-	WERROR_PERSON_INTERACTION_RESTRICTED,
-	WERROR_PORTAL_ONLY_OLTHOI_PK,
-	WERROR_PORTAL_NO_OLTHOI_PK,
-	WERROR_PORTAL_NO_VITAE,
-	WERROR_PORTAL_NO_NEW_ACCOUNTS,
-	WERROR_BAD_OLTHOI_RECALL,
+	WERROR_ADMIN_IS_DEAF, //  will not receive your message, please use urgent assistance to speak with an in-game representative\n
+	WERROR_ADMIN_DEAF_TO_MESSAGE, // Message Blocked: %s
+	WERROR_LOUD_LIST_IS_FULL, // // You cannot add anymore people to the list of players that you can hear.\n
+	WERROR_CHARACTER_ADDED_LOUD_LIST, //  has been added to the list of people you can hear.\n
+	WERROR_CHARACTER_REMOVED_LOUD_LIST, //  has been removed from the list of people you can hear.\n
+	WERROR_DEAF_MODE_ON, // You are now deaf to player's screams.\n
+	WERROR_DEAF_MODE_OFF, // You can hear all players once again.\n
+	WERROR_FAILED_MUTE, // You fail to remove %s from your loud list.\n
+	WERROR_CRAFT_CHICKEN_OUT_MSG, // You chicken out.
+	WERROR_CRAFT_NO_CHANCE, // You cannot posssibly succeed.
+	WERROR_FELLOWSHIP_FELLOW_LOCKED_CAN_NOT_OPEN, // The fellowship is locked; you cannot open locked fellowships.\n
+	WERROR_TRADE_COMPLETE, // Trade Complete!
+	WERROR_SALVAGE_NOT_A_TOOL, // That is not a salvaging tool.
+	WERROR_CHARACTER_NOT_AVAILABLE, // That person is not available now.
+	WERROR_SNOOP_STARTED, // You are now snooping on %s.\n
+	WERROR_SNOOP_STOPED, // You are no longer snooping on %s.\n
+	WERROR_SNOOP_FAILED, // You fail to snoop on %s.\n
+	WERROR_SNOOP_UNAUTHORIZED, // %s attempted to snoop on you.\n
+	WERROR_SNOOP_ALREADY_SNOOPED_ON, // %s is already being snooped on, only one person may snoop on another at a time.\n
+	WERROR_CHARACTER_IN_LIMBO_MSG_NOT_RECEIVED, // %s is in limbo and cannot receive your message.\n
+	WERROR_HOUSE_PURCHASE_TOO_SOON, // You must wait 30 days after purchasing a house before you may purchase another with any character on the same account. This applies to all housing except apartments.\n
+	WERROR_ALLEGIANCE_I_AM_BOOTED_FROM_CHAT, // You have been booted from your allegiance chat room. Use "@allegiance chat on" to rejoin. (%s).\n
+	WERROR_ALLEGIANCE_TARGET_BOOTED_FROM_CHAT, // %s has been booted from the allegiance chat room.\n
+	WERROR_ALLEGIANCE_NOT_AUTHORIZED, // You do not have the authority within your allegiance to do that.\n
+	WERROR_ALLEGIANCE_CHAR_ALREADY_BANNED, // The account of %s is already banned from the allegiance.\n
+	WERROR_ALLEGIANCE_CHAR_NOT_BANNED, // The account of %s is not banned from the allegiance.\n
+	WERROR_ALLEGIANCE_CHAR_NOT_UNBANNED, // The account of %s was not unbanned from the allegiance.\n
+	WERROR_ALLEGIANCE_CHAR_BANNED_SUCCESSFULLY, // The account of %s has been banned from the allegiance.\n
+	WERROR_ALLEGIANCE_CHAR_UNBANNED_SUCCESSFULLY, // The account of %s is no longer banned from the allegiance.\n
+	WERROR_ALLEGIANCE_LIST_BANNED_CHARACTERS, // Banned Characters: 
+	WERROR_ALLEGIANCE_BANNED = 1342, // %s is banned from the allegiance!\n
+	WERROR_ALLEGIANCE_YOU_ARE_BANNED, // You are banned from %s's allegiance!\n
+	WERROR_ALLEGIANCE_BANNED_LIST_FULL, // You have the maximum number of accounts banned.!\n
+	WERROR_ALLEGIANCE_OFFICER_SET, // %s is now an allegiance officer.\n
+	WERROR_ALLEGIANCE_OFFICER_NOT_SET, // An unspecified error occurred while attempting to set %s as an allegiance officer.\n
+	WERROR_ALLEGIANCE_OFFICER_REMOVED, // %s is no longer an allegiance officer.\n
+	WERROR_ALLEGIANCE_OFFICER_NOT_REMOVED, // An unspecified error occurred while attempting to remove %s as an allegiance officer.\n
+	WERROR_ALLEGIANCE_OFFICER_FULL, // You already have the maximum number of allegiance officers. You must remove some before you add any more.\n
+	WERROR_ALLEGIANCE_OFFICERS_CLEARED, // Your allegiance officers have been cleared.\n
+	WERROR_CHAT_MUST_WAIT_TO_COMMUNICATE, // You must wait %s before communicating again!\n
+	WERROR_CHAT_NO_JOIN_CHANNEL_WHILE_GAGGED, // You cannot join any chat channels while gagged.\n
+	WERROR_ALLEGIANCE_YOU_ARE_NOW_AN_OFFICER, // Your allegiance officer status has been modified. You now hold the position of: %s.\n
+	WERROR_ALLEGIANCE_YOU_ARE_NO_LONGER_AN_OFFICER, // You are no longer an allegiance officer.\n
+	WERROR_ALLEGIANCE_OFFICER_ALREADY_OFFICER, // %s is already an allegiance officer of that level.\n
+	WERROR_ALLEGIANCE_HOMETOWN_NOT_SET, // Your allegiance does not have a hometown.\n
+	WERROR_ALREADY_BEING_USED, // The %s is currently in use.\n
+	WERROR_HOOK_EMPTY_NOT_OWNER, // The hook does not contain a usable item. You cannot open the hook because you do not own the house to which it belongs.\n
+	WERROR_HOOK_EMPTY_OWNER, // The hook does not contain a usable item. Use the '@house hooks on'command to make the hook openable.\n
+	WERROR_MISSILE_OUT_OF_RANGE, // Out of Range!
+	WERROR_CHAT_NOT_LISTENING_TO_CHANNEL, // You are not listening to the %s channel!\n
+	WERROR_ACTOD_ONLY, // You must purchase Asheron's Call -- Throne of Destiny to use this function.
+	WERROR_ITEM_ACTOD_ONLY, // You must purchase Asheron's Call -- Throne of Destiny to use this item.
+	WERROR_PORTAL_ACTOD_ONLY, // You must purchase Asheron's Call -- Throne of Destiny to use this portal.
+	WERROR_QUEST_ACTOD_ONLY, // You must purchase Asheron's Call -- Throne of Destiny to access this quest.
+	WERROR_AUGMENTATION_FAILED, // You have failed to complete the augmentation.\n
+	WERROR_AUGMENTATION_TOO_MANY_TIMES, // You have used this augmentation too many times already.\n
+	WERROR_AUGMENTATION_FAMILY_TOO_MANY_TIMES, // You have used augmentations of this type too many times already.\n
+	WERROR_AUGMENTATION_NOT_ENOUGH_XP, // You do not have enough unspent experience available to purchase this augmentation.\n
+	WERROR_AUGMENTATION_SKILL_NOT_TRAINED, // %s\n
+	WERROR_AUGMENTATION_SUCCEEDED, // Congratulations! You have succeeded in acquiring the %s augmentation.\n
+	WERROR_SKILL_ALTERATION_UNTRAIN_AUGMENTED_SUCCEEDED, // Although your augmentation will not allow you to untrain your %s skill, you have succeeded in recovering all the experience you had invested in it.\n
+	WERROR_PORTAL_RECALLS_DISABLED, // You must exit the Training Academy before that command will be available to you.\n
+	WERROR_AFK, // {arbitrary string sent by server}
+	WERROR_PK_ONLY, // Only Player Killer characters may use this command!\n
+	WERROR_PKL_ONLY, // Only Player Killer Lite characters may use this command!\n
+	WERROR_FRIENDS_EXCEEDED_MAX, // You may only have a maximum of 50 friends at once. If you wish to add more friends, you must first remove some.
+	WERROR_FRIENDS_ALREADY_FRIEND, // %s is already on your friends list!\n
+	WERROR_FRIENDS_NOT_FRIEND, // That character is not on your friends list!\n
+	WERROR_HOUSE_NOT_OWNER, // Only the character who owns the house may use this command.
+	WERROR_ALLEGIANCE_NAME_EMPTY, // That allegiance name is invalid because it is empty. Please use the @allegiance name clear command to clear your allegiance name.\n
+	WERROR_ALLEGIANCE_NAME_TOO_LONG, // That allegiance name is too long. Please choose another name.\n
+	WERROR_ALLEGIANCE_NAME_BAD_CHARACTER, // That allegiance name contains illegal characters. Please choose another name using only letters, spaces, - and '.\n
+	WERROR_ALLEGIANCE_NAME_NOT_APPROPRIATE, // That allegiance name is not appropriate. Please choose another name.\n
+	WERROR_ALLEGIANCE_NAME_IN_USE, // That allegiance name is already in use. Please choose another name.\n
+	WERROR_ALLEGIANCE_NAME_TIMER, // You may only change your allegiance name once every 24 hours. You may change your allegiance name again in %s.\n
+	WERROR_ALLEGIANCE_NAME_CLEARED, // Your allegiance name has been cleared.\n
+	WERROR_ALLEGIANCE_NAME_SAME_NAME, // That is already the name of your allegiance!\n
+	WERROR_ALLEGIANCE_OFFICER_ALREADY_MONARCH, // %s is the monarch and cannot be promoted or demoted.\n
+	WERROR_ALLEGIANCE_OFFICER_TITLE_SET, // That level of allegiance officer is now known as: %s.\n
+	WERROR_ALLEGIANCE_OFFICER_INVALID_LEVEL, // That is an invalid officer level.\n
+	WERROR_ALLEGIANCE_OFFICER_TITLE_NOT_APPROPRIATE, // That allegiance officer title is not appropriate.\n
+	WERROR_ALLEGIANCE_OFFICER_TITLE_TOO_LONG, // That allegiance officer title name is too long. Please choose another name.\n
+	WERROR_ALLEGIANCE_OFFICER_TITLE_CLEARED, // All of your allegiance officer titles have been cleared.\n
+	WERROR_ALLEGIANCE_OFFICER_TITLE_BAD_CHARACTER, // That allegiance officer title contains illegal characters. Please choose another name using only letters, spaces, - and '.\n
+	WERROR_ALLEGIANCE_LOCK_DISPLAY, // Your allegiance is currently: %s.\n
+	WERROR_ALLEGIANCE_LOCK_SET, // Your allegiance is now: %s.\n
+	WERROR_ALLEGIANCE_LOCK_PREVENTS_PATRON, // You may not accept the offer of allegiance from %s because your allegiance is locked.\n
+	WERROR_ALLEGIANCE_LOCK_PREVENTS_VASSAL, // You may not swear allegiance at this time because the allegiance of %s is locked.\n
+	WERROR_ALLEGIANCE_LOCK_APPROVED_DISPLAY, // You have pre-approved %s to join your allegiance.\n
+	WERROR_ALLEGIANCE_LOCK_NO_APPROVED, //You have not pre-approved any vassals to join your allegiance.\n
+	WERROR_ALLEGIANCE_TARGET_ALREADY_A_MEMBER, // %s is already a member of your allegiance!\n
+	WERROR_ALLEGIANCE_APPROVED_SET, // %s has been pre-approved to join your allegiance.\n
+	WERROR_ALLEGIANCE_APPROVED_CLEARED, // You have cleared the pre-approved vassal for your allegiance.\n
+	WERROR_ALLEGIANCE_GAG_ALREADY, // That character is already gagged!\n
+	WERROR_ALLEGIANCE_GAG_NOT_ALREADY, // That character is not currently gagged!\n
+	WERROR_ALLEGIANCE_GAG_TARGET, // Your allegiance chat privileges have been temporarily removed by %s. Until they are restored, you may not view or speak in the allegiance chat channel.
+	WERROR_ALLEGIANCE_GAG_OFFICER, // %s is now temporarily unable to view or speak in allegiance chat. The gag will run out in 5 minutes, or %s may be explicitly ungagged before then.
+	WERROR_ALLEGIANCE_GAG_AUTO_UNGAG, // Your allegiance chat privileges have been restored.\n
+	WERROR_ALLEGIANCE_GAG_UNGAG_TARGET, // Your allegiance chat privileges have been restored by %s.
+	WERROR_ALLEGIANCE_GAG_UNGAG_OFFICER, // You have restored allegiance chat privileges to %s.
+	WERROR_TOO_MANY_UNIQUE_ITEMS, // You cannot pick up more of that item!
+	WERROR_HERITAGE_REQUIRES_SPECIFIC_ARMOR, // You are restricted to clothes and armor created for your race.
+	WERROR_SPECIFIC_ARMOR_REQUIRES_HERITAGE, // That item was specifically created for another race.
+	WERROR_NOT_OLTHOI_INTERACTION, // Olthoi cannot interact with that!\n
+	WERROR_NOT_OLTHOI_LIFESTONE, // Olthoi cannot use regular lifestones! Asheron would not allow it!\n
+	WERROR_NOT_OLTHOI_VENDOR, // The vendor looks at you in horror!\n
+	WERROR_NOT_OLTHOI_NPC, // %s cowers from you!\n
+	WERROR_NO_OLTHOI_FELLOWSHIP, // As a mindless engine of destruction an Olthoi cannot join a fellowship!\n
+	WERROR_NO_OLTHOI_ALLEGIANCE, // The Olthoi only have an allegiance to the Olthoi Queen!\n
+	WERROR_ITEM_INTERACTION_RESTRICTED, // You cannot use that item!\n
+	WERROR_PERSON_INTERACTION_RESTRICTED, // This person will not interact with you!\n
+	WERROR_PORTAL_ONLY_OLTHOI_PK, // Only Olthoi may pass through this portal!\n
+	WERROR_PORTAL_NO_OLTHOI_PK, // Olthoi may not pass through this portal!\n
+	WERROR_PORTAL_NO_VITAE, // You may not pass through this portal while Vitae weakens you!\n
+	WERROR_PORTAL_NO_NEW_ACCOUNTS, // This character must be two weeks old or have been created on an account at least two weeks old to use this portal!\n
+	WERROR_BAD_OLTHOI_RECALL, // Olthoi characters can only use Lifestone and PK Arena recalls!\n
 	WERROR_CONTRACT_ERROR
 };
 
@@ -1727,6 +1747,7 @@ enum COMBAT_USE
 	COMBAT_USE_AMMO = 0x3,
 	COMBAT_USE_SHIELD = 0x4,
 	COMBAT_USE_TWO_HANDED = 0x5,
+	COMBAT_USE_OFFHAND = 0x6,
 	FORCE_COMBAT_USE_32_BIT = 0x7FFFFFFF,
 };
 
@@ -1998,7 +2019,7 @@ enum VendorTypeEmote // Custom
 	Heartbeat_VendorTypeEmote = 5
 };
 
-enum Command
+enum Command : uint32_t
 {
 	Command_Invalid = 0x00000000,
 	Motion_Invalid = 0x80000000,
@@ -2416,139 +2437,139 @@ enum Command
 	Motion_OffhandPunchSlowMed = 0x10000199,
 	Motion_OffhandPunchSlowLow = 0x1000019a
 
-		/*
-	Motion_SnowAngelState = 0x43000115,
-	Motion_WarmHands = 0x13000116,
-	Motion_CurtseyState = 0x43000117,
-	Motion_AFKState = 0x43000118,
-	Motion_MeditateState = 0x43000119,
-	Command_TradePanel = 0x900011a,
-	Motion_LogOut = 0x1000011b,
-	Motion_DoubleSlashLow = 0x1000011c,
-	Motion_DoubleSlashMed = 0x1000011d,
-	Motion_DoubleSlashHigh = 0x1000011e,
-	Motion_TripleSlashLow = 0x1000011f,
-	Motion_TripleSlashMed = 0x10000120,
-	Motion_TripleSlashHigh = 0x10000121,
-	Motion_DoubleThrustLow = 0x10000122,
-	Motion_DoubleThrustMed = 0x10000123,
-	Motion_DoubleThrustHigh = 0x10000124,
-	Motion_TripleThrustLow = 0x10000125,
-	Motion_TripleThrustMed = 0x10000126,
-	Motion_TripleThrustHigh = 0x10000127,
-	Motion_MagicPowerUp01Purple = 0x10000128,
-	Motion_MagicPowerUp02Purple = 0x10000129,
-	Motion_MagicPowerUp03Purple = 0x1000012a,
-	Motion_MagicPowerUp04Purple = 0x1000012b,
-	Motion_MagicPowerUp05Purple = 0x1000012c,
-	Motion_MagicPowerUp06Purple = 0x1000012d,
-	Motion_MagicPowerUp07Purple = 0x1000012e,
-	Motion_MagicPowerUp08Purple = 0x1000012f,
-	Motion_MagicPowerUp09Purple = 0x10000130,
-	Motion_MagicPowerUp10Purple = 0x10000131,
-	Motion_Helper = 0x13000132,
-	Motion_Pickup5 = 0x40000133,
-	Motion_Pickup10 = 0x40000134,
-	Motion_Pickup15 = 0x40000135,
-	Motion_Pickup20 = 0x40000136,
-	Motion_HouseRecall = 0x10000137,
-	Motion_AtlatlCombat = 0x80000138,
-	Motion_ThrownShieldCombat = 0x80000139,
-	Motion_SitState = 0x4300013a,
-	Motion_SitCrossleggedState = 0x4300013b,
-	Motion_SitBackState = 0x4300013c,
-	Motion_PointLeftState = 0x4300013d,
-	Motion_PointRightState = 0x4300013e,
-	Motion_TalktotheHandState = 0x4300013f,
-	Motion_PointDownState = 0x43000140,
-	Motion_DrudgeDanceState = 0x43000141,
-	Motion_PossumState = 0x43000142,
-	Motion_ReadState = 0x43000143,
-	Motion_ThinkerState = 0x43000144,
-	Motion_HaveASeatState = 0x43000145,
-	Motion_AtEaseState = 0x43000146,
-	Motion_NudgeLeft = 0x13000147,
-	Motion_NudgeRight = 0x13000148,
-	Motion_PointLeft = 0x13000149,
-	Motion_PointRight = 0x1300014a,
-	Motion_PointDown = 0x1300014b,
-	Motion_Knock = 0x1300014c,
-	Motion_ScanHorizon = 0x1300014d,
-	Motion_DrudgeDance = 0x1300014e,
-	Motion_HaveASeat = 0x1300014f,
-	Motion_LifestoneRecall = 0x10000150,
-	Command_CharacterOptionsPanel = 0x9000151,
-	Command_SoundAndGraphicsPanel = 0x9000152,
-	Command_HelpfulSpellsPanel = 0x9000153,
-	Command_HarmfulSpellsPanel = 0x9000154,
-	Command_CharacterInformationPanel = 0x9000155,
-	Command_LinkStatusPanel = 0x9000156,
-	Command_VitaePanel = 0x9000157,
-	Command_ShareFellowshipXP = 0x9000158,
-	Command_ShareFellowshipLoot = 0x9000159,
-	Command_AcceptCorpseLooting = 0x900015a,
-	Command_IgnoreTradeRequests = 0x900015b,
-	Command_DisableWeather = 0x900015c,
-	Command_DisableHouseEffect = 0x900015d,
-	Command_SideBySideVitals = 0x900015e,
-	Command_ShowRadarCoordinates = 0x900015f,
-	Command_ShowSpellDurations = 0x9000160,
-	Command_MuteOnLosingFocus = 0x9000161,
-	Motion_Fishing = 0x10000162,
-	Motion_MarketplaceRecall = 0x10000163,
-	Motion_EnterPKLite = 0x10000164,
-	Command_AllegianceChat = 0x9000165,
-	Command_AutomaticallyAcceptFellowshipRequests = 0x9000166,
-	Command_Reply = 0x9000167,
-	Command_MonarchReply = 0x9000168,
-	Command_PatronReply = 0x9000169,
-	Command_ToggleCraftingChanceOfSuccessDialog = 0x900016a,
-	Command_UseClosestUnopenedCorpse = 0x900016b,
-	Command_UseNextUnopenedCorpse = 0x900016c,
-	Command_IssueSlashCommand = 0x900016d,
-	Motion_AllegianceHometownRecall = 0x1000016e,
-	Motion_PKArenaRecall = 0x1000016f,
-	Motion_OffhandSlashHigh = 0x10000170,
-	Motion_OffhandSlashMed = 0x10000171,
-	Motion_OffhandSlashLow = 0x10000172,
-	Motion_OffhandThrustHigh = 0x10000173,
-	Motion_OffhandThrustMed = 0x10000174,
-	Motion_OffhandThrustLow = 0x10000175,
-	Motion_OffhandDoubleSlashLow = 0x10000176,
-	Motion_OffhandDoubleSlashMed = 0x10000177,
-	Motion_OffhandDoubleSlashHigh = 0x10000178,
-	Motion_OffhandTripleSlashLow = 0x10000179,
-	Motion_OffhandTripleSlashMed = 0x1000017a,
-	Motion_OffhandTripleSlashHigh = 0x1000017b,
-	Motion_OffhandDoubleThrustLow = 0x1000017c,
-	Motion_OffhandDoubleThrustMed = 0x1000017d,
-	Motion_OffhandDoubleThrustHigh = 0x1000017e,
-	Motion_OffhandTripleThrustLow = 0x1000017f,
-	Motion_OffhandTripleThrustMed = 0x10000180,
-	Motion_OffhandTripleThrustHigh = 0x10000181,
-	Motion_OffhandKick = 0x10000182,
-	Motion_AttackHigh4 = 0x10000183,
-	Motion_AttackMed4 = 0x10000184,
-	Motion_AttackLow4 = 0x10000185,
-	Motion_AttackHigh5 = 0x10000186,
-	Motion_AttackMed5 = 0x10000187,
-	Motion_AttackLow5 = 0x10000188,
-	Motion_AttackHigh6 = 0x10000189,
-	Motion_AttackMed6 = 0x1000018a,
-	Motion_AttackLow6 = 0x1000018b,
-	Motion_PunchFastHigh = 0x1000018c,
-	Motion_PunchFastMed = 0x1000018d,
-	Motion_PunchFastLow = 0x1000018e,
-	Motion_PunchSlowHigh = 0x1000018f,
-	Motion_PunchSlowMed = 0x10000190,
-	Motion_PunchSlowLow = 0x10000191,
-	Motion_OffhandPunchFastHigh = 0x10000192,
-	Motion_OffhandPunchFastMed = 0x10000193,
-	Motion_OffhandPunchFastLow = 0x10000194,
-	Motion_OffhandPunchSlowHigh = 0x10000195,
-	Motion_OffhandPunchSlowMed = 0x10000196,
-	Motion_OffhandPunchSlowLow = 0x10000197
-	*/
+	/*
+Motion_SnowAngelState = 0x43000115,
+Motion_WarmHands = 0x13000116,
+Motion_CurtseyState = 0x43000117,
+Motion_AFKState = 0x43000118,
+Motion_MeditateState = 0x43000119,
+Command_TradePanel = 0x900011a,
+Motion_LogOut = 0x1000011b,
+Motion_DoubleSlashLow = 0x1000011c,
+Motion_DoubleSlashMed = 0x1000011d,
+Motion_DoubleSlashHigh = 0x1000011e,
+Motion_TripleSlashLow = 0x1000011f,
+Motion_TripleSlashMed = 0x10000120,
+Motion_TripleSlashHigh = 0x10000121,
+Motion_DoubleThrustLow = 0x10000122,
+Motion_DoubleThrustMed = 0x10000123,
+Motion_DoubleThrustHigh = 0x10000124,
+Motion_TripleThrustLow = 0x10000125,
+Motion_TripleThrustMed = 0x10000126,
+Motion_TripleThrustHigh = 0x10000127,
+Motion_MagicPowerUp01Purple = 0x10000128,
+Motion_MagicPowerUp02Purple = 0x10000129,
+Motion_MagicPowerUp03Purple = 0x1000012a,
+Motion_MagicPowerUp04Purple = 0x1000012b,
+Motion_MagicPowerUp05Purple = 0x1000012c,
+Motion_MagicPowerUp06Purple = 0x1000012d,
+Motion_MagicPowerUp07Purple = 0x1000012e,
+Motion_MagicPowerUp08Purple = 0x1000012f,
+Motion_MagicPowerUp09Purple = 0x10000130,
+Motion_MagicPowerUp10Purple = 0x10000131,
+Motion_Helper = 0x13000132,
+Motion_Pickup5 = 0x40000133,
+Motion_Pickup10 = 0x40000134,
+Motion_Pickup15 = 0x40000135,
+Motion_Pickup20 = 0x40000136,
+Motion_HouseRecall = 0x10000137,
+Motion_AtlatlCombat = 0x80000138,
+Motion_ThrownShieldCombat = 0x80000139,
+Motion_SitState = 0x4300013a,
+Motion_SitCrossleggedState = 0x4300013b,
+Motion_SitBackState = 0x4300013c,
+Motion_PointLeftState = 0x4300013d,
+Motion_PointRightState = 0x4300013e,
+Motion_TalktotheHandState = 0x4300013f,
+Motion_PointDownState = 0x43000140,
+Motion_DrudgeDanceState = 0x43000141,
+Motion_PossumState = 0x43000142,
+Motion_ReadState = 0x43000143,
+Motion_ThinkerState = 0x43000144,
+Motion_HaveASeatState = 0x43000145,
+Motion_AtEaseState = 0x43000146,
+Motion_NudgeLeft = 0x13000147,
+Motion_NudgeRight = 0x13000148,
+Motion_PointLeft = 0x13000149,
+Motion_PointRight = 0x1300014a,
+Motion_PointDown = 0x1300014b,
+Motion_Knock = 0x1300014c,
+Motion_ScanHorizon = 0x1300014d,
+Motion_DrudgeDance = 0x1300014e,
+Motion_HaveASeat = 0x1300014f,
+Motion_LifestoneRecall = 0x10000150,
+Command_CharacterOptionsPanel = 0x9000151,
+Command_SoundAndGraphicsPanel = 0x9000152,
+Command_HelpfulSpellsPanel = 0x9000153,
+Command_HarmfulSpellsPanel = 0x9000154,
+Command_CharacterInformationPanel = 0x9000155,
+Command_LinkStatusPanel = 0x9000156,
+Command_VitaePanel = 0x9000157,
+Command_ShareFellowshipXP = 0x9000158,
+Command_ShareFellowshipLoot = 0x9000159,
+Command_AcceptCorpseLooting = 0x900015a,
+Command_IgnoreTradeRequests = 0x900015b,
+Command_DisableWeather = 0x900015c,
+Command_DisableHouseEffect = 0x900015d,
+Command_SideBySideVitals = 0x900015e,
+Command_ShowRadarCoordinates = 0x900015f,
+Command_ShowSpellDurations = 0x9000160,
+Command_MuteOnLosingFocus = 0x9000161,
+Motion_Fishing = 0x10000162,
+Motion_MarketplaceRecall = 0x10000163,
+Motion_EnterPKLite = 0x10000164,
+Command_AllegianceChat = 0x9000165,
+Command_AutomaticallyAcceptFellowshipRequests = 0x9000166,
+Command_Reply = 0x9000167,
+Command_MonarchReply = 0x9000168,
+Command_PatronReply = 0x9000169,
+Command_ToggleCraftingChanceOfSuccessDialog = 0x900016a,
+Command_UseClosestUnopenedCorpse = 0x900016b,
+Command_UseNextUnopenedCorpse = 0x900016c,
+Command_IssueSlashCommand = 0x900016d,
+Motion_AllegianceHometownRecall = 0x1000016e,
+Motion_PKArenaRecall = 0x1000016f,
+Motion_OffhandSlashHigh = 0x10000170,
+Motion_OffhandSlashMed = 0x10000171,
+Motion_OffhandSlashLow = 0x10000172,
+Motion_OffhandThrustHigh = 0x10000173,
+Motion_OffhandThrustMed = 0x10000174,
+Motion_OffhandThrustLow = 0x10000175,
+Motion_OffhandDoubleSlashLow = 0x10000176,
+Motion_OffhandDoubleSlashMed = 0x10000177,
+Motion_OffhandDoubleSlashHigh = 0x10000178,
+Motion_OffhandTripleSlashLow = 0x10000179,
+Motion_OffhandTripleSlashMed = 0x1000017a,
+Motion_OffhandTripleSlashHigh = 0x1000017b,
+Motion_OffhandDoubleThrustLow = 0x1000017c,
+Motion_OffhandDoubleThrustMed = 0x1000017d,
+Motion_OffhandDoubleThrustHigh = 0x1000017e,
+Motion_OffhandTripleThrustLow = 0x1000017f,
+Motion_OffhandTripleThrustMed = 0x10000180,
+Motion_OffhandTripleThrustHigh = 0x10000181,
+Motion_OffhandKick = 0x10000182,
+Motion_AttackHigh4 = 0x10000183,
+Motion_AttackMed4 = 0x10000184,
+Motion_AttackLow4 = 0x10000185,
+Motion_AttackHigh5 = 0x10000186,
+Motion_AttackMed5 = 0x10000187,
+Motion_AttackLow5 = 0x10000188,
+Motion_AttackHigh6 = 0x10000189,
+Motion_AttackMed6 = 0x1000018a,
+Motion_AttackLow6 = 0x1000018b,
+Motion_PunchFastHigh = 0x1000018c,
+Motion_PunchFastMed = 0x1000018d,
+Motion_PunchFastLow = 0x1000018e,
+Motion_PunchSlowHigh = 0x1000018f,
+Motion_PunchSlowMed = 0x10000190,
+Motion_PunchSlowLow = 0x10000191,
+Motion_OffhandPunchFastHigh = 0x10000192,
+Motion_OffhandPunchFastMed = 0x10000193,
+Motion_OffhandPunchFastLow = 0x10000194,
+Motion_OffhandPunchSlowHigh = 0x10000195,
+Motion_OffhandPunchSlowMed = 0x10000196,
+Motion_OffhandPunchSlowLow = 0x10000197
+*/
 };
 
 enum EmoteType
@@ -2624,9 +2645,9 @@ enum EmoteType
 	//none below this are implemented nor are they used by our data set.
 	PopUp_EmoteType = 68,
 	SetBoolStat_EmoteType = 69,
-	SetQuestCompletions_EmoteType = 70,
+	SetQuestCompletions_EmoteType = 70, //Functionality Implemented
 	InqNumCharacterTitles_EmoteType = 71,
-	Generate_EmoteType = 72,
+	Generate_EmoteType = 72, //Functionality Implemented
 	PetCastSpellOnOwner_EmoteType = 73,
 	TakeItems_EmoteType = 74,
 	InqYesNo_EmoteType = 75,
@@ -2938,7 +2959,7 @@ enum AllegianceIndex
 	HasAllegianceAge_AllegianceIndex = 0x4,
 	HasPackedLevel_AllegianceIndex = 0x8,
 	MayPassupExperience_AllegianceIndex = 0x10,
-	ForceDWord_AllegianceIndex = 0xFFFFFFFF,
+	Forceuint32_t_AllegianceIndex = 0xFFFFFFFF,
 };
 
 enum eAllegianceOfficerLevel
@@ -2948,7 +2969,7 @@ enum eAllegianceOfficerLevel
 	Seneschal_AllegianceOfficerLevel = 2,
 	Castellan_AllegianceOfficerLevel = 3,
 	NumberOfOfficerTitles_AllegianceOfficerLevel = 3,
-	ForceDWord_eAllegianceOfficerLevel = 0xFFFFFFFF,
+	Forceuint32_t_eAllegianceOfficerLevel = 0xFFFFFFFF,
 };
 
 enum ArmorEnchantment_BFIndex
@@ -3575,6 +3596,15 @@ im not sure what all the activation_responses are but Use = 0x2, Animate = 0x4, 
 0x800 is on some weird puzzle levers that dont actually activate anything until you have them all set correctly
 */
 
+enum HouseType
+{
+	Undef_HouseType = 0,
+	Cottage_HouseType = 1,
+	Villa_HouseType = 2,
+	Mansion_HouseType = 3,
+	Apartment_HouseType = 4
+};
+
 enum ActivationResponseEnum
 {
 	Undef_ActivationResponse = 0,
@@ -3654,12 +3684,12 @@ enum ImbuedEffectType
 
 enum SchoolOfMagic
 {
-	Undef_Magic = 0x0,
-	War_Magic = 0x1,
-	Life_Magic = 0x2,
-	ItemEnchantment_Magic = 0x3,
-	CreatureEnchantment_Magic = 0x4,
-	FORCE_SchoolOfMagic_32_BIT = 0x7FFFFFFF,
+	Undef_Magic,
+	War_Magic,
+	Life_Magic,
+	ItemEnchantment_Magic,
+	CreatureEnchantment_Magic,
+	Void_Magic 
 };
 
 enum GameEventState
@@ -4032,5 +4062,1144 @@ enum AlphaTestFunc
 	ALPHATESTFUNC_ALWAYS = 0x8,
 	ALPHATESTFUNC_INVALID = 0x7FFFFFFF,
 };
+
+enum ClientEventsEnum
+{
+	CHANGE_PLAYER_OPTION = 0x0005, // Change player option
+	MELEE_ATTACK = 0x0008, // Melee Attack
+	MISSILE_ATTACK = 0x000A, // Missile Attack
+	SET_AFK_MODE = 0x000F, // Set AFK Mode
+	SET_AFK_MESSAGE = 0x0010, //Set AFK Message
+	TEXT_CLIENT = 0x0015, // Client Text
+	REMOVE_FRIEND = 0x0017,
+	ADD_FRIEND = 0x0018,
+	STORE_ITEM = 0x0019, // Store Item
+	EQUIP_ITEM = 0x001A, // Equip Item
+	DROP_ITEM = 0x001B, // Drop Item
+	ALLEGIANCE_SWEAR = 0x001D, // Swear Allegiance request
+	ALLEGIANCE_BREAK = 0x001E, // Break Allegiance request
+	ALLEGIANCE_SEND_UPDATES = 0x001F, // Set 'Send Allegiance Updates' request
+	CLEAR_FRIENDS = 0x0025,
+	RECALL_PKL_ARENA = 0x0026,
+	RECALL_PK_ARENA = 0x0027,
+	SET_DISPLAY_TITLE = 0x002C,
+	CONFIRMATION_RESPONSE = 0x0275, // confirmation response (currently only used for crafting)
+	UST_SALVAGE_REQUEST = 0x027D, // ust salvage request
+	ALLEGIANCE_QUERY_NAME = 0x0030,
+	ALLEGIANCE_CLEAR_NAME = 0x0031,
+	SEND_TELL_BY_GUID = 0x0032, // Send tell by GUID
+	ALLEGIANCE_SET_NAME = 0x0033,
+	USE_ITEM_EX = 0x0035, // Use Item Ex
+	USE_OBJECT = 0x0036, // Use Object
+	ALLEGIANCE_SET_OFFICER = 0x003B,
+	ALLEGIANCE_SET_OFFICER_TITLE = 0x003C,
+	ALLEGIANCE_LIST_OFFICER_TITLES = 0x003D,
+	ALLEGIANCE_CLEAR_OFFICER_TITLES = 0x003E,
+	ALLEGIANCE_LOCK_ACTION = 0x003F,
+	ALLEGIANCE_APPROVED_VASSAL = 0x0040,
+	ALLEGIANCE_CHAT_GAG = 0x0041,
+	ALLEGIANCE_HOUSE_ACTION = 0x0042,
+	SPEND_XP_VITALS = 0x0044, // spend XP on vitals (attribute2nd)
+	SPEND_XP_ATTRIBUTES = 0x0045, // spend XP on attributes
+	SPEND_XP_SKILLS = 0x0046, // spend XP on skills
+	SPEND_SKILL_CREDITS = 0x0047, // spend credits to train a skill
+	CAST_UNTARGETED_SPELL = 0x0048, // cast untargeted spell
+	CAST_TARGETED_SPELL = 0x004A, // cast targeted spell
+	CHANGE_COMBAT_STANCE = 0x0053, // Evt_Combat__ChangeCombatMode_ID "Change Combat Mode"
+	STACKABLE_MERGE = 0x0054, // Evt_Inventory__StackableMerge
+	STACKABLE_SPLIT_TO_CONTAINER = 0x0055, // Evt_Inventory__StackableSplitToContainer
+	STACKABLE_SPLIT_TO_3D = 0x0056, // Evt_Inventory__StackableSplitTo3D
+	STACKABLE_SPLIT_TO_WIELD = 0x019B, // Evt_Inventory__StackableSplitToWield
+	SQUELCH_CHARACTER_MODIFY = 0x0058,
+	SQUELCH_ACCOUNT_MODIFY = 0x0059,
+	SQUELCH_GLOBAL_MODIFY = 0x005B,
+	SEND_TELL_BY_NAME = 0x005D, // Send Tell by Name
+	BUY_FROM_VENDOR = 0x005F, // Buy from Vendor
+	SELL_TO_VENDOR = 0x0060, // Sell to Vendor
+	RECALL_LIFESTONE = 0x0063, // Lifestone Recall
+	LOGIN_COMPLETE = 0x00A1, // "Login Complete"
+	FELLOW_CREATE = 0x00A2, // "Create Fellowship"
+	FELLOW_QUIT = 0x00A3, // "Quit Fellowship"
+	FELLOW_DISMISS = 0x00A4, // "Fellowship Dismiss"
+	FELLOW_RECRUIT = 0x00A5, // "Fellowship Recruit"
+	FELLOW_UPDATE = 0x00A6, // "Fellowship Update"
+	BOOK_ADD_PAGE = 0x00AA,
+	BOOK_MODIFY_PAGE = 0x00AB,
+	BOOK_DATA = 0x00AC,
+	BOOK_DELETE_PAGE = 0x00AD,
+	BOOK_PAGE_DATA = 0x00AE,
+	GIVE_OBJECT = 0x00CD, // Give someone an item
+	PUT_OBJECT_IN_CONTAINER = 0x00CD, // Put object in container
+	INSCRIBE = 0x00BF, // "Inscribe"
+	APPRAISE = 0x00C8, // Identify
+	ADMIN_TELEPORT = 0x00D6, // Advocate teleport (triggered by having an admin flag set, // clicking the mini-map)
+	ABUSE_LOG_REQUEST = 0x0140,
+	CHANNEL_ADD = 0x0145,
+	CHANNEL_REMOVE = 0x0146,
+	CHANNEL_TEXT = 0x0147, // Channel Text
+	CHANNEL_LIST = 0x0148,
+	CHANNEL_INDEX = 0x0149,
+	TEXT_CHANNEL = 0x0147, // Channel Text
+	NO_LONGER_VIEWING_CONTAINER = 0x0195, // No longer viewing contents
+	ADD_ITEM_SHORTCUT = 0x019C, // Add item to shortcut bar
+	REMOVE_ITEM_SHORTCUT = 0x019D, // Remove item to shortcut bar
+	CHARACTER_OPTIONS = 0x01A1, // 
+	SPELLBOOK_REMOVE = 0x01A8, // Delete spell from spellbook
+	TOGGLE_SHOW_HELM = 0x01A1, // Toggle show helm?
+	CANCEL_ATTACK = 0x01B7, // Cancel attack
+	QUERY_HEALTH = 0x01BF, // Request health update
+	QUERY_AGE = 0x01C2,
+	QUERY_BIRTH = 0x01C4,
+	HEALTH_UPDATE_REQUEST = 0x01BF, // Request health update
+	TEXT_INDIRECT = 0x01DF, // Indirect Text (@me)
+	TEXT_EMOTE = 0x01E1, // Emote Text (*laugh* sends 'laughs')
+	ADD_TO_SPELLBAR = 0x01E3, // Add item to spell bar
+	REMOVE_FROM_SPELLBAR = 0x01E4, // Remove item from spell bar
+	PING = 0x01E9, // Ping
+	TRADE_OPEN = 0x1F6, // Open Trade Negotiations
+	TRADE_CLOSE = 0x1F7, // Close Trade Negotiations
+	TRADE_ADD = 0x1F8, // AddToTrade
+	TRADE_ACCEPT = 0x1FA, // Accept trade
+	TRADE_DECLINE = 0x1FB, // Decline trade
+	TRADE_RESET = 0x204, // Reset trade
+	CLEAR_PLAYER_CONSENT_LIST = 0x0216, // Clears the player's corpse looting consent list, /consent clear
+	DISPLAY_PLAYER_CONSENT_LIST = 0x0217, // Display the player's corpse looting consent list, /consent who 
+	REMOVE_FROM_PLAYER_CONSENT_LIST = 0x0218, // Remove your corpse looting permission for the given player, /consent remove 
+	ADD_PLAYER_PERMISSION = 0x0219, // Grants a player corpse looting permission, /permit add
+	REMOVE_PLAYER_PERMISSION = 0x021A, // Revokes a player's corpse looting permission, /permit remove
+	HOUSE_BUY = 0x021C, // House_BuyHouse 
+	HOUSE_ABANDON = 0x021F, // House_AbandonHouse 
+	HOUSE_OF_PLAYER_QUERY = 0x21E, // Query your house info, during signin 
+	HOUSE_RENT = 0x0221, // House_RentHouse 
+	DESIRED_COMPS_SET = 0x0224,
+	HOUSE_ADD_GUEST = 0x0245, // House_AddPermanentGuest 
+	HOUSE_REMOVE_GUEST = 0x0246, // House_RemovePermanentGuest
+	HOUSE_SET_OPEN_ACCESS = 0x0247, // House_SetOpenHouseStatus
+	HOUSE_CHANGE_STORAGE_PERMISSIONS = 0x0249, // House_ChangeStoragePermission
+	HOUSE_BOOT_GUEST = 0x024A, // Boots a specific player from your house / house boot
+	HOUSE_CLEAR_STORAGE_PERMISSIONS = 0x024C, // House_RemoveAllStoragePermission 
+	HOUSE_GUEST_LIST = 0x024D, // House_RequestFullGuestList
+	ALLEGIANCE_SET_MOTD = 0x0254, // Sets the allegiance message of the day, /allegiance motd set
+	ALLEGIANCE_QUERY_MOTD = 0x0255, // Query the motd, /allegiance motd
+	ALLEGIANCE_CLEAR_MOTD = 0x0256, // Clear the motd, /allegiance motd clear
+	HOUSE_QUERY_SLUMLORD = 0x0258, // Gets SlumLord info, sent after getting a failed house transaction
+	ALLEGIANCE_MOTD = 0x0255, // Request allegiance MOTD
+	HOUSE_SET_OPEN_STORAGE_ACCESS = 0x025C, // House_AddAllStoragePermission
+	HOUSE_REMOVE_ALL_GUESTS = 0x025E, // House_RemoveAllPermanentGuests
+	HOUSE_BOOT_ALL = 0x025F, // Boot everyone from your house, /house boot -all
+	RECALL_HOUSE = 0x0262, // House Recall
+	ITEM_MANA_REQUEST = 0x0263, // Request Item Mana
+	HOUSE_SET_HOOKS_VISIBILITY = 0x0266, // House_SetHooksVisibility 
+	HOUSE_CHANGE_ALLEGIANCE_GUEST_PERMISSIONS = 0x0267, // House_ModifyAllegianceGuestPermission 
+	HOUSE_CHANGE_ALLEGIANCE_STORAGE_PERMISSIONS = 0x0268, // House_ModifyAllegianceStoragePermission
+	CHESS_JOIN = 0x0269, // Joins a chess game
+	CHESS_QUIT = 0x026A, // Quits a chess game
+	CHESS_MOVE = 0x026B, // Makes a chess move
+	CHESS_PASS = 0x026D, // Pass your move
+	CHESS_STALEMATE = 0x026E, // Offer or confirm stalemate
+	HOUSE_LIST_AVAILABLE = 0x0270, // Lists available house /house available
+	ALLEGIANCE_BOOT_PLAYER = 0x0277, // Boots a player from the allegiance, optionally all characters on their account
+	RECALL_HOUSE_MANSION = 0x0278, // House_TeleToMansion
+	DIE_COMMAND = 0x0279, // "/die" command
+	ALLEGIANCE_INFO_REQUEST = 0x027B, // allegiance info request
+	SPELLBOOK_FILTERS = 0x0286, // filter player spellbook by type/level
+	RECALL_MARKET = 0x028D, // Marketplace Recall
+	PKLITE = 0x028F, // Enter PKLite mode
+	FELLOW_ASSIGN_NEW_LEADER = 0x0290, // "Fellowship Assign New Leader"
+	FELLOW_CHANGE_OPENNESS = 0x0291, // "Fellowship Change Openness"
+	ALLEGIANCE_CHAT_BOOT = 0x02A0, // Boots a player from the allegiance chat
+	ALLEGIANCE_ADD_PLAYER_BAN = 0x02A1, // Bans a player from the allegiance
+	ALLEGIANCE_REMOVE_PLAYER_BAN = 0x02A2, // Removes a player ban from the allegiance
+	ALLEGIANCE_LIST_BANS = 0x02A3, // Display allegiance bans
+	ALLEGIANCE_REMOVE_OFFICER = 0x02A5, // Removes an allegiance officer
+	ALLEGIANCE_LIST_OFFICERS = 0x02A6, // List allegiance officers
+	ALLEGIANCE_CLEAR_OFFICERS = 0x02A7, // Clear allegiance officers
+	RECALL_ALLEGIANCE_HOMETOWN = 0x02AB, // Allegiance_RecallAllegianceHometown (bindstone)
+	FINISH_BARBER = 0x0311, // Completes the barber interaction
+	CONTRACT_ABANDON = 0x0316, // Abandons a contract
+	MOVEMENT_JUMP = 0xF61B, // Jump Movement
+	MOVEMENT_MOVE_TO_STATE = 0xF61C, // Move to state data
+	MOVEMENT_DO_MOVEMENT_COMMAND = 0xF61E, // Performs a movement based on input
+	MOVEMENT_TURN_TO = 0xF649, // Turn to event data
+	MOVEMENT_STOP = 0xF661, // Stops a movement
+	MOVEMENT_AUTONOMY_LEVEL = 0xF752, // Sets an autonomy level
+	MOVEMENT_AUTONOMOUS_POSITION = 0xF753, // Sends an autonomous position
+	MOVEMENT_JUMP_NON_AUTONOMOUS = 0xF7C9 // Performs a non autonomous jump
+
+};
+
+enum ItemSet
+{
+	Invalid_ItemSet,
+	Test_ItemSet,
+	Test2_ItemSet,
+	UNKNOWN_3_ItemSet,
+	CarraidasBenediction_ItemSet,
+	NobleRelic_ItemSet,
+	AncientRelic_ItemSet,
+	AlduressaRelic_ItemSet,
+	Shoujen_ItemSet, // Ninja Nanjou
+	EmpyreanRings_ItemSet,
+	ArmMindHeart_ItemSet,
+	ArmorPerfectLight_ItemSet,
+	ArmorPerfectLight2_ItemSet,
+	Soldiers_ItemSet,
+	Adepts_ItemSet,
+	Archers_ItemSet,
+	Defenders_ItemSet,
+	Tinkers_ItemSet,
+	Crafters_ItemSet,
+	Hearty_ItemSet,
+	Dexterous_ItemSet,
+	Wise_ItemSet,
+	Swift_ItemSet,
+	Hardened_ItemSet,
+	Reinforced_ItemSet,
+	Interlocking_ItemSet,
+	Flameproof_ItemSet,
+	Acidproof_ItemSet,
+	Coldproof_ItemSet,
+	Lightningproof_ItemSet,
+	SocietyArmor_ItemSet,
+	ColosseumClothing_ItemSet,
+	GraveyardClothing_ItemSet,
+	OlthoiClothing_ItemSet,
+	NoobieArmor_ItemSet,
+	AetheriaDefense_ItemSet,
+	AetheriaDestruction_ItemSet,
+	AetheriaFury_ItemSet,
+	AetheriaGrowth_ItemSet,
+	AetheriaVigor_ItemSet,
+	RareDamageResistance_ItemSet,
+	RareDamageBoost_ItemSet,
+	OlthoiArmorDRed_ItemSet,
+	OlthoiArmorCRat_ItemSet,
+	OlthoiArmorCRed_ItemSet,
+	OlthoiArmorDRat_ItemSet,
+	AlduressaRelicUpgrade_ItemSet,
+	AncientRelicUpgrade_ItemSet,
+	NobleRelicUpgrade_ItemSet,
+	CloakAlchemy_ItemSet,
+	CloakArcaneLore_ItemSet,
+	CloakArmorTinkering_ItemSet,
+	CloakAssessPerson_ItemSet,
+	CloakAxe_ItemSet,
+	CloakBow_ItemSet,
+	CloakCooking_ItemSet,
+	CloakCreatureEnchantment_ItemSet,
+	CloakCrossbow_ItemSet,
+	CloakDagger_ItemSet,
+	CloakDeception_ItemSet,
+	CloakFletching_ItemSet,
+	CloakHealing_ItemSet,
+	CloakItemEnchantment_ItemSet,
+	CloakItemTinkering_ItemSet,
+	CloakLeadership_ItemSet,
+	CloakLifeMagic_ItemSet,
+	CloakLoyalty_ItemSet,
+	CloakMace_ItemSet,
+	CloakMagicDefense_ItemSet,
+	CloakMagicItemTinkering_ItemSet,
+	CloakManaConversion_ItemSet,
+	CloakMeleeDefense_ItemSet,
+	CloakMissileDefense_ItemSet,
+	CloakSalvaging_ItemSet,
+	CloakSpear_ItemSet,
+	CloakStaff_ItemSet,
+	CloakSword_ItemSet,
+	CloakThrownWeapon_ItemSet,
+	CloakTwoHandedCombat_ItemSet,
+	CloakUnarmedCombat_ItemSet,
+	CloakVoidMagic_ItemSet,
+	CloakWarMagic_ItemSet,
+	CloakWeaponTinkering_ItemSet,
+	CloakAssessCreature_ItemSet,
+	CloakDirtyFighting_ItemSet,
+	CloakDualWield_ItemSet,
+	CloakRecklessness_ItemSet,
+	CloakShield_ItemSet,
+	CloakSneakAttack_ItemSet,
+	Reinforced_Shoujen_ItemSet, // Ninja Shozoku
+	CloakSummoning_ItemSet,
+	ShroudedSoul_ItemSet,
+	DarkenedMind_ItemSet,
+	CloudedSpirit_ItemSet,
+	MinorStingingShroudedSoul_ItemSet,
+	MinorSparkingShroudedSoul_ItemSet,
+	MinorSmolderingShroudedSoul_ItemSet,
+	MinorShiveringShroudedSoul_ItemSet,
+	MinorStingingDarkenedMind_ItemSet,
+	MinorSparkingDarkenedMind_ItemSet,
+	MinorSmolderingDarkenedMind_ItemSet,
+	MinorShiveringDarkenedMind_ItemSet,
+	MinorStingingCloudedSpirit_ItemSet,
+	MinorSparkingCloudedSpirit_ItemSet,
+	MinorSmolderingCloudedSpirit_ItemSet,
+	MinorShiveringCloudedSpirit_ItemSet,
+	MajorStingingShroudedSoul_ItemSet,
+	MajorSparkingShroudedSoul_ItemSet,
+	MajorSmolderingShroudedSoul_ItemSet,
+	MajorShiveringShroudedSoul_ItemSet,
+	MajorStingingDarkenedMind_ItemSet,
+	MajorSparkingDarkenedMind_ItemSet,
+	MajorSmolderingDarkenedMind_ItemSet,
+	MajorShiveringDarkenedMind_ItemSet,
+	MajorStingingCloudedSpirit_ItemSet,
+	MajorSparkingCloudedSpirit_ItemSet,
+	MajorSmolderingCloudedSpirit_ItemSet,
+	MajorShiveringCloudedSpirit_ItemSet,
+	BlackfireStingingShroudedSoul_ItemSet,
+	BlackfireSparkingShroudedSoul_ItemSet,
+	BlackfireSmolderingShroudedSoul_ItemSet,
+	BlackfireShiveringShroudedSoul_ItemSet,
+	BlackfireStingingDarkenedMind_ItemSet,
+	BlackfireSparkingDarkenedMind_ItemSet,
+	BlackfireSmolderingDarkenedMind_ItemSet,
+	BlackfireShiveringDarkenedMind_ItemSet,
+	BlackfireStingingCloudedSpirit_ItemSet,
+	BlackfireSparkingCloudedSpirit_ItemSet,
+	BlackfireSmolderingCloudedSpirit_ItemSet,
+	BlackfireShiveringCloudedSpirit_ItemSet,
+	ShimmeringShadowsSet_ItemSet,
+	BrownSocietyLocket_ItemSet,
+	YellowSocietyLocket_ItemSet,
+	RedSocietyBand_ItemSet,
+	GreenSocietyBand_ItemSet,
+	PurpleSocietyBand_ItemSet,
+	BlueSocietyBand_ItemSet,
+	GauntletGarb_ItemSet,
+	ParagonMissile_ItemSet,
+	ParagonMagic_ItemSet,
+	ParagonMelee_ItemSet
+};
+
+enum AllegianceLockAction
+{
+	LockedOff = 1,
+	LockedOn,
+	ToggleLocked,
+	CheckLocked,
+	DisplayBypass,
+	ClearBypass
+};
+
+enum ConfirmationTypes
+{
+	SwearAllegianceConfirm = 1,
+	AlterSkillConfirm,
+	AlterAttributeConfirm,
+	FellowshipConfirm,
+	CraftConfirm,
+	AugmentationConfirm,
+	YesNoConfirm
+};
+
+enum TargetingTacticType
+{
+	Target_None		    = 0x00,
+	Target_Random		= 0x01,
+	Target_Focused		= 0x02,
+	Target_LastDamager	= 0x04,
+	Target_TopDamager	= 0x08,
+	Target_Weakest		= 0x10,
+	Target_Strongest	= 0x20,
+	Target_Nearest		= 0x40
+};
+
+enum SquelchTypes {
+	AllChannels_Squelch = 1,
+	Speech_Squelch = 2,
+	SpeechDirect_Squelch = 3, // @tell
+	Combat_Squelch = 6,
+	Magic_Squelch = 7,
+	Emote_Squelch = 12,
+	AppraisalChannel_Squelch = 16,
+	MagicCastingChannel_Squelch = 17,
+	AllegienceChannel_Squelch = 18,
+	FellowshipChannel_Squelch = 19,
+	CombatEnemy_Squelch = 21,
+	CombatSelf_Squelch = 22,
+	Recall_Squelch = 23,
+	Craft_Squelch = 24,
+	Salvaging_Squelch = 25
+};
+
+enum SquelchMasks {
+	Speech_Mask = 0x00000004,
+	SpeechDirect_Mask = 0x00000008, // @tell
+	Combat_Mask = 0x00000040,
+	Magic_Mask = 0x00000080,
+	Emote_Mask = 0x00001000,
+	AppraisalChannel_Mask = 0x00010000,
+	MagicCastingChannel_Mask = 0x00020000,
+	AllegienceChannel_Mask = 0x00040000,
+	FellowshipChannel_Mask = 0x00080000,
+	CombatEnemy_Mask = 0x00200000,
+	CombatSelf_Mask = 0x00400000,
+	Recall_Mask = 0x00800000,
+	Craft_Mask = 0x01000000,
+	Salvaging_Mask = 0x02000000,
+	AllChannels_Mask = 0xFFFFFFFF
+};
+
+enum SpellCategory
+{
+	Undef_SpellCategory,
+	Strength_Raising_SpellCategory,
+	Strength_Lowering_SpellCategory,
+	Endurance_Raising_SpellCategory,
+	Endurance_Lowering_SpellCategory,
+	Quickness_Raising_SpellCategory,
+	Quickness_Lowering_SpellCategory,
+	Coordination_Raising_SpellCategory,
+	Coordination_Lowering_SpellCategory,
+	Focus_Raising_SpellCategory,
+	Focus_Lowering_SpellCategory,
+	Self_Raising_SpellCategory,
+	Self_Lowering_SpellCategory,
+	Focus_Concentration_SpellCategory,
+	Focus_Disruption_SpellCategory,
+	Focus_Brilliance_SpellCategory,
+	Focus_Dullness_SpellCategory,
+	Axe_Raising_SpellCategory,
+	Axe_Lowering_SpellCategory,
+	Bow_Raising_SpellCategory,
+	Bow_Lowering_SpellCategory,
+	Crossbow_Raising_SpellCategory,
+	Crossbow_Lowering_SpellCategory,
+	Dagger_Raising_SpellCategory,
+	Dagger_Lowering_SpellCategory,
+	Mace_Raising_SpellCategory,
+	Mace_Lowering_SpellCategory,
+	Spear_Raising_SpellCategory,
+	Spear_Lowering_SpellCategory,
+	Staff_Raising_SpellCategory,
+	Staff_Lowering_SpellCategory,
+	Sword_Raising_SpellCategory,
+	Sword_Lowering_SpellCategory,
+	Thrown_Weapons_Raising_SpellCategory,
+	Thrown_Weapons_Lowering_SpellCategory,
+	Unarmed_Combat_Raising_SpellCategory,
+	Unarmed_Combat_Lowering_SpellCategory,
+	Melee_Defense_Raising_SpellCategory,
+	Melee_Defense_Lowering_SpellCategory,
+	Missile_Defense_Raising_SpellCategory,
+	Missile_Defense_Lowering_SpellCategory,
+	Magic_Defense_Raising_SpellCategory,
+	Magic_Defense_Lowering_SpellCategory,
+	Creature_Enchantment_Raising_SpellCategory,
+	Creature_Enchantment_Lowering_SpellCategory,
+	Item_Enchantment_Raising_SpellCategory,
+	Item_Enchantment_Lowering_SpellCategory,
+	Life_Magic_Raising_SpellCategory,
+	Life_Magic_Lowering_SpellCategory,
+	War_Magic_Raising_SpellCategory,
+	War_Magic_Lowering_SpellCategory,
+	Mana_Conversion_Raising_SpellCategory,
+	Mana_Conversion_Lowering_SpellCategory,
+	Arcane_Lore_Raising_SpellCategory,
+	Arcane_Lore_Lowering_SpellCategory,
+	Appraise_Armor_Raising_SpellCategory,
+	Appraise_Armor_Lowering_SpellCategory,
+	Appraise_Item_Raising_SpellCategory,
+	Appraise_Item_Lowering_SpellCategory,
+	Appraise_Magic_Item_Raising_SpellCategory,
+	Appraise_Magic_Item_Lowering_SpellCategory,
+	Appraise_Weapon_Raising_SpellCategory,
+	Appraise_Weapon_Lowering_SpellCategory,
+	Assess_Monster_Raising_SpellCategory,
+	Assess_Monster_Lowering_SpellCategory,
+	Deception_Raising_SpellCategory,
+	Deception_Lowering_SpellCategory,
+	Healing_Raising_SpellCategory,
+	Healing_Lowering_SpellCategory,
+	Jump_Raising_SpellCategory,
+	Jump_Lowering_SpellCategory,
+	Leadership_Raising_SpellCategory,
+	Leadership_Lowering_SpellCategory,
+	Lockpick_Raising_SpellCategory,
+	Lockpick_Lowering_SpellCategory,
+	Loyalty_Raising_SpellCategory,
+	Loyalty_Lowering_SpellCategory,
+	Run_Raising_SpellCategory,
+	Run_Lowering_SpellCategory,
+	Health_Raising_SpellCategory,
+	Health_Lowering_SpellCategory,
+	Stamina_Raising_SpellCategory,
+	Stamina_Lowering_SpellCategory,
+	Mana_Raising_SpellCategory,
+	Mana_Lowering_SpellCategory,
+	Mana_Remedy_SpellCategory,
+	Mana_Malediction_SpellCategory,
+	Health_Transfer_to_caster_SpellCategory,
+	Health_Transfer_from_caster_SpellCategory,
+	Stamina_Transfer_to_caster_SpellCategory,
+	Stamina_Transfer_from_caster_SpellCategory,
+	Mana_Transfer_to_caster_SpellCategory,
+	Mana_Transfer_from_caster_SpellCategory,
+	Health_Accelerating_SpellCategory,
+	Health_Decelerating_SpellCategory,
+	Stamina_Accelerating_SpellCategory,
+	Stamina_Decelerating_SpellCategory,
+	Mana_Accelerating_SpellCategory,
+	Mana_Decelerating_SpellCategory,
+	Vitae_Raising_SpellCategory,
+	Vitae_Lowering_SpellCategory,
+	Acid_Protection_SpellCategory,
+	Acid_Vulnerability_SpellCategory,
+	Bludgeon_Protection_SpellCategory,
+	Bludgeon_Vulnerability_SpellCategory,
+	Cold_Protection_SpellCategory,
+	Cold_Vulnerability_SpellCategory,
+	Electric_Protection_SpellCategory,
+	Electric_Vulnerability_SpellCategory,
+	Fire_Protection_SpellCategory,
+	Fire_Vulnerability_SpellCategory,
+	Pierce_Protection_SpellCategory,
+	Pierce_Vulnerability_SpellCategory,
+	Slash_Protection_SpellCategory,
+	Slash_Vulnerability_SpellCategory,
+	Armor_Raising_SpellCategory,
+	Armor_Lowering_SpellCategory,
+	Acid_Missile_SpellCategory,
+	Bludgeoning_Missile_SpellCategory,
+	Cold_Missile_SpellCategory,
+	Electric_Missile_SpellCategory,
+	Fire_Missile_SpellCategory,
+	Piercing_Missile_SpellCategory,
+	Slashing_Missile_SpellCategory,
+	Acid_Seeker_SpellCategory,
+	Bludgeoning_Seeker_SpellCategory,
+	Cold_Seeker_SpellCategory,
+	Electric_Seeker_SpellCategory,
+	Fire_Seeker_SpellCategory,
+	Piercing_Seeker_SpellCategory,
+	Slashing_Seeker_SpellCategory,
+	Acid_Burst_SpellCategory,
+	Bludgeoning_Burst_SpellCategory,
+	Cold_Burst_SpellCategory,
+	Electric_Burst_SpellCategory,
+	Fire_Burst_SpellCategory,
+	Piercing_Burst_SpellCategory,
+	Slashing_Burst_SpellCategory,
+	Acid_Blast_SpellCategory,
+	Bludgeoning_Blast_SpellCategory,
+	Cold_Blast_SpellCategory,
+	Electric_Blast_SpellCategory,
+	Fire_Blast_SpellCategory,
+	Piercing_Blast_SpellCategory,
+	Slashing_Blast_SpellCategory,
+	Acid_Scatter_SpellCategory,
+	Bludgeoning_Scatter_SpellCategory,
+	Cold_Scatter_SpellCategory,
+	Electric_Scatter_SpellCategory,
+	Fire_Scatter_SpellCategory,
+	Piercing_Scatter_SpellCategory,
+	Slashing_Scatter_SpellCategory,
+	Attack_Mod_Raising_SpellCategory,
+	Attack_Mod_Lowering_SpellCategory,
+	Damage_Raising_SpellCategory,
+	Damage_Lowering_SpellCategory,
+	Defense_Mod_Raising_SpellCategory,
+	Defense_Mod_Lowering_SpellCategory,
+	Weapon_Time_Raising_SpellCategory,
+	Weapon_Time_Lowering_SpellCategory,
+	Armor_Value_Raising_SpellCategory,
+	Armor_Value_Lowering_SpellCategory,
+	Acid_Resistance_Raising_SpellCategory,
+	Acid_Resistance_Lowering_SpellCategory,
+	Bludgeon_Resistance_Raising_SpellCategory,
+	Bludgeon_Resistance_Lowering_SpellCategory,
+	Cold_Resistance_Raising_SpellCategory,
+	Cold_Resistance_Lowering_SpellCategory,
+	Electric_Resistance_Raising_SpellCategory,
+	Electric_Resistance_Lowering_SpellCategory,
+	Fire_Resistance_Raising_SpellCategory,
+	Fire_Resistance_Lowering_SpellCategory,
+	Pierce_Resistance_Raising_SpellCategory,
+	Pierce_Resistance_Lowering_SpellCategory,
+	Slash_Resistance_Raising_SpellCategory,
+	Slash_Resistance_Lowering_SpellCategory,
+	Bludgeoning_Resistance_Raising_SpellCategory,
+	Bludgeoning_Resistance_Lowering_SpellCategory,
+	Slashing_Resistance_Raising_SpellCategory,
+	Slashing_Resistance_Lowering_SpellCategory,
+	Piercing_Resistance_Raising_SpellCategory,
+	Piercing_Resistance_Lowering_SpellCategory,
+	Electrical_Resistance_Raising_SpellCategory,
+	Electrical_Resistance_Lowering_SpellCategory,
+	Frost_Resistance_Raising_SpellCategory,
+	Frost_Resistance_Lowering_SpellCategory,
+	Flame_Resistance_Raising_SpellCategory,
+	Flame_Resistance_Lowering_SpellCategory,
+	Acidic_Resistance_Raising_SpellCategory,
+	Acidic_Resistance_Lowering_SpellCategory,
+	Armor_Level_Raising_SpellCategory,
+	Armor_Level_Lowering_SpellCategory,
+	Lockpick_Resistance_Raising_SpellCategory,
+	Lockpick_Resistance_Lowering_SpellCategory,
+	Appraisal_Resistance_Raising_SpellCategory,
+	Appraisal_Resistance_Lowering_SpellCategory,
+	Vision_Raising_SpellCategory,
+	Vision_Lowering_SpellCategory,
+	Transparency_Raising_SpellCategory,
+	Transparency_Lowering_SpellCategory,
+	Portal_Tie_SpellCategory,
+	Portal_Recall_SpellCategory,
+	Portal_Creation_SpellCategory,
+	Portal_Item_Creation_SpellCategory,
+	Vitae_SpellCategory,
+	Assess_Person_Raising_SpellCategory,
+	Assess_Person_Lowering_SpellCategory,
+	Acid_Volley_SpellCategory,
+	Bludgeoning_Volley_SpellCategory,
+	Frost_Volley_SpellCategory,
+	Lightning_Volley_SpellCategory,
+	Flame_Volley_SpellCategory,
+	Force_Volley_SpellCategory,
+	Blade_Volley_SpellCategory,
+	Portal_Sending_SpellCategory,
+	Lifestone_Sending_SpellCategory,
+	Cooking_Raising_SpellCategory,
+	Cooking_Lowering_SpellCategory,
+	Fletching_Raising_SpellCategory,
+	Fletching_Lowering_SpellCategory,
+	Alchemy_Lowering_SpellCategory,
+	Alchemy_Raising_SpellCategory,
+	Acid_Ring_SpellCategory,
+	Bludgeoning_Ring_SpellCategory,
+	Cold_Ring_SpellCategory,
+	Electric_Ring_SpellCategory,
+	Fire_Ring_SpellCategory,
+	Piercing_Ring_SpellCategory,
+	Slashing_Ring_SpellCategory,
+	Acid_Wall_SpellCategory,
+	Bludgeoning_Wall_SpellCategory,
+	Cold_Wall_SpellCategory,
+	Electric_Wall_SpellCategory,
+	Fire_Wall_SpellCategory,
+	Piercing_Wall_SpellCategory,
+	Slashing_Wall_SpellCategory,
+	Acid_Strike_SpellCategory,
+	Bludgeoning_Strike_SpellCategory,
+	Cold_Strike_SpellCategory,
+	Electric_Strike_SpellCategory,
+	Fire_Strike_SpellCategory,
+	Piercing_Strike_SpellCategory,
+	Slashing_Strike_SpellCategory,
+	Acid_Streak_SpellCategory,
+	Bludgeoning_Streak_SpellCategory,
+	Cold_Streak_SpellCategory,
+	Electric_Streak_SpellCategory,
+	Fire_Streak_SpellCategory,
+	Piercing_Streak_SpellCategory,
+	Slashing_Streak_SpellCategory,
+	Dispel_SpellCategory,
+	Creature_Mystic_Raising_SpellCategory,
+	Creature_Mystic_Lowering_SpellCategory,
+	Item_Mystic_Raising_SpellCategory,
+	Item_Mystic_Lowering_SpellCategory,
+	War_Mystic_Raising_SpellCategory,
+	War_Mystic_Lowering_SpellCategory,
+	Health_Restoring_SpellCategory,
+	Health_Depleting_SpellCategory,
+	Mana_Restoring_SpellCategory,
+	Mana_Depleting_SpellCategory,
+	Strength_Increase_SpellCategory,
+	Strength_Decrease_SpellCategory,
+	Endurance_Increase_SpellCategory,
+	Endurance_Decrease_SpellCategory,
+	Quickness_Increase_SpellCategory,
+	Quickness_Decrease_SpellCategory,
+	Coordination_Increase_SpellCategory,
+	Coordination_Decrease_SpellCategory,
+	Focus_Increase_SpellCategory,
+	Focus_Decrease_SpellCategory,
+	Self_Increase_SpellCategory,
+	Self_Decrease_SpellCategory,
+	GreatVitality_Raising_SpellCategory,
+	PoorVitality_Lowering_SpellCategory,
+	GreatVigor_Raising_SpellCategory,
+	PoorVigor_Lowering_SpellCategory,
+	GreaterIntellect_Raising_SpellCategory,
+	LessorIntellect_Lowering_SpellCategory,
+	LifeGiver_Raising_SpellCategory,
+	LifeTaker_Lowering_SpellCategory,
+	StaminaGiver_Raising_SpellCategory,
+	StaminaTaker_Lowering_SpellCategory,
+	ManaGiver_Raising_SpellCategory,
+	ManaTaker_Lowering_SpellCategory,
+	Acid_Ward_Protection_SpellCategory,
+	Acid_Ward_Vulnerability_SpellCategory,
+	Fire_Ward_Protection_SpellCategory,
+	Fire_Ward_Vulnerability_SpellCategory,
+	Cold_Ward_Protection_SpellCategory,
+	Cold_Ward_Vulnerability_SpellCategory,
+	Electric_Ward_Protection_SpellCategory,
+	Electric_Ward_Vulnerability_SpellCategory,
+	Leadership_Obedience_Raising_SpellCategory,
+	Leadership_Obedience_Lowering_SpellCategory,
+	Melee_Defense_Shelter_Raising_SpellCategory,
+	Melee_Defense_Shelter_Lowering_SpellCategory,
+	Missile_Defense_Shelter_Raising_SpellCategory,
+	Missile_Defense_Shelter_Lowering_SpellCategory,
+	Magic_Defense_Shelter_Raising_SpellCategory,
+	Magic_Defense_Shelter_Lowering_SpellCategory,
+	HuntersAcumen_Raising_SpellCategory,
+	HuntersAcumen_Lowering_SpellCategory,
+	StillWater_Raising_SpellCategory,
+	StillWater_Lowering_SpellCategory,
+	StrengthofEarth_Raising_SpellCategory,
+	StrengthofEarth_Lowering_SpellCategory,
+	Torrent_Raising_SpellCategory,
+	Torrent_Lowering_SpellCategory,
+	Growth_Raising_SpellCategory,
+	Growth_Lowering_SpellCategory,
+	CascadeAxe_Raising_SpellCategory,
+	CascadeAxe_Lowering_SpellCategory,
+	CascadeDagger_Raising_SpellCategory,
+	CascadeDagger_Lowering_SpellCategory,
+	CascadeMace_Raising_SpellCategory,
+	CascadeMace_Lowering_SpellCategory,
+	CascadeSpear_Raising_SpellCategory,
+	CascadeSpear_Lowering_SpellCategory,
+	CascadeStaff_Raising_SpellCategory,
+	CascadeStaff_Lowering_SpellCategory,
+	StoneCliffs_Raising_SpellCategory,
+	StoneCliffs_Lowering_SpellCategory,
+	MaxDamage_Raising_SpellCategory,
+	MaxDamage_Lowering_SpellCategory,
+	Bow_Damage_Raising_SpellCategory,
+	Bow_Damage_Lowering_SpellCategory,
+	Bow_Range_Raising_SpellCategory,
+	Bow_Range_Lowering_SpellCategory,
+	Extra_Defense_Mod_Raising_SpellCategory,
+	Extra_Defense_Mod_Lowering_SpellCategory,
+	Extra_Bow_Skill_Raising_SpellCategory,
+	Extra_Bow_Skill_Lowering_SpellCategory,
+	Extra_Alchemy_Skill_Raising_SpellCategory,
+	Extra_Alchemy_Skill_Lowering_SpellCategory,
+	Extra_Arcane_Lore_Skill_Raising_SpellCategory,
+	Extra_Arcane_Lore_Skill_Lowering_SpellCategory,
+	Extra_Appraise_Armor_Skill_Raising_SpellCategory,
+	Extra_Appraise_Armor_Skill_Lowering_SpellCategory,
+	Extra_Cooking_Skill_Raising_SpellCategory,
+	Extra_Cooking_Skill_Lowering_SpellCategory,
+	Extra_Crossbow_Skill_Raising_SpellCategory,
+	Extra_Crossbow_Skill_Lowering_SpellCategory,
+	Extra_Deception_Skill_Raising_SpellCategory,
+	Extra_Deception_Skill_Lowering_SpellCategory,
+	Extra_Loyalty_Skill_Raising_SpellCategory,
+	Extra_Loyalty_Skill_Lowering_SpellCategory,
+	Extra_Fletching_Skill_Raising_SpellCategory,
+	Extra_Fletching_Skill_Lowering_SpellCategory,
+	Extra_Healing_Skill_Raising_SpellCategory,
+	Extra_Healing_Skill_Lowering_SpellCategory,
+	Extra_Melee_Defense_Skill_Raising_SpellCategory,
+	Extra_Melee_Defense_Skill_Lowering_SpellCategory,
+	Extra_Appraise_Item_Skill_Raising_SpellCategory,
+	Extra_Appraise_Item_Skill_Lowering_SpellCategory,
+	Extra_Jumping_Skill_Raising_SpellCategory,
+	Extra_Jumping_Skill_Lowering_SpellCategory,
+	Extra_Life_Magic_Skill_Raising_SpellCategory,
+	Extra_Life_Magic_Skill_Lowering_SpellCategory,
+	Extra_Lockpick_Skill_Raising_SpellCategory,
+	Extra_Lockpick_Skill_Lowering_SpellCategory,
+	Extra_Appraise_Magic_Item_Skill_Raising_SpellCategory,
+	Extra_Appraise_Magic_Item_Skill_Lowering_SpellCategory,
+	Extra_Mana_Conversion_Skill_Raising_SpellCategory,
+	Extra_Mana_Conversion_Skill_Lowering_SpellCategory,
+	Extra_Assess_Creature_Skill_Raising_SpellCategory,
+	Extra_Assess_Creature_Skill_Lowering_SpellCategory,
+	Extra_Assess_Person_Skill_Raising_SpellCategory,
+	Extra_Assess_Person_Skill_Lowering_SpellCategory,
+	Extra_Run_Skill_Raising_SpellCategory,
+	Extra_Run_Skill_Lowering_SpellCategory,
+	Extra_Sword_Skill_Raising_SpellCategory,
+	Extra_Sword_Skill_Lowering_SpellCategory,
+	Extra_Thrown_Weapons_Skill_Raising_SpellCategory,
+	Extra_Thrown_Weapons_Skill_Lowering_SpellCategory,
+	Extra_Unarmed_Combat_Skill_Raising_SpellCategory,
+	Extra_Unarmed_Combat_Skill_Lowering_SpellCategory,
+	Extra_Appraise_Weapon_Skill_Raising_SpellCategory,
+	Extra_Appraise_Weapon_Skill_Lowering_SpellCategory,
+	Armor_Increase_SpellCategory,
+	Armor_Decrease_SpellCategory,
+	Extra_Acid_Resistance_Raising_SpellCategory,
+	Extra_Acid_Resistance_Lowering_SpellCategory,
+	Extra_Bludgeon_Resistance_Raising_SpellCategory,
+	Extra_Bludgeon_Resistance_Lowering_SpellCategory,
+	Extra_Fire_Resistance_Raising_SpellCategory,
+	Extra_Fire_Resistance_Lowering_SpellCategory,
+	Extra_Cold_Resistance_Raising_SpellCategory,
+	Extra_Cold_Resistance_Lowering_SpellCategory,
+	Extra_Attack_Mod_Raising_SpellCategory,
+	Extra_Attack_Mod_Lowering_SpellCategory,
+	Extra_Armor_Value_Raising_SpellCategory,
+	Extra_Armor_Value_Lowering_SpellCategory,
+	Extra_Pierce_Resistance_Raising_SpellCategory,
+	Extra_Pierce_Resistance_Lowering_SpellCategory,
+	Extra_Slash_Resistance_Raising_SpellCategory,
+	Extra_Slash_Resistance_Lowering_SpellCategory,
+	Extra_Electric_Resistance_Raising_SpellCategory,
+	Extra_Electric_Resistance_Lowering_SpellCategory,
+	Extra_Weapon_Time_Raising_SpellCategory,
+	Extra_Weapon_Time_Lowering_SpellCategory,
+	Bludgeon_Ward_Protection_SpellCategory,
+	Bludgeon_Ward_Vulnerability_SpellCategory,
+	Slash_Ward_Protection_SpellCategory,
+	Slash_Ward_Vulnerability_SpellCategory,
+	Pierce_Ward_Protection_SpellCategory,
+	Pierce_Ward_Vulnerability_SpellCategory,
+	Stamina_Restoring_SpellCategory,
+	Stamina_Depleting_SpellCategory,
+	Fireworks_SpellCategory,
+	Health_Divide_SpellCategory,
+	Stamina_Divide_SpellCategory,
+	Mana_Divide_SpellCategory,
+	Coordination_Increase2_SpellCategory,
+	Strength_Increase2_SpellCategory,
+	Focus_Increase2_SpellCategory,
+	Endurance_Increase2_SpellCategory,
+	Self_Increase2_SpellCategory,
+	Melee_Defense_Multiply_SpellCategory,
+	Missile_Defense_Multiply_SpellCategory,
+	Magic_Defense_Multiply_SpellCategory,
+	Attributes_Decrease_SpellCategory,
+	LifeGiver_Raising2_SpellCategory,
+	Item_Enchantment_Raising2_SpellCategory,
+	Skills_Decrease_SpellCategory,
+	Extra_Mana_Conversion_Bonus_SpellCategory,
+	War_Mystic_Raising2_SpellCategory,
+	War_Mystic_Lowering2_SpellCategory,
+	Magic_Defense_Shelter_Raising2_SpellCategory,
+	Extra_Life_Magic_Skill_Raising2_SpellCategory,
+	Creature_Mystic_Raising2_SpellCategory,
+	Item_Mystic_Raising2_SpellCategory,
+	Mana_Raising2_SpellCategory,
+	Self_Raising2_SpellCategory,
+	CreatureEnchantment_Raising2_SpellCategory,
+	Salvaging_Raising_SpellCategory,
+	Extra_Salvaging_Raising_SpellCategory,
+	Extra_Salvaging_Raising2_SpellCategory,
+	CascadeAxe_Raising2_SpellCategory,
+	Extra_Bow_Skill_Raising2_SpellCategory,
+	Extra_Thrown_Weapons_Skill_Raising2_SpellCategory,
+	Extra_Crossbow_Skill_Raising2_SpellCategory,
+	CascadeDagger_Raising2_SpellCategory,
+	CascadeMace_Raising2_SpellCategory,
+	Extra_Unarmed_Combat_Skill_Raising2_SpellCategory,
+	CascadeSpear_Raising2_SpellCategory,
+	CascadeStaff_Raising2_SpellCategory,
+	Extra_Sword_Skill_Raising2_SpellCategory,
+	Acid_Protection_Rare_SpellCategory,
+	Acid_Resistance_Raising_Rare_SpellCategory,
+	Alchemy_Raising_Rare_SpellCategory,
+	Appraisal_Resistance_Lowering_Rare_SpellCategory,
+	Appraise_Armor_Raising_Rare_SpellCategory,
+	Appraise_Item_Raising_Rare_SpellCategory,
+	Appraise_Magic_Item_Raising_Rare_SpellCategory,
+	Appraise_Weapon_Raising_Rare_SpellCategory,
+	Arcane_Lore_Raising_Rare_SpellCategory,
+	Armor_Raising_Rare_SpellCategory,
+	Armor_Value_Raising_Rare_SpellCategory,
+	Assess_Monster_Raising_Rare_SpellCategory,
+	Assess_Person_Raising_Rare_SpellCategory,
+	Attack_Mod_Raising_Rare_SpellCategory,
+	Axe_Raising_Rare_SpellCategory,
+	Bludgeon_Protection_Rare_SpellCategory,
+	Bludgeon_Resistance_Raising_Rare_SpellCategory,
+	Bow_Raising_Rare_SpellCategory,
+	Cold_Protection_Rare_SpellCategory,
+	Cold_Resistance_Raising_Rare_SpellCategory,
+	Cooking_Raising_Rare_SpellCategory,
+	Coordination_Raising_Rare_SpellCategory,
+	Creature_Enchantment_Raising_Rare_SpellCategory,
+	Crossbow_Raising_Rare_SpellCategory,
+	Dagger_Raising_Rare_SpellCategory,
+	Damage_Raising_Rare_SpellCategory,
+	Deception_Raising_Rare_SpellCategory,
+	Defense_Mod_Raising_Rare_SpellCategory,
+	Electric_Protection_Rare_SpellCategory,
+	Electric_Resistance_Raising_Rare_SpellCategory,
+	Endurance_Raising_Rare_SpellCategory,
+	Fire_Protection_Rare_SpellCategory,
+	Fire_Resistance_Raising_Rare_SpellCategory,
+	Fletching_Raising_Rare_SpellCategory,
+	Focus_Raising_Rare_SpellCategory,
+	Healing_Raising_Rare_SpellCategory,
+	Health_Accelerating_Rare_SpellCategory,
+	Item_Enchantment_Raising_Rare_SpellCategory,
+	Jump_Raising_Rare_SpellCategory,
+	Leadership_Raising_Rare_SpellCategory,
+	Life_Magic_Raising_Rare_SpellCategory,
+	Lockpick_Raising_Rare_SpellCategory,
+	Loyalty_Raising_Rare_SpellCategory,
+	Mace_Raising_Rare_SpellCategory,
+	Magic_Defense_Raising_Rare_SpellCategory,
+	Mana_Accelerating_Rare_SpellCategory,
+	Mana_Conversion_Raising_Rare_SpellCategory,
+	Melee_Defense_Raising_Rare_SpellCategory,
+	Missile_Defense_Raising_Rare_SpellCategory,
+	Pierce_Protection_Rare_SpellCategory,
+	Pierce_Resistance_Raising_Rare_SpellCategory,
+	Quickness_Raising_Rare_SpellCategory,
+	Run_Raising_Rare_SpellCategory,
+	Self_Raising_Rare_SpellCategory,
+	Slash_Protection_Rare_SpellCategory,
+	Slash_Resistance_Raising_Rare_SpellCategory,
+	Spear_Raising_Rare_SpellCategory,
+	Staff_Raising_Rare_SpellCategory,
+	Stamina_Accelerating_Rare_SpellCategory,
+	Strength_Raising_Rare_SpellCategory,
+	Sword_Raising_Rare_SpellCategory,
+	Thrown_Weapons_Raising_Rare_SpellCategory,
+	Unarmed_Combat_Raising_Rare_SpellCategory,
+	War_Magic_Raising_Rare_SpellCategory,
+	Weapon_Time_Raising_Rare_SpellCategory,
+	Armor_Increase_Inky_Armor_SpellCategory,
+	Magic_Defense_Shelter_Raising_Fiun_SpellCategory,
+	Extra_Run_Skill_Raising_Fiun_SpellCategory,
+	Extra_Mana_Conversion_Skill_Raising_Fiun_SpellCategory,
+	Attributes_Increase_Cantrip1_SpellCategory,
+	Extra_Melee_Defense_Skill_Raising2_SpellCategory,
+	ACTDPurchaseRewardSpell_SpellCategory,
+	ACTDPurchaseRewardSpellHealth_SpellCategory,
+	SaltAsh_Attack_Mod_Raising_SpellCategory,
+	Quickness_Increase2_SpellCategory,
+	Extra_Alchemy_Skill_Raising2_SpellCategory,
+	Extra_Cooking_Skill_Raising2_SpellCategory,
+	Extra_Fletching_Skill_Raising2_SpellCategory,
+	Extra_Lockpick_Skill_Raising2_SpellCategory,
+	MucorManaWell_SpellCategory,
+	Stamina_Restoring2_SpellCategory,
+	Allegiance_Raising_SpellCategory,
+	Health_DoT_SpellCategory,
+	Health_DoT_Secondary_SpellCategory,
+	Health_DoT_Tertiary_SpellCategory,
+	Health_HoT_SpellCategory,
+	Health_HoT_Secondary_SpellCategory,
+	Health_HoT_Tertiary_SpellCategory,
+	Health_Divide_Secondary_SpellCategory,
+	Health_Divide_Tertiary_SpellCategory,
+	SetSword_Raising_SpellCategory,
+	SetAxe_Raising_SpellCategory,
+	SetDagger_Raising_SpellCategory,
+	SetMace_Raising_SpellCategory,
+	SetSpear_Raising_SpellCategory,
+	SetStaff_Raising_SpellCategory,
+	SetUnarmed_Raising_SpellCategory,
+	SetBow_Raising_SpellCategory,
+	SetCrossbow_Raising_SpellCategory,
+	SetThrown_Raising_SpellCategory,
+	SetItemEnchantment_Raising_SpellCategory,
+	SetCreatureEnchantment_Raising_SpellCategory,
+	SetWarMagic_Raising_SpellCategory,
+	SetLifeMagic_Raising_SpellCategory,
+	SetMeleeDefense_Raising_SpellCategory,
+	SetMissileDefense_Raising_SpellCategory,
+	SetMagicDefense_Raising_SpellCategory,
+	SetStamina_Accelerating_SpellCategory,
+	SetCooking_Raising_SpellCategory,
+	SetFletching_Raising_SpellCategory,
+	SetLockpick_Raising_SpellCategory,
+	SetAlchemy_Raising_SpellCategory,
+	SetSalvaging_Raising_SpellCategory,
+	SetArmorExpertise_Raising_SpellCategory,
+	SetWeaponExpertise_Raising_SpellCategory,
+	SetItemTinkering_Raising_SpellCategory,
+	SetMagicItemExpertise_Raising_SpellCategory,
+	SetLoyalty_Raising_SpellCategory,
+	SetStrength_Raising_SpellCategory,
+	SetEndurance_Raising_SpellCategory,
+	SetCoordination_Raising_SpellCategory,
+	SetQuickness_Raising_SpellCategory,
+	SetFocus_Raising_SpellCategory,
+	SetWillpower_Raising_SpellCategory,
+	SetHealth_Raising_SpellCategory,
+	SetStamina_Raising_SpellCategory,
+	SetMana_Raising_SpellCategory,
+	SetSprint_Raising_SpellCategory,
+	SetJumping_Raising_SpellCategory,
+	SetSlashResistance_Raising_SpellCategory,
+	SetBludgeonResistance_Raising_SpellCategory,
+	SetPierceResistance_Raising_SpellCategory,
+	SetFlameResistance_Raising_SpellCategory,
+	SetAcidResistance_Raising_SpellCategory,
+	SetFrostResistance_Raising_SpellCategory,
+	SetLightningResistance_Raising_SpellCategory,
+	Crafting_LockPick_Raising_SpellCategory,
+	Crafting_Fletching_Raising_SpellCategory,
+	Crafting_Cooking_Raising_SpellCategory,
+	Crafting_Alchemy_Raising_SpellCategory,
+	Crafting_ArmorTinkering_Raising_SpellCategory,
+	Crafting_WeaponTinkering_Raising_SpellCategory,
+	Crafting_MagicTinkering_Raising_SpellCategory,
+	Crafting_ItemTinkering_Raising_SpellCategory,
+	SkillPercent_Alchemy_Raising_SpellCategory,
+	TwoHanded_Raising_SpellCategory,
+	TwoHanded_Lowering_SpellCategory,
+	Extra_TwoHanded_Skill_Raising_SpellCategory,
+	Extra_TwoHanded_Skill_Lowering_SpellCategory,
+	Extra_TwoHanded_Skill_Raising2_SpellCategory,
+	TwoHanded_Raising_Rare_SpellCategory,
+	SetTwoHanded_Raising_SpellCategory,
+	GearCraft_Raising_SpellCategory,
+	GearCraft_Lowering_SpellCategory,
+	Extra_GearCraft_Skill_Raising_SpellCategory,
+	Extra_GearCraft_Skill_Lowering_SpellCategory,
+	Extra_GearCraft_Skill_Raising2_SpellCategory,
+	GearCraft_Raising_Rare_SpellCategory,
+	SetGearCraft_Raising_SpellCategory,
+	LoyaltyMana_Raising_SpellCategory,
+	LoyaltyStamina_Raising_SpellCategory,
+	LeadershipHealth_Raising_SpellCategory,
+	TrinketDamage_Raising_SpellCategory,
+	TrinketDamage_Lowering_SpellCategory,
+	TrinketHealth_Raising_SpellCategory,
+	TrinketStamina_Raising_SpellCategory,
+	TrinketMana_Raising_SpellCategory,
+	TrinketXP_Raising_SpellCategory,
+	DeceptionArcaneLore_Raising_SpellCategory,
+	HealOverTime_Raising_SpellCategory,
+	DamageOverTime_Raising_SpellCategory,
+	HealingResistRating_Raising_SpellCategory,
+	AetheriaDamageRating_Raising_SpellCategory,
+	AetheriaDamageReduction_Raising_SpellCategory,
+		SKIPPED_SpellCategory,
+	AetheriaHealth_Raising_SpellCategory,
+	AetheriaStamina_Raising_SpellCategory,
+	AetheriaMana_Raising_SpellCategory,
+	AetheriaCriticalDamage_Raising_SpellCategory,
+	AetheriaHealingAmplification_Raising_SpellCategory,
+	AetheriaProcDamageRating_Raising_SpellCategory,
+	AetheriaProcDamageReduction_Raising_SpellCategory,
+	AetheriaProcHealthOverTime_Raising_SpellCategory,
+	AetheriaProcDamageOverTime_Raising_SpellCategory,
+	AetheriaProcHealingReduction_Raising_SpellCategory,
+	RareDamageRating_Raising_SpellCategory,
+	RareDamageReductionRating_Raising_SpellCategory,
+	AetheriaEndurance_Raising_SpellCategory,
+	NetherDamageOverTime_Raising_SpellCategory,
+	NetherDamageOverTime_Raising2_SpellCategory,
+	NetherDamageOverTime_Raising3_SpellCategory,
+	Nether_Streak_SpellCategory,
+	Nether_Missile_SpellCategory,
+	Nether_Ring_SpellCategory,
+	NetherDamageRating_Lowering_SpellCategory,
+	NetherDamageHealingReduction_Raising_SpellCategory,
+	Void_Magic_Lowering_SpellCategory,
+	Void_Magic_Raising_SpellCategory,
+	Void_Mystic_Raising_SpellCategory,
+	SetVoidMagic_Raising_SpellCategory,
+	Void_Magic_Raising_Rare_SpellCategory,
+	Void_Mystic_Raising2_SpellCategory,
+	LuminanceDamageRating_Raising_SpellCategory,
+	LuminanceDamageReduction_Raising_SpellCategory,
+	LuminanceHealth_Raising_SpellCategory,
+	AetheriaCriticalReduction_Raising_SpellCategory,
+	Extra_Missile_Defense_Skill_Raising_SpellCategory,
+	Extra_Missile_Defense_Skill_Lowering_SpellCategory,
+	Extra_Missile_Defense_Skill_Raising2_SpellCategory,
+	AetheriaHealthResistance_Raising_SpellCategory,
+	AetheriaDotResistance_Raising_SpellCategory,
+	Cloak_Skill_Raising_SpellCategory,
+	Cloak_All_Skill_Raising_SpellCategory,
+	Cloak_Magic_Defense_Lowering_SpellCategory,
+	Cloak_Melee_Defense_Lowering_SpellCategory,
+	Cloak_Missile_Defense_Lowering_SpellCategory,
+	DirtyFighting_Lowering_SpellCategory,
+	DirtyFighting_Raising_SpellCategory,
+	Extra_DirtyFighting_Raising_SpellCategory,
+	DualWield_Lowering_SpellCategory,
+	DualWield_Raising_SpellCategory,
+	Extra_DualWield_Raising_SpellCategory,
+	Recklessness_Lowering_SpellCategory,
+	Recklessness_Raising_SpellCategory,
+	Extra_Recklessness_Raising_SpellCategory,
+	Shield_Lowering_SpellCategory,
+	Shield_Raising_SpellCategory,
+	Extra_Shield_Raising_SpellCategory,
+	SneakAttack_Lowering_SpellCategory,
+	SneakAttack_Raising_SpellCategory,
+	Extra_SneakAttack_Raising_SpellCategory,
+	Rare_DirtyFighting_Raising_SpellCategory,
+	Rare_DualWield_Raising_SpellCategory,
+	Rare_Recklessness_Raising_SpellCategory,
+	Rare_Shield_Raising_SpellCategory,
+	Rare_SneakAttack_Raising_SpellCategory,
+	DF_Attack_Skill_Debuff_SpellCategory,
+	DF_Bleed_Damage_SpellCategory,
+	DF_Defense_Skill_Debuff_SpellCategory,
+	DF_Healing_Debuff_SpellCategory,
+	SetDirtyFighting_Raising_SpellCategory,
+	SetDualWield_Raising_SpellCategory,
+	SetRecklessness_Raising_SpellCategory,
+	SetShield_Raising_SpellCategory,
+	SetSneakAttack_Raising_SpellCategory,
+	LifeGiver_Mhoire_SpellCategory,
+	RareDamageRating_Raising2_SpellCategory,
+	Spell_Damage_Raising_SpellCategory,
+	Summoning_Raising_SpellCategory,
+	Summoning_Lowering_SpellCategory,
+	Extra_Summoning_Skill_Raising_SpellCategory,
+	SetSummoning_Raising_SpellCategory
+};
+
+enum PortalEnum
+{
+	UNDEF = 0,
+	PLAYER_PASSABLE = 1,
+	PK_BANNED = 2,
+	PKLITE_BANNED = 4,
+	PLAYER_NPK_ONLY = 7,
+	NPK_BANNED = 8,
+	PLAYER_PK_PKL_ONLY = 9,
+	NOT_SUMMONABLE = 16,
+	PLAYER_NOTSUMMONABLE = 17,
+	PLAYER_PK_PKL_ONLY_NOTSUMMONABLE = 25,
+	NOT_RECALLABLE_NOR_LINKABLE = 32,
+	PLAYER_NOTRECALLABLE_NOTLINKABLE = 33,
+	PLAYER_PK_PKL_ONLY_NOTRECALLABLE_NOTLINKABLE = 41,
+	PLAYER_NOTRECALLABLE_NOTLINKABLE_NOTSUMMONABLE = 49,
+	PLAYER_PK_PKL_ONLY_NOTSUMMONABLE_NOTRECALLABLE_NOTLINKABLE = 57,
+	ONLY_OLTHOI_PCS = 64,
+	NO_OLTHOI_PCS = 128,
+	NO_VITAE = 256,
+	NO_NEW_ACCOUNTS = 512
+};
+
+enum GeneratorTimeType
+{
+	Undef_GeneratorTimeType,
+	RealTime_GeneratorTimeType,
+	Defined_GeneratorTimeType,
+	Event_GeneratorTimeType,
+	Night_GeneratorTimeType,
+	Day_GeneratorTimeType
+};
+
+enum GeneratorDefinedTimes
+{
+	Undef_GeneratorDefinedTimes,
+	Dusk_GeneratorDefinedTimes,
+	Dawn_GeneratorDefinedTimes
+};
+
+enum GeneratorDestruct
+{
+	Undef_GeneratorDestruct,
+	Nothing_GeneratorDestruct,
+	Destroy_GeneratorDestruct,
+	Kill_GeneratorDestruct
+};
+
+enum GeneratorType
+{
+	Undef_GeneratorType,
+	Relative_GeneratorType,
+	Absolute_GeneratorType
+};
+
 
 #include "GameStatEnums.h"

@@ -7,23 +7,26 @@
 class CSpellProjectile : public CWeenieObject
 {
 public:
-	CSpellProjectile(const SpellCastData &scd, DWORD target_id);//, unsigned int damage);
+	CSpellProjectile(const SpellCastData &scd, uint32_t target_id);//, unsigned int damage);
 	virtual ~CSpellProjectile();
 
-	virtual class CSpellProjectile *AsSpellProjectile() { return this; }
+	virtual class CSpellProjectile *AsSpellProjectile() override { return this; }
 
 	virtual void Tick() override;
 	virtual void PostSpawn() override;
 	virtual int DoCollision(const class EnvCollisionProfile &prof) override;
 	virtual int DoCollision(const class AtkCollisionProfile &prof) override;
 	virtual int DoCollision(const class ObjCollisionProfile &prof) override;
-	virtual void DoCollisionEnd(DWORD object_id) override;
+	virtual void DoCollisionEnd(uint32_t object_id) override;
 
-	virtual DWORD GetPhysicsTargetID() override { return m_TargetID; }
+	virtual uint32_t GetPhysicsTargetID() override { return m_TargetID; }
+
+	void makeLifeProjectile(int selfDrainedAmount, float selfDrainedDamageRatio);
+	void makeEnchantProjectile() { isEnchantProjectile = true; };
 
 public:
-	DWORD m_SourceID;
-	DWORD m_TargetID;
+	uint32_t m_SourceID;
+	uint32_t m_TargetID;
 	//unsigned int m_Damage;
 
 private:
@@ -37,6 +40,8 @@ private:
 	bool isLifeProjectile = false;
 	int selfDrainedAmount = 0;
 	float selfDrainedDamageRatio = 0.0;
+
+	bool isEnchantProjectile = false;
 };
 
 

@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "LegacyPackObj.h"
 #include "PString.h"
 
@@ -23,7 +23,7 @@ void PString::Destroy()
 
 BOOL PString::UnPack(BYTE** ppData, ULONG iSize)
 {
-    DWORD Length;
+    uint32_t Length;
 
     // Default pack includes 16-bit length.
     WORD Length16;
@@ -33,8 +33,8 @@ BOOL PString::UnPack(BYTE** ppData, ULONG iSize)
     if (Length16 == 0xFFFF)
     {
         // If necessary will include 32-bit length.
-        DWORD Length32;
-        if (!UNPACK(DWORD, Length32))
+        uint32_t Length32;
+        if (!UNPACK(uint32_t, Length32))
             return FALSE;
 
         Length = Length32;
@@ -46,7 +46,7 @@ BOOL PString::UnPack(BYTE** ppData, ULONG iSize)
         return FALSE;
 
     // Not the real code.
-    DWORD allocLength = Length + 1;
+    uint32_t allocLength = Length + 1;
     char *TempString = new char[allocLength];
     memcpy(TempString, *ppData, Length);
     TempString[Length] = '\0';
@@ -61,9 +61,9 @@ BOOL PString::UnPack(BYTE** ppData, ULONG iSize)
     return TRUE;
 }
 
-DWORD PString::compute_hash(const char *str)
+uint32_t PString::compute_hash(const char *str)
 {
-	DWORD result = 0;
+	uint32_t result = 0;
 
 	while (*str)
 	{
@@ -72,8 +72,8 @@ DWORD PString::compute_hash(const char *str)
 			result = (result ^ ((result & 0xF0000000) >> 24)) & 0xFFFFFFF;
 		str++;
 	}
-	if (result == (DWORD) -1)
-		result = (DWORD) -2;
+	if (result == (uint32_t) -1)
+		result = (uint32_t) -2;
 
 	return result;
 }

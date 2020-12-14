@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Database2.h"
 #include "World.h"
 #include "Portal.h"
@@ -94,7 +94,7 @@ CMYSQLConnection *CMYSQLConnection::Create(const char *host, unsigned int port, 
 
 		if (sqlconnection && connectTiming.GetElapsed() >= 1.0)
 		{
-			LOG(Database, Warning, "mysql_real_connect() took %.1f s!\n", connectTiming.GetElapsed());
+			SERVER_WARN << "mysql_real_connect() took" << connectTiming.GetElapsed();
 		}
 	}
 
@@ -122,19 +122,19 @@ CMYSQLConnection *CMYSQLConnection::Create(const char *host, unsigned int port, 
 
 			if (sqlconnection && connectTiming.GetElapsed() >= 1.0)
 			{
-				LOG(Database, Warning, "mysql_real_connect() re-attempt took %.1f s!\n", connectTiming.GetElapsed());
+				SERVER_WARN << "mysql_real_connect() re-attempt took"<< connectTiming.GetElapsed();
 			}
 
 			if (sqlconnection == NULL)
 			{
-				LOG(Database, Warning, "Failed to create mysql connection after two tries:\n%s\n", mysql_error(sqlobject));
+				SERVER_WARN << "Failed to create mysql connection after two tries:"<< mysql_error(sqlobject);
 
 				mysql_close(sqlobject);
 				return NULL;
 			}
 			else
 			{
-				LOG(Database, Normal, "Received EINTR while attempting to connect to mysql, but re-attempt succeeded.\n");
+				SERVER_WARN << "Received EINTR while attempting to connect to mysql, but re-attempt succeeded.";
 			}
 		}
 		else
@@ -142,7 +142,8 @@ CMYSQLConnection *CMYSQLConnection::Create(const char *host, unsigned int port, 
 			if (CSQLConnection::s_NumConnectAttempts > 1)
 			{
 				// Only show warning if not the first connection attempt
-				LOG(Database, Warning, "mysql_real_connect() failed:\n%s\n", mysql_error(sqlobject));
+				SERVER_WARN << "mysql_real_connect() failed:" << mysql_error(sqlobject);
+				WINLOG(Data, Warning, "Failed to establish connection to database.\n");
 			}
 
 			mysql_close(sqlobject);
@@ -153,7 +154,7 @@ CMYSQLConnection *CMYSQLConnection::Create(const char *host, unsigned int port, 
 	if (sqlconnection)
 	{
 		// Disable auto-reconnect (probably already disabled)
-		sqlconnection->reconnect = 0;
+		// sqlconnection->reconnect = false;
 
 		return new CMYSQLConnection(sqlconnection);
 	}
@@ -186,13 +187,13 @@ bool CMYSQLConnection::Query(const char *query)
 
 		if (queryTiming.GetElapsed() >= 1.0)
 		{
-			LOG(Database, Warning, "MYSQL query \"%s\" took %f seconds.\n", query, queryTiming.GetElapsed());
+			SERVER_WARN << "MYSQL query" << query << "took" << queryTiming.GetElapsed() << "seconds.";
 		}
 	}
 
 	if (errorCode != 0)
 	{
-		LOG(Database, Error, "MYSQL query errored %d for \"%s\"\n", errorCode, query);
+		SERVER_ERROR << "MYSQL query" << query << "errored" << errorCode;
 		return false;
 	}
 
@@ -230,7 +231,7 @@ std::string CMYSQLConnection::EscapeString(std::string unescaped)
 	
 	char *escaped = new char[(unescaped.length() * 2) + 1];
 	escaped[0] = '\0';
-	mysql_real_escape_string(m_InternalConnection, escaped, unescaped.c_str(), (DWORD) unescaped.length());
+	mysql_real_escape_string(m_InternalConnection, escaped, unescaped.c_str(), (uint32_t) unescaped.length());
 
 	std::string result = escaped;
 	delete[] escaped;
@@ -254,21 +255,15 @@ void *CMYSQLConnection::GetInternalConnection()
 }
 
 CDatabase2::CDatabase2()
+	: m_queryThread([&]() { InternalThreadProc(); })
 {
 	m_pConnection = NULL;
-
-	m_hMakeTick = CreateEvent(NULL, FALSE, FALSE, NULL);
-	m_hAsyncThread = CreateThread(NULL, 0, InternalThreadProcStatic, this, 0, NULL);
 }
 
 CDatabase2::~CDatabase2()
 {
 	m_bQuit = true;
-
-	if (m_hMakeTick)
-	{
-		SetEvent(m_hMakeTick);
-	}
+	m_signal.notify_all();
 
 	if (m_pConnection != nullptr)
 	{
@@ -277,24 +272,14 @@ CDatabase2::~CDatabase2()
 		m_pConnection = nullptr;
 	}
 
-	if (m_hAsyncThread)
-	{
-		WaitForSingleObject(m_hAsyncThread, 60000);
-		CloseHandle(m_hAsyncThread);
-		m_hAsyncThread = NULL;
-	}
+	if (m_queryThread.joinable())
+		m_queryThread.join();
 
 	if (m_pAsyncConnection != nullptr)
 	{
 		m_pAsyncConnection->Close();
 		delete m_pAsyncConnection;
 		m_pAsyncConnection = nullptr;
-	}
-
-	if (m_hMakeTick)
-	{
-		CloseHandle(m_hMakeTick);
-		m_hMakeTick = NULL;
 	}
 }
 
@@ -322,7 +307,7 @@ bool CDatabase2::Query(const char *format, ...)
 
 	char *charBuffer = new char[charCount];
 	charBuffer[0] = '\0';
-	_vsnprintf(charBuffer, charCount, format, args);
+	vsnprintf(charBuffer, charCount, format, args);
 	charBuffer[charCount - 1] = '\0';
 
 	if (m_pConnection)
@@ -387,16 +372,17 @@ void *CDatabase2::GetInternalAsyncConnection()
 	return m_pAsyncConnection->GetInternalConnection();
 }
 
-DWORD WINAPI CDatabase2::InternalThreadProcStatic(LPVOID lpThis)
+uint32_t WINAPI CDatabase2::InternalThreadProcStatic(LPVOID lpThis)
 {
 	return ((CDatabase2 *)lpThis)->InternalThreadProc();
 }
 
-DWORD CDatabase2::InternalThreadProc()
+uint32_t CDatabase2::InternalThreadProc()
 {
 	do
 	{
-		::WaitForSingleObject(m_hMakeTick, 1000);
+		std::unique_lock lock(m_signalLock);
+		m_signal.wait_for(lock, std::chrono::seconds(1));
 
 		ProcessAsyncQueries();
 		AsyncTick();
@@ -434,54 +420,27 @@ bool CMYSQLSaveWeenieQuery::PerformQuery(MYSQL *c)
 {
 	if (!c)
 	{
-		LOG(Database, Error, "Cannot perform save query; no connection.\n");
+		SERVER_ERROR << "Cannot perform save query; no connection.";
 		return false;
 	}
 
-	MYSQL_STMT *statement = mysql_stmt_init(c);
-
-	if (!statement)
+	mysql_statement<4> statement(c, "CALL blob_update_weenie(?, ?, ?, ?)");
+	if (statement)
 	{
-		LOG(Database, Error, "mysql_stmt_init() error on CreateOrUpdateWeenie for 0x%08X (%u bytes): %s\n", _weenie_id, _data_length, mysql_error(c));
-		return false;
+		statement.bind(0, _weenie_id);
+		statement.bind(1, _top_level_object_id);
+		statement.bind(2, _block_id);
+		statement.bind(3, _data, _data_length);
+
+		if (statement.execute())
+		{
+			g_pDBIO->DecrementPendingSave(_weenie_id);
+			return true;
+		}
 	}
 
-	char query_string[512];
-	sprintf(query_string, "REPLACE INTO weenies (id, top_level_object_id, block_id, data) VALUES (%u, %u, %u, ?)", _weenie_id, _top_level_object_id, _block_id);
-
-	if (mysql_stmt_prepare(statement, query_string, (unsigned long)strlen(query_string)))
-	{
-		mysql_stmt_close(statement);
-
-		LOG(Database, Error, "mysql_stmt_prepare() error on CreateOrUpdateWeenie for 0x%08X (%u bytes): %s\n", _weenie_id, _data_length, mysql_error(c));
-		return false;
-	}
-
-	MYSQL_BIND data_param;
-	memset(&data_param, 0, sizeof(data_param));
-	data_param.buffer = _data;
-	data_param.buffer_length = _data_length;
-	data_param.buffer_type = MYSQL_TYPE_BLOB;
-	if (mysql_stmt_bind_param(statement, &data_param))
-	{
-		mysql_stmt_close(statement);
-
-		LOG(Database, Error, "mysql_stmt_bind_param() error on CreateOrUpdateWeenie for 0x%08X (%u bytes): %s\n", _weenie_id, _data_length, mysql_error(c));
-		return false;
-	}
-
-	if (mysql_stmt_execute(statement))
-	{
-		LOG(Database, Error, "mysql_stmt_execute() error on CreateOrUpdateWeenie for 0x%08X (%u bytes): %s\n", _weenie_id, _data_length, mysql_error(c));
-		mysql_stmt_close(statement);
-
-		return false;
-	}
-
-	mysql_stmt_close(statement);
-	g_pDBIO->DecrementPendingSave(_weenie_id);
-
-	return true;
+	SERVER_ERROR << "mysql_statement error on CreateOrUpdateWeenie for" << _weenie_id << "(" << _data_length << "):" << mysql_error(c);
+	return false;
 }
 
 CMYSQLSaveHouseQuery::CMYSQLSaveHouseQuery(unsigned int house_id, void *data, unsigned int data_length)
@@ -510,54 +469,26 @@ bool CMYSQLSaveHouseQuery::PerformQuery(MYSQL *c)
 {
 	if (!c)
 	{
-		LOG(Database, Error, "Cannot perform save query; no connection.\n");
+		SERVER_ERROR << "Cannot perform save query; no connection.";
 		return false;
 	}
 
-	MYSQL_STMT *statement = mysql_stmt_init(c);
-
-	if (!statement)
+	mysql_statement<2> statement(c, "CALL blob_update_house(?, ?)");
+	if (statement)
 	{
-		LOG(Database, Error, "mysql_stmt_init() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
-		return false;
+		statement.bind(0, _house_id);
+		statement.bind(1, _data, _data_length);
+
+		if (statement.execute())
+		{
+			g_pDBIO->DecrementPendingSave(_house_id);
+			return true;
+		}
 	}
 
-	char query_string[512];
-	sprintf(query_string, "REPLACE INTO houses (house_id, data) VALUES (%u, ?)", _house_id);
+	SERVER_ERROR << "mysql_statement error on CreateOrUpdateHouseData for" << _house_id << "(" << _data_length << "):" << mysql_error(c);
+	return false;
 
-	if (mysql_stmt_prepare(statement, query_string, (unsigned long)strlen(query_string)))
-	{
-		mysql_stmt_close(statement);
-
-		LOG(Database, Error, "mysql_stmt_prepare() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
-		return false;
-	}
-
-	MYSQL_BIND data_param;
-	memset(&data_param, 0, sizeof(data_param));
-	data_param.buffer = _data;
-	data_param.buffer_length = _data_length;
-	data_param.buffer_type = MYSQL_TYPE_BLOB;
-	if (mysql_stmt_bind_param(statement, &data_param))
-	{
-		mysql_stmt_close(statement);
-
-		LOG(Database, Error, "mysql_stmt_bind_param() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
-		return false;
-	}
-
-	if (mysql_stmt_execute(statement))
-	{
-		LOG(Database, Error, "mysql_stmt_execute() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
-		mysql_stmt_close(statement);
-
-		return false;
-	}
-
-	mysql_stmt_close(statement);
-	g_pDBIO->DecrementPendingSave(_house_id);
-
-	return true;
 }
 
 CMYSQLDatabase::CMYSQLDatabase(const char *host, unsigned int port, const char *user, const char *password, const char *defaultdatabasename)
@@ -575,46 +506,13 @@ CMYSQLDatabase::CMYSQLDatabase(const char *host, unsigned int port, const char *
 	if (!m_pConnection || !m_pAsyncConnection)
 	{
 		// If we can't connect the first time, just disable this feature.
-		LOG(Database, Warning, "MySQL database functionality disabled.\n");
+		SERVER_WARN << "MySQL database functionality disabled.";
 		m_bDisabled = true;
 	}
 }
 
 CMYSQLDatabase::~CMYSQLDatabase()
 {
-	m_bQuit = true;
-
-	if (m_hMakeTick)
-	{
-		SetEvent(m_hMakeTick);
-	}
-
-	if (m_pConnection != nullptr)
-	{
-		m_pConnection->Close();
-		delete m_pConnection;
-		m_pConnection = nullptr;
-	}
-
-	if (m_hAsyncThread)
-	{
-		WaitForSingleObject(m_hAsyncThread, 60000);
-		CloseHandle(m_hAsyncThread);
-		m_hAsyncThread = NULL;
-	}
-
-	if (m_pAsyncConnection != nullptr)
-	{
-		m_pAsyncConnection->Close();
-		delete m_pAsyncConnection;
-		m_pAsyncConnection = nullptr;
-	}
-
-	if (m_hMakeTick)
-	{
-		CloseHandle(m_hMakeTick);
-		m_hMakeTick = NULL;
-	}
 }
 
 void CMYSQLDatabase::RefreshConnection()
@@ -645,10 +543,11 @@ void CMYSQLDatabase::RefreshAsyncConnection()
 
 void CMYSQLDatabase::QueueAsyncQuery(CMYSQLQuery *query)
 {
-	_asyncQueueLock.Lock();
-	_asyncQueries.push_back(query);
-	SetEvent(m_hMakeTick);
-	_asyncQueueLock.Unlock();
+	{
+		std::scoped_lock lock(m_lock);
+		_asyncQueries.push_back(query);
+	}
+	Signal();
 }
 
 void CMYSQLDatabase::ProcessAsyncQueries()
@@ -657,31 +556,40 @@ void CMYSQLDatabase::ProcessAsyncQueries()
 	{
 		CMYSQLQuery *queuedQuery = NULL;
 
-		_asyncQueueLock.Lock();
-		if (!_asyncQueries.empty())
 		{
-			queuedQuery = _asyncQueries.front();
-			_asyncQueries.pop_front();
+			std::scoped_lock lock(m_lock);
+			if (!_asyncQueries.empty())
+			{
+				queuedQuery = _asyncQueries.front();
+				_asyncQueries.pop_front();
+			}
 		}
-		_asyncQueueLock.Unlock();
 
 		if (!queuedQuery)
 		{
 			break;
-		}
-		
-		if (queuedQuery->PerformQuery((MYSQL *)GetInternalAsyncConnection()))
-		{
-			delete queuedQuery;
-		}
-		else
-		{
-			_asyncQueueLock.Lock();
-			_asyncQueries.push_front(queuedQuery);
-			_asyncQueueLock.Unlock();
+    	}
 
-			// there was an error, stop for now
-			break;
+		try
+		{
+			if (queuedQuery->PerformQuery((MYSQL *)GetInternalAsyncConnection()))
+			{
+				delete queuedQuery;
+			}
+			else
+			{
+				std::scoped_lock lock(m_lock);
+				_asyncQueries.push_front(queuedQuery);
+
+				SERVER_ERROR << "Error while performing query:" << queuedQuery;
+
+				// there was an error, stop for now
+				break;
+			}
+		}
+		catch (...)
+		{
+			SERVER_ERROR << "Unable to delete query";
 		}
 	}
 }
@@ -762,7 +670,7 @@ void CGameDatabase::Init()
 void CGameDatabase::LoadBSD()
 {
 	BYTE *data = NULL;
-	DWORD length = 0;
+	uint32_t length = 0;
 
 	if (LoadDataFromFile("data/misc/bsd.dat", &data, &length))
 	{
@@ -824,12 +732,12 @@ void CGameDatabase::LoadAerfalle()
 	// Consolidate or remove this method of loading (this was copied and pasted)
 
 	BYTE *data;
-	DWORD length;
+	uint32_t length;
 
 	if (LoadDataFromFile("data/misc/aerfalle.dat", &data, &length))
 	{
 		BinaryReader reader(data, length);
-		unsigned int count = reader.ReadDWORD();
+		unsigned int count = reader.ReadUInt32();
 
 		for (unsigned int i = 0; i < count; i++)
 		{
@@ -837,9 +745,9 @@ void CGameDatabase::LoadAerfalle()
 
 			CCapturedWorldObjectInfo *pObjectInfo = new CCapturedWorldObjectInfo;
 
-			DWORD a = reader.ReadDWORD(); // size of this
-			DWORD b = reader.ReadDWORD(); // 0xF745
-			pObjectInfo->guid = reader.ReadDWORD(); // GUID
+			uint32_t a = reader.ReadUInt32(); // size of this
+			uint32_t b = reader.ReadUInt32(); // 0xF745
+			pObjectInfo->guid = reader.ReadUInt32(); // GUID
 
 			pObjectInfo->objdesc.UnPack(&reader);
 			pObjectInfo->physics.Unpack(reader);
@@ -875,22 +783,22 @@ void CGameDatabase::LoadStaticsData()
 	unsigned int spawned = 0;
 
 	BYTE *data;
-	DWORD length;
+	uint32_t length;
 
 	if (LoadDataFromFile("data/misc/statics.dat", &data, &length))
 	{
 		BinaryReader reader(data, length);
-		unsigned int count = reader.ReadDWORD();
+		unsigned int count = reader.ReadUInt32();
 
 		for (unsigned int i = 0; i < count; i++)
 		{
 			CCapturedWorldObjectInfo *pObjectInfo = new CCapturedWorldObjectInfo;
 			
 			reader.ReadString();
-			DWORD dwObjDataLen = reader.ReadDWORD(); // size of this
+			uint32_t dwObjDataLen = reader.ReadUInt32(); // size of this
 
-			reader.ReadDWORD(); // 0xf745
-			pObjectInfo->guid = reader.ReadDWORD(); // GUID
+			reader.ReadUInt32(); // 0xf745
+			pObjectInfo->guid = reader.ReadUInt32(); // GUID
 			
 			pObjectInfo->objdesc.UnPack(&reader);
 			pObjectInfo->physics.Unpack(reader);
@@ -904,21 +812,21 @@ void CGameDatabase::LoadStaticsData()
 				break;
 			}
 
-			DWORD dwIDDataLen = reader.ReadDWORD();
-			DWORD offsetStart = reader.GetOffset();
+			uint32_t dwIDDataLen = reader.ReadUInt32();
+			uint32_t offsetStart = reader.GetOffset();
 
 			if (dwIDDataLen > 0)
 			{
 				BinaryReader idReader(reader.GetDataPtr(), dwIDDataLen);
 
-				idReader.ReadDWORD(); // 0xf7b0
-				idReader.ReadDWORD(); // character
-				idReader.ReadDWORD(); // sequence
-				idReader.ReadDWORD(); // game event (0xc9)
+				idReader.ReadUInt32(); // 0xf7b0
+				idReader.ReadUInt32(); // character
+				idReader.ReadUInt32(); // sequence
+				idReader.ReadUInt32(); // game event (0xc9)
 
-				idReader.ReadDWORD(); // object
-				DWORD flags = idReader.ReadDWORD(); // flags
-				idReader.ReadDWORD(); // success
+				idReader.ReadUInt32(); // object
+				uint32_t flags = idReader.ReadUInt32(); // flags
+				idReader.ReadUInt32(); // success
 
 				enum AppraisalProfilePackHeader {
 					Packed_None = 0,
@@ -941,17 +849,17 @@ void CGameDatabase::LoadStaticsData()
 
 				if (flags & Packed_IntStats)
 				{
-					pObjectInfo->dwordProperties = idReader.ReadMap<DWORD, DWORD>();
+					pObjectInfo->uint32_tProperties = idReader.ReadMap<uint32_t, uint32_t>();
 				}
 
 				if (flags & Packed_Int64Stats)
-					pObjectInfo->qwordProperties = idReader.ReadMap<DWORD, UINT64>();
+					pObjectInfo->qwordProperties = idReader.ReadMap<uint32_t, UINT64>();
 
 				if (flags & Packed_BoolStats)
-					pObjectInfo->boolProperties = idReader.ReadMap<DWORD, DWORD>();
+					pObjectInfo->boolProperties = idReader.ReadMap<uint32_t, uint32_t>();
 
 				if (flags & Packed_FloatStats)
-					pObjectInfo->floatProperties = idReader.ReadMap<DWORD, double>();
+					pObjectInfo->floatProperties = idReader.ReadMap<uint32_t, double>();
 
 				if (idReader.GetLastError())
 				{
@@ -970,7 +878,7 @@ void CGameDatabase::LoadStaticsData()
 #if 1 // deprecated reimplement
 	for (auto pSpawnInfo : m_CapturedStaticsData)
 	{
-		DWORD cell_id = pSpawnInfo->physics.pos.objcell_id;
+		uint32_t cell_id = pSpawnInfo->physics.pos.objcell_id;
 
 		if (!cell_id)
 			continue;
@@ -1043,11 +951,11 @@ void CGameDatabase::LoadStaticsData()
 
 	if (!spawned)
 	{
-		LOG(Temp, Warning, "Spawn data not included. Spawning functionality may be limited.\n");
+		SERVER_WARN << "Spawn data not included. Spawning functionality may be limited.";
 	}
 	else
 	{
-		LOG(Temp, Normal, "Spawned %d persistent dynamic objects!\n", spawned);
+		SERVER_INFO << "Spawned" << spawned << "persistent dynamic objects!";
 	}
 }
 
@@ -1156,7 +1064,7 @@ void CGameDatabase::SpawnStaticsForLandBlock(WORD lb_gid)
 
 		pSpawn->m_bDontClear = true;
 		
-		DWORD weenieHeader = 0;
+		uint32_t weenieHeader = 0;
 		pSpawnInfo->weenie.set_pack_header(&weenieHeader);
 
 		if (weenieHeader & PWD_Packed_Useability)
@@ -1208,7 +1116,7 @@ void CGameDatabase::SpawnStaticsForLandBlock(WORD lb_gid)
 
 CCapturedWorldObjectInfo *CGameDatabase::GetRandomCapturedMonsterData()
 {
-	DWORD numMonsters = (DWORD) m_CapturedMonsterDataList.size();
+	uint32_t numMonsters = (uint32_t) m_CapturedMonsterDataList.size();
 	if (numMonsters < 1)
 		return NULL;
 
@@ -1244,22 +1152,22 @@ void CGameDatabase::LoadCapturedMonsterData()
 	// Consolidate or remove this method of loading (this was copied and pasted)
 
 	BYTE *data;
-	DWORD length;
+	uint32_t length;
 
 	if (LoadDataFromFile("data/misc/monsters.dat", &data, &length))
 	{
 		BinaryReader reader(data, length);
-		unsigned int count = reader.ReadDWORD();
+		unsigned int count = reader.ReadUInt32();
 
 		for (unsigned int i = 0; i < count; i++)
 		{
 			CCapturedWorldObjectInfo *pMonsterInfo = new CCapturedWorldObjectInfo;
 			pMonsterInfo->m_ObjName = reader.ReadString();
 
-			DWORD dwObjDataLen = reader.ReadDWORD(); // size of this
+			uint32_t dwObjDataLen = reader.ReadUInt32(); // size of this
 
-			reader.ReadDWORD(); // 0xf745
-			DWORD dwGUID = reader.ReadDWORD(); // GUID
+			reader.ReadUInt32(); // 0xf745
+			uint32_t dwGUID = reader.ReadUInt32(); // GUID
 
 			pMonsterInfo->objdesc.UnPack(&reader);
 			pMonsterInfo->physics.Unpack(reader);
@@ -1272,21 +1180,21 @@ void CGameDatabase::LoadCapturedMonsterData()
 				break;
 			}
 
-			DWORD dwIDDataLen = reader.ReadDWORD();
-			DWORD offsetStart = reader.GetOffset();
+			uint32_t dwIDDataLen = reader.ReadUInt32();
+			uint32_t offsetStart = reader.GetOffset();
 
 			if (dwIDDataLen > 0)
 			{
 				BinaryReader idReader(reader.GetDataPtr(), dwIDDataLen);
 
-				idReader.ReadDWORD(); // 0xf7b0
-				idReader.ReadDWORD(); // character
-				idReader.ReadDWORD(); // sequence
-				idReader.ReadDWORD(); // game event (0xc9)
+				idReader.ReadUInt32(); // 0xf7b0
+				idReader.ReadUInt32(); // character
+				idReader.ReadUInt32(); // sequence
+				idReader.ReadUInt32(); // game event (0xc9)
 
-				idReader.ReadDWORD(); // object
-				DWORD flags = idReader.ReadDWORD(); // flags
-				idReader.ReadDWORD(); // success
+				idReader.ReadUInt32(); // object
+				uint32_t flags = idReader.ReadUInt32(); // flags
+				idReader.ReadUInt32(); // success
 
 				enum AppraisalProfilePackHeader {
 					Packed_None = 0,
@@ -1314,7 +1222,7 @@ void CGameDatabase::LoadCapturedMonsterData()
 
 				if (flags & Packed_IntStats)
 				{
-					pMonsterInfo->dwordProperties = idReader.ReadMap<DWORD, DWORD>();
+					pMonsterInfo->uint32_tProperties = idReader.ReadMap<uint32_t, uint32_t>();
 				}
 
 				if (idReader.GetLastError())
@@ -1324,7 +1232,7 @@ void CGameDatabase::LoadCapturedMonsterData()
 
 				if (flags & Packed_Int64Stats)
 				{
-					pMonsterInfo->qwordProperties = idReader.ReadMap<DWORD, UINT64>();
+					pMonsterInfo->qwordProperties = idReader.ReadMap<uint32_t, UINT64>();
 				}
 
 				if (idReader.GetLastError())
@@ -1334,7 +1242,7 @@ void CGameDatabase::LoadCapturedMonsterData()
 
 				if (flags & Packed_BoolStats)
 				{
-					pMonsterInfo->boolProperties = idReader.ReadMap<DWORD, DWORD>();
+					pMonsterInfo->boolProperties = idReader.ReadMap<uint32_t, uint32_t>();
 				}
 
 				if (idReader.GetLastError())
@@ -1344,7 +1252,7 @@ void CGameDatabase::LoadCapturedMonsterData()
 
 				if (flags & Packed_FloatStats)
 				{
-					pMonsterInfo->floatProperties = idReader.ReadMap<DWORD, double>();
+					pMonsterInfo->floatProperties = idReader.ReadMap<uint32_t, double>();
 				}
 
 				if (idReader.GetLastError())
@@ -1354,7 +1262,7 @@ void CGameDatabase::LoadCapturedMonsterData()
 
 				if (flags & Packed_StringStats)
 				{
-					pMonsterInfo->stringProperties = idReader.ReadMap<DWORD>();
+					pMonsterInfo->stringProperties = idReader.ReadMap<uint32_t>();
 				}
 
 				if (idReader.GetLastError())
@@ -1364,7 +1272,7 @@ void CGameDatabase::LoadCapturedMonsterData()
 
 				if (flags & Packed_DataIDStats)
 				{
-					pMonsterInfo->dataIDProperties = idReader.ReadMap<DWORD, DWORD>();
+					pMonsterInfo->dataIDProperties = idReader.ReadMap<uint32_t, uint32_t>();
 				}
 
 				if (idReader.GetLastError())
@@ -1402,7 +1310,7 @@ void CGameDatabase::LoadCapturedMonsterData()
 
 				if (flags & Packed_CreatureProfile)
 				{
-					DWORD flags = idReader.ReadDWORD();					
+					uint32_t flags = idReader.ReadUInt32();					
 				}
 			}
 
@@ -1422,7 +1330,7 @@ void CGameDatabase::LoadCapturedMonsterData()
 
 CCapturedWorldObjectInfo *CGameDatabase::GetRandomCapturedItemData()
 {
-	DWORD numItems = (DWORD) m_CapturedItemDataList.size();
+	uint32_t numItems = (uint32_t) m_CapturedItemDataList.size();
 
 	if (numItems < 1)
 	{
@@ -1450,12 +1358,12 @@ void CGameDatabase::LoadCapturedItemData()
 	// Consolidate or remove this method of loading (this was copied and pasted)
 
 	BYTE *data;
-	DWORD length;
+	uint32_t length;
 
 	if (LoadDataFromFile("data/misc/items.dat", &data, &length))
 	{
 		BinaryReader reader(data, length);
-		unsigned int count = reader.ReadDWORD();
+		unsigned int count = reader.ReadUInt32();
 
 		for (unsigned int i = 0; i < count; i++)
 		{
@@ -1467,11 +1375,11 @@ void CGameDatabase::LoadCapturedItemData()
 
 			// make all lowercase and ignore spaces for searching purposes
 
-			DWORD dwObjDataLen = reader.ReadDWORD(); // size of this
-			DWORD offset_start = reader.GetOffset();
+			uint32_t dwObjDataLen = reader.ReadUInt32(); // size of this
+			uint32_t offset_start = reader.GetOffset();
 
-			reader.ReadDWORD(); // 0xf745
-			DWORD dwGUID = reader.ReadDWORD(); // GUID
+			reader.ReadUInt32(); // 0xf745
+			uint32_t dwGUID = reader.ReadUInt32(); // GUID
 
 			pItemInfo->objdesc.UnPack(&reader);
 			pItemInfo->physics.Unpack(reader);
@@ -1488,21 +1396,21 @@ void CGameDatabase::LoadCapturedItemData()
 				DEBUG_BREAK();
 			}
 
-			DWORD dwIDDataLen = reader.ReadDWORD();
-			DWORD offsetStart = reader.GetOffset();
+			uint32_t dwIDDataLen = reader.ReadUInt32();
+			uint32_t offsetStart = reader.GetOffset();
 
 			if (dwIDDataLen > 0)
 			{
 				BinaryReader idReader(reader.GetDataPtr(), dwIDDataLen);
 
-				idReader.ReadDWORD(); // 0xf7b0
-				idReader.ReadDWORD(); // character
-				idReader.ReadDWORD(); // sequence
-				idReader.ReadDWORD(); // game event (0xc9)
+				idReader.ReadUInt32(); // 0xf7b0
+				idReader.ReadUInt32(); // character
+				idReader.ReadUInt32(); // sequence
+				idReader.ReadUInt32(); // game event (0xc9)
 
-				idReader.ReadDWORD(); // object
-				DWORD flags = idReader.ReadDWORD(); // flags
-				idReader.ReadDWORD(); // success
+				idReader.ReadUInt32(); // object
+				uint32_t flags = idReader.ReadUInt32(); // flags
+				idReader.ReadUInt32(); // success
 
 				enum AppraisalProfilePackHeader {
 					Packed_None = 0,
@@ -1530,7 +1438,7 @@ void CGameDatabase::LoadCapturedItemData()
 
 				if (flags & Packed_IntStats)
 				{
-					pItemInfo->dwordProperties = idReader.ReadMap<DWORD, DWORD>();
+					pItemInfo->uint32_tProperties = idReader.ReadMap<uint32_t, uint32_t>();
 				}
 
 				if (idReader.GetLastError())
@@ -1540,7 +1448,7 @@ void CGameDatabase::LoadCapturedItemData()
 
 				if (flags & Packed_Int64Stats)
 				{
-					pItemInfo->qwordProperties = idReader.ReadMap<DWORD, UINT64>();
+					pItemInfo->qwordProperties = idReader.ReadMap<uint32_t, UINT64>();
 				}
 
 				if (idReader.GetLastError())
@@ -1550,7 +1458,7 @@ void CGameDatabase::LoadCapturedItemData()
 
 				if (flags & Packed_BoolStats)
 				{
-					pItemInfo->boolProperties = idReader.ReadMap<DWORD, DWORD>();
+					pItemInfo->boolProperties = idReader.ReadMap<uint32_t, uint32_t>();
 				}
 
 				if (idReader.GetLastError())
@@ -1560,7 +1468,7 @@ void CGameDatabase::LoadCapturedItemData()
 
 				if (flags & Packed_FloatStats)
 				{
-					pItemInfo->floatProperties = idReader.ReadMap<DWORD, double>();
+					pItemInfo->floatProperties = idReader.ReadMap<uint32_t, double>();
 				}
 
 				if (idReader.GetLastError())
@@ -1570,10 +1478,10 @@ void CGameDatabase::LoadCapturedItemData()
 
 				/*
 				if (flags & Packed_StringStats)
-				pItemInfo->stringProperties = idReader.ReadMap<DWORD>();
+				pItemInfo->stringProperties = idReader.ReadMap<uint32_t>();
 
 				if (flags & Packed_DataIDStats)
-				pItemInfo->dataIDProperties = idReader.ReadMap<DWORD, DWORD>();
+				pItemInfo->dataIDProperties = idReader.ReadMap<uint32_t, uint32_t>();
 				*/
 			}
 
@@ -1594,7 +1502,7 @@ void CGameDatabase::LoadCapturedItemData()
 
 CCapturedWorldObjectInfo *CGameDatabase::GetRandomCapturedArmorData()
 {
-	DWORD numItems = (DWORD) m_CapturedArmorDataList.size();
+	uint32_t numItems = (uint32_t) m_CapturedArmorDataList.size();
 	if (numItems < 1)
 		return NULL;
 
@@ -1622,12 +1530,12 @@ void CGameDatabase::LoadCapturedArmorData()
 	// Consolidate or remove this method of loading (this was copied and pasted)
 
 	BYTE *data;
-	DWORD length;
+	uint32_t length;
 
 	if (LoadDataFromFile("data/misc/armor.dat", &data, &length))
 	{
 		BinaryReader reader(data, length);
-		unsigned int count = reader.ReadDWORD();
+		unsigned int count = reader.ReadUInt32();
 
 		for (unsigned int i = 0; i < count; i++)
 		{
@@ -1639,11 +1547,11 @@ void CGameDatabase::LoadCapturedArmorData()
 
 			// make all lowercase and ignore spaces for searching purposes
 
-			DWORD dwObjDataLen = reader.ReadDWORD(); // size of this
-			DWORD offset_start = reader.GetOffset();
+			uint32_t dwObjDataLen = reader.ReadUInt32(); // size of this
+			uint32_t offset_start = reader.GetOffset();
 
-			reader.ReadDWORD(); // 0xf745
-			DWORD dwGUID = reader.ReadDWORD(); // GUID
+			reader.ReadUInt32(); // 0xf745
+			uint32_t dwGUID = reader.ReadUInt32(); // GUID
 
 			pItemInfo->objdesc.UnPack(&reader);
 			pItemInfo->physics.Unpack(reader);
@@ -1660,21 +1568,21 @@ void CGameDatabase::LoadCapturedArmorData()
 				DEBUG_BREAK();
 			}
 
-			DWORD dwIDDataLen = reader.ReadDWORD();
-			DWORD offsetStart = reader.GetOffset();
+			uint32_t dwIDDataLen = reader.ReadUInt32();
+			uint32_t offsetStart = reader.GetOffset();
 
 			if (dwIDDataLen > 0)
 			{
 				BinaryReader idReader(reader.GetDataPtr(), dwIDDataLen);
 
-				idReader.ReadDWORD(); // 0xf7b0
-				idReader.ReadDWORD(); // character
-				idReader.ReadDWORD(); // sequence
-				idReader.ReadDWORD(); // game event (0xc9)
+				idReader.ReadUInt32(); // 0xf7b0
+				idReader.ReadUInt32(); // character
+				idReader.ReadUInt32(); // sequence
+				idReader.ReadUInt32(); // game event (0xc9)
 
-				idReader.ReadDWORD(); // object
-				DWORD flags = idReader.ReadDWORD(); // flags
-				idReader.ReadDWORD(); // success
+				idReader.ReadUInt32(); // object
+				uint32_t flags = idReader.ReadUInt32(); // flags
+				idReader.ReadUInt32(); // success
 
 				enum AppraisalProfilePackHeader {
 					Packed_None = 0,
@@ -1701,7 +1609,7 @@ void CGameDatabase::LoadCapturedArmorData()
 				}
 
 				if (flags & Packed_IntStats)
-					pItemInfo->dwordProperties = idReader.ReadMap<DWORD, DWORD>();
+					pItemInfo->uint32_tProperties = idReader.ReadMap<uint32_t, uint32_t>();
 
 				if (idReader.GetLastError())
 				{
@@ -1710,7 +1618,7 @@ void CGameDatabase::LoadCapturedArmorData()
 
 				if (flags & Packed_Int64Stats)
 				{
-					pItemInfo->qwordProperties = idReader.ReadMap<DWORD, UINT64>();
+					pItemInfo->qwordProperties = idReader.ReadMap<uint32_t, UINT64>();
 				}
 
 				if (idReader.GetLastError())
@@ -1720,7 +1628,7 @@ void CGameDatabase::LoadCapturedArmorData()
 
 				if (flags & Packed_BoolStats)
 				{
-					pItemInfo->boolProperties = idReader.ReadMap<DWORD, DWORD>();
+					pItemInfo->boolProperties = idReader.ReadMap<uint32_t, uint32_t>();
 				}
 
 				if (idReader.GetLastError())
@@ -1730,7 +1638,7 @@ void CGameDatabase::LoadCapturedArmorData()
 
 				if (flags & Packed_FloatStats)
 				{
-					pItemInfo->floatProperties = idReader.ReadMap<DWORD, double>();
+					pItemInfo->floatProperties = idReader.ReadMap<uint32_t, double>();
 				}
 
 				if (idReader.GetLastError())
@@ -1740,16 +1648,16 @@ void CGameDatabase::LoadCapturedArmorData()
 
 				/* .... etc...
 				if (flags & Packed_StringStats)
-				pItemInfo->stringProperties = idReader.ReadMap<DWORD>();
+				pItemInfo->stringProperties = idReader.ReadMap<uint32_t>();
 
 				if (flags & Packed_DataIDStats)
-				pItemInfo->dataIDProperties = idReader.ReadMap<DWORD, DWORD>();
+				pItemInfo->dataIDProperties = idReader.ReadMap<uint32_t, uint32_t>();
 				*/
 			}
 
 			reader.SetOffset(offsetStart + dwIDDataLen);
 
-			DWORD dwWornModelDataLen = reader.ReadDWORD();
+			uint32_t dwWornModelDataLen = reader.ReadUInt32();
 			offsetStart = reader.GetOffset();
 
 			/*
@@ -1761,10 +1669,10 @@ void CGameDatabase::LoadCapturedArmorData()
 
 				if (numPalette)
 				{
-					pItemInfo->wornAppearance.dwBasePalette = reader.ReadPackedDWORD(); // actually packed, fix this
+					pItemInfo->wornAppearance.dwBasePalette = reader.ReadPackeduint32_t(); // actually packed, fix this
 					for (int j = 0; j < numPalette; j++)
 					{
-						DWORD replacement = reader.ReadPackedDWORD(); // actually packed, fix this
+						uint32_t replacement = reader.ReadPackeduint32_t(); // actually packed, fix this
 						BYTE offset = reader.ReadBYTE();
 						BYTE range = reader.ReadBYTE();
 						pItemInfo->wornAppearance.lPalettes.push_back(PaletteRpl(replacement, offset, range));
@@ -1774,15 +1682,15 @@ void CGameDatabase::LoadCapturedArmorData()
 				for (int j = 0; j < numTex; j++)
 				{
 					BYTE index = reader.ReadBYTE();
-					DWORD oldT = reader.ReadPackedDWORD();
-					DWORD newT = reader.ReadPackedDWORD();
+					uint32_t oldT = reader.ReadPackeduint32_t();
+					uint32_t newT = reader.ReadPackeduint32_t();
 					pItemInfo->wornAppearance.lTextures.push_back(TextureRpl(index, oldT, newT));
 				}
 
 				for (int j = 0; j < numModel; j++)
 				{
 					BYTE index = reader.ReadBYTE();
-					DWORD newM = reader.ReadPackedDWORD();
+					uint32_t newM = reader.ReadPackeduint32_t();
 					pItemInfo->wornAppearance.lModels.push_back(ModelRpl(index, newM));
 				}
 			}
@@ -1798,14 +1706,14 @@ void CGameDatabase::LoadCapturedArmorData()
 	}
 }
 
-DWORD ParseDWORDFromStringHex(const char *hex)
+uint32_t Parseuint32_tFromStringHex(const char *hex)
 {
 	return strtoul(hex, NULL, 16);
 }
 
 float ParseFloatFromStringHex(const char *hex)
 {
-	DWORD hexVal = ParseDWORDFromStringHex(hex);
+	uint32_t hexVal = Parseuint32_tFromStringHex(hex);
 	return *((float *)&hexVal);
 }
 
@@ -1824,7 +1732,7 @@ void CGameDatabase::LoadTeleTownList()
 			{
 				TeleTownList_t t;
 				t.m_teleString = ResultRow[2];
-				t.position.objcell_id = ParseDWORDFromStringHex(ResultRow[3]);
+				t.position.objcell_id = Parseuint32_tFromStringHex(ResultRow[3]);
 				t.position.frame.m_origin.x = ParseFloatFromStringHex(ResultRow[4]);
 				t.position.frame.m_origin.y = ParseFloatFromStringHex(ResultRow[5]);
 				t.position.frame.m_origin.z = ParseFloatFromStringHex(ResultRow[6]);
@@ -1838,7 +1746,7 @@ void CGameDatabase::LoadTeleTownList()
 			}
 
 #ifndef PUBLIC_BUILD
-			LOG(World, Normal, "Added %d teleport locations.\n", Result->ResultRows());
+			SERVER_INFO << "Added" << Result->ResultRows() << "teleport locations.";
 #endif
 			delete Result;
 		}
@@ -1898,7 +1806,7 @@ CWeenieObject *CGameDatabase::CreateFromCapturedData(CCapturedWorldObjectInfo *p
 	pObject->m_Qualities.SetFloat(TRANSLUCENCY_FLOAT, pObjectInfo->physics.translucency);
 
 	/* TODO
-	pObject->m_Qualities.SetInt(pObjectInfo->dwordProperties);
+	pObject->m_Qualities.SetInt(pObjectInfo->uint32_tProperties);
 	pObject->m_Qualities.SetInt64(pObjectInfo->qwordProperties);
 	pObject->m_Qualities.SetBool(pObjectInfo->boolProperties);
 	pObject->m_Qualities.m_FloatStats.Set(pObjectInfo->floatProperties);
@@ -1911,11 +1819,11 @@ CWeenieObject *CGameDatabase::CreateFromCapturedData(CCapturedWorldObjectInfo *p
 #if 0
 	if (pObjectInfo->weenie._type & (ITEM_TYPE::TYPE_ARMOR | ITEM_TYPE::TYPE_CLOTHING))
 	{
-		DWORD iconID = pObjectInfo->weenie._iconID;
+		uint32_t iconID = pObjectInfo->weenie._iconID;
 
 		if (iconID)
 		{
-			DWORD paletteKey;
+			uint32_t paletteKey;
 			ClothingTable *pCT = g_ClothingCache.GetTableByIndexOfIconID(iconID, 0, &paletteKey);
 
 			if (pCT)

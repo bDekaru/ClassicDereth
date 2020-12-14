@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "Packable.h"
+class PackObj;
 
 class BinaryWriter
 {
@@ -13,40 +13,49 @@ public:
 	
 	void WriteString(const std::string &value);
 	void WriteString(const char *value);
+	void WriteString(const std::u16string &value) { WriteString16(value); }
+	void WriteString16(const std::u16string &value);
 	void Write(const void *data, unsigned int length);
 	void Align();
 
 	template <typename ValueType, typename InputType>
-	void Write(InputType inputType)
+	typename std::enable_if_t<!(std::is_same_v<std::string, InputType> || std::is_same_v<std::u16string, InputType>)>
+	Write(InputType inputType)
 	{
 		ValueType valueType = (ValueType)inputType;
 		Write(&valueType, sizeof(ValueType));
 	}
 
-	template <>
-	void Write<std::string>(std::string inputType)
+	template <typename ValueType, typename InputType>
+	typename std::enable_if_t<std::is_same_v<std::string, InputType>>
+	Write(InputType inputType)
 	{
-		WriteString(inputType.c_str());
+		WriteString(inputType);
 	}
 
-	void Write(PackObj *packable) {
-		packable->Pack(this);
+	template <typename ValueType, typename InputType>
+	typename std::enable_if_t<std::is_same_v<std::u16string, InputType>>
+		Write(InputType inputType)
+	{
+		WriteString16(inputType);
 	}
+
+	void Write(PackObj* packable);
 
 	void Write(BinaryWriter *otherWriter)
 	{
 		Write(otherWriter->GetData(), otherWriter->GetSize());
 	}
 
-	void WritePackedDWORD(DWORD value)
+	void WritePackedUInt32(uint32_t value)
 	{
 		if (value < 0x8000)
 			Write<WORD>(value);
 		else
-			Write<DWORD>((value << 16) | ((value >> 16) | 0x8000));
+			Write<uint32_t>((value << 16) | ((value >> 16) | 0x8000));
 	}
 
-	void WriteCompressedUInt32(DWORD v)
+	void WriteCompressedUInt32(uint32_t v)
 	{
 		BYTE *b = (BYTE *)&v;
 
@@ -69,18 +78,18 @@ public:
 			Write<BYTE>(b[0]);
 	}
 
-	void Pack_AsWClassIDCompressed(DWORD value)
+	void Pack_AsWClassIDCompressed(uint32_t value)
 	{
 		if (value < 0x8000)
 			Write<WORD>(value);
 		else
-			Write<DWORD>((value << 16) | ((value >> 16) | 0x8000));
+			Write<uint32_t>((value << 16) | ((value >> 16) | 0x8000));
 	}
 
-	void Pack_AsDataIDOfKnownType(DWORD i_FirstID, DWORD i_toPack)
+	void Pack_AsDataIDOfKnownType(uint32_t i_FirstID, uint32_t i_toPack)
 	{
-		DWORD dataID = i_toPack ? i_toPack : i_FirstID;
-		DWORD offset = dataID - i_FirstID;
+		uint32_t dataID = i_toPack ? i_toPack : i_FirstID;
+		uint32_t offset = dataID - i_FirstID;
 
 		if (offset > 0x3FFF)
 		{
@@ -107,7 +116,7 @@ public:
 	{
 		Write<WORD>((WORD) table.size());
 		Write<WORD>(bucketSize);
-		for (std::map<A, B>::iterator keyValuePair = table.begin(); keyValuePair != table.end(); keyValuePair++)
+		for (typename std::map<A, B>::iterator keyValuePair = table.begin(); keyValuePair != table.end(); keyValuePair++)
 		{
 			AppendData((A)keyValuePair->first);
 			AppendData((B)keyValuePair->second);
@@ -118,7 +127,7 @@ public:
 	{
 		Write<WORD>((WORD) table.size());
 		Write<WORD>(bucketSize);
-		for (std::map<A, std::string>::iterator keyValuePair = table.begin(); keyValuePair != table.end(); keyValuePair++)
+		for (typename std::map<A, std::string>::iterator keyValuePair = table.begin(); keyValuePair != table.end(); keyValuePair++)
 		{
 			AppendData((A)keyValuePair->first);
 			AppendString(keyValuePair->second.c_str());
@@ -131,7 +140,7 @@ public:
 	void WriteNewWString(const std::wstring &value);
 
 	BYTE *GetData();
-	DWORD GetSize();
+	uint32_t GetSize();
 
 protected:
 	// BYTE m_pbData[0x800];
@@ -139,7 +148,7 @@ protected:
 	BYTE m_LocalBuffer[512];
 
 	BYTE *m_pbData;
-	DWORD m_dwDataSize;
+	uint32_t m_dwDataSize;
 	BYTE *m_pbDataPos;
-	DWORD m_dwSize;
+	uint32_t m_dwSize;
 };

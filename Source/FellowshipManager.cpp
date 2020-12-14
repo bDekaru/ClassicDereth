@@ -1,13 +1,89 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "FellowshipManager.h"
 #include "World.h"
 #include "WeenieObject.h"
 #include "Player.h"
 #include "ChatMsgs.h"
+#include "Config.h"
 
 #define MAX_FELLOWSHIP_MEMBERS 9
 #define FELLOWSHIP_OPTIONAL_UPDATING 1
+
+Fellow::Fellow(uint32_t player_id) : Fellow::Fellow(g_pWorld->FindPlayer(player_id))
+{
+}
+
+Fellow::Fellow(CWeenieObject* weenie)
+{
+	if (weenie)
+	{
+		_cachedWeenie = weenie;
+
+		_name = weenie->GetName();
+		_level = weenie->InqIntQuality(LEVEL_INT, 0);
+
+		// share loot from char options?
+		CPlayerWeenie *player = weenie->AsPlayer();
+		_share_loot = (player->GetCharacterOptions() & FellowshipShareLoot_CharacterOption) != 0;
+		if (_share_loot) _share_loot = 0x0010;
+
+		_current_health = weenie->GetHealth();
+		_current_stamina = weenie->GetStamina();
+		_current_mana = weenie->GetMana();
+
+		_max_health = weenie->GetMaxHealth();
+		_max_stamina = weenie->GetMaxStamina();
+		_max_mana = weenie->GetMaxMana();
+	}
+}
+
+Fellow& Fellow::operator=(const Fellow &other)
+{
+	_cachedWeenie = other._cachedWeenie;
+
+	_name = other._name;
+	_level = other._level;
+
+	_share_loot = other._share_loot;
+
+	_current_health = other._current_health;
+	_current_stamina = other._current_stamina;
+	_current_mana = other._current_mana;
+
+	_max_health = other._max_health;
+	_max_stamina = other._max_stamina;
+	_max_mana = other._max_mana;
+
+	return *this;
+}
+
+bool Fellow::updated(const Fellow &other) const
+{
+	if (!_cachedWeenie || !other._cachedWeenie)
+		return false;
+
+	if (_cachedWeenie->GetID() != other._cachedWeenie->GetID())
+		return false;
+
+	if (_level != other._level)
+		return true;
+
+	if (_max_health != other._max_health || _max_stamina != other._max_stamina || _max_mana != other._max_mana)
+		return true;
+
+	// this is a noisy packet, so we'll apply a threshold to updates
+	if (other._max_health > 0 && (float)abs((int)_current_health - (int)other._current_health) / (float)other._max_health >= g_pConfig->GetFellowHealthThreshold())
+		return true;
+
+	if (other._max_stamina > 0 && (float)abs((int)_current_stamina - (int)other._current_stamina) / (float)other._max_stamina >= g_pConfig->GetFellowStamThreshold())
+		return true;
+
+	if (other._max_mana > 0 && (float)abs((int)_current_mana - (int)other._current_mana) / (float)other._max_mana >= g_pConfig->GetFellowManaThreshold())
+		return true;
+
+	return false;
+}
 
 DEFINE_PACK(Fellow)
 {
@@ -34,14 +110,18 @@ DEFINE_PACK(Fellowship)
 	_fellowship_table.Pack(pWriter);
 
 	pWriter->WriteString(_name);
-	pWriter->Write<DWORD>(_leader);
+	pWriter->Write<uint32_t>(_leader);
 	pWriter->Write<int>(_share_xp);
 	pWriter->Write<int>(_even_xp_split);
 	pWriter->Write<int>(_open_fellow);
 	pWriter->Write<int>(_locked);
 
 	_fellows_departed.Pack(pWriter);
-
+	if (_fellows_departed.empty())
+	{
+		// Bad Decal, it needs another int
+		pWriter->Write<int>(0);
+	}
 }
 
 DEFINE_UNPACK(Fellowship)
@@ -61,27 +141,27 @@ void Fellowship::UpdateData()
 		CPlayerWeenie *player = g_pWorld->FindPlayer(entry.first);
 		if (player)
 		{
-			entry.second._name = player->GetName();
-			unsigned int level = entry.second._level = player->InqIntQuality(LEVEL_INT, 0);
+			//entry.second._name = player->GetName();
+			unsigned int level = entry.second._level;
 
-			entry.second._current_health = player->GetHealth();
-			entry.second._current_stamina = player->GetStamina();
-			entry.second._current_mana = player->GetMana();
+			//entry.second._current_health = player->GetHealth();
+			//entry.second._current_stamina = player->GetStamina();
+			//entry.second._current_mana = player->GetMana();
 
-			entry.second._max_health = player->GetMaxHealth();
-			entry.second._max_stamina = player->GetMaxStamina();
-			entry.second._max_mana = player->GetMaxMana();
+			//entry.second._max_health = player->GetMaxHealth();
+			//entry.second._max_stamina = player->GetMaxStamina();
+			//entry.second._max_mana = player->GetMaxMana();
 
-			entry.second._cp_cache = 0; // TODO
-			entry.second._lum_cache = 0; // TODO
-			entry.second._share_loot = _share_loot ? 0x0010 : 0;
+			//entry.second._cp_cache = 0; // TODO
+			//entry.second._lum_cache = 0; // TODO
+			//entry.second._share_loot = _share_loot ? 0x0010 : 0;
 
 			if (minLevel <= 0 || level < minLevel)
 				minLevel = level;
 			if (maxLevel <= 0 || level > maxLevel)
 				maxLevel = level;
 
-			entry.second._cachedWeenie = player;
+			//entry.second._cachedWeenie = player;
 
 			if (entry.first == _leader)
 				leaderLevel = level;
@@ -104,13 +184,14 @@ void Fellowship::UpdateData()
 	_share_xp = (bAllOver50 || bWithin10Levels) && _desiredShareXP;
 
 	unsigned int xpPortionSum = CalculateExperienceProportionSum();
+	double xpPortionPctg = 1.0 / (double)xpPortionSum;
 
 	for (auto &entry : _fellowship_table)
 	{
 		if (_even_xp_split)
-			entry.second.splitPercent = FellowshipManager::GetEvenSplitXPPctg((DWORD) _fellowship_table.size());
+			entry.second.splitPercent = FellowshipManager::GetEvenSplitXPPctg((uint32_t) _fellowship_table.size());
 		else
-			entry.second.splitPercent = FellowshipManager::GetExperienceProportion(entry.second._level) / (double)xpPortionSum;
+			entry.second.splitPercent = xpPortionPctg * (double)entry.second._level;
 	}
 }
 
@@ -139,13 +220,17 @@ double Fellowship::CalculateDegradeMod(CWeenieObject *source, CWeenieObject *tar
 	return max(0.0, min(1.0, 1.0 - ((numClicks - 25.0) / 25.0)));
 }
 
-void Fellowship::GiveXP(CWeenieObject *source, long long amount, bool bShowText)
+void Fellowship::GiveXP(CWeenieObject *source, int64_t amount, ExperienceHandlingType flags, bool bShowText)
 {
 	UpdateData();
 
+	flags_clear(flags, ExperienceHandlingType::ShareWithFellows);
+
+	// TODO: Apply fellowship experience handling
+
 	if (!_share_xp)
 	{
-		source->GiveXP(amount, bShowText);
+		source->GiveXP(amount, flags, bShowText);
 	}
 	else
 	{
@@ -159,9 +244,37 @@ void Fellowship::GiveXP(CWeenieObject *source, long long amount, bool bShowText)
 			{
 				double degradeMod = CalculateDegradeMod(source, other);
 
-				long long xpGained = (long long) (amount * entry.second.splitPercent * degradeMod);
+				int64_t xpGained = (int64_t) (amount * entry.second.splitPercent * degradeMod);
 				if (xpGained > 0)
-					other->GiveXP(xpGained, bShowText);
+					other->GiveXP(xpGained, flags, bShowText);
+			}
+		}
+	}
+}
+
+void Fellowship::GiveLum(CWeenieObject *source, int64_t amount, bool bShowText)
+{
+	
+
+	if (!_share_xp)
+	{
+		source->GiveLum(amount, bShowText);
+	}
+	else
+	{
+		for (auto &entry : _fellowship_table)
+		{
+			if (entry.first == source->GetID())
+				entry.second._cp_cache += amount;
+
+			CWeenieObject *other = entry.second._cachedWeenie;
+			if (other)
+			{
+				double degradeMod = CalculateDegradeMod(source, other);
+
+				int64_t xpGained = (int64_t)(amount * entry.second.splitPercent * degradeMod);
+				if (xpGained > 0)
+					other->GiveLum(xpGained, bShowText);
 			}
 		}
 	}
@@ -173,66 +286,89 @@ unsigned int Fellowship::CalculateExperienceProportionSum()
 	unsigned int sum = 0;
 
 	for (auto &entry : _fellowship_table)
-		sum += FellowshipManager::GetExperienceProportion(entry.second._level);
+		sum += entry.second._level;
 
 	return sum;
 }
 
-void Fellowship::TickUpdate()
+bool Fellowship::ShouldUpdate(uint32_t fellow_id)
 {
+	CPlayerWeenie *player = g_pWorld->FindPlayer(fellow_id);
+	if (!player)
+		return false;
 
-	// check if any need updating
-
-#if FELLOWSHIP_OPTIONAL_UPDATING 
-	bool bNeedUpdate = false;
-	for (auto &entry : _fellowship_table)
+	Fellow updated(player);
+	Fellow *current = _fellowship_table.lookup(fellow_id);
+	if (current && current->updated(updated))
 	{
-		if (entry.second._updates)
-		{
-			bNeedUpdate = true;
-			break;
-		}
+		*current = updated;
+		return true;
 	}
 
-	if (!bNeedUpdate)
-		return;
-#endif
+	return false;
+}
+
+void Fellowship::FullUpdate()
+{
 	UpdateData();
 
 	BinaryWriter updateMessage;
-	updateMessage.Write<DWORD>(0x2BE);
+	updateMessage.Write<uint32_t>(0x2BE);
 	Pack(&updateMessage);
 
 	for (auto &entry : _fellowship_table)
 	{
-#if FELLOWSHIP_OPTIONAL_UPDATING 
-		if (entry.second._updates)
-#endif
+		CPlayerWeenie *player = g_pWorld->FindPlayer(entry.first);
+		if (player)
+			player->SendNetMessage(&updateMessage, PRIVATE_MSG, TRUE, FALSE);
+	}
+}
+
+void Fellowship::VitalsUpdate(uint32_t player_id)
+{
+	if (ShouldUpdate(player_id))
+	{
+		UpdateData();
+		Fellow *f = _fellowship_table.lookup(player_id);
+		if (!f)
+			return;
+
+		BinaryWriter updateMessage;
+		updateMessage.Write<uint32_t>(0x2C0);
+		updateMessage.Write<uint32_t>(player_id);
+		f->Pack(&updateMessage);
+		updateMessage.Write<uint32_t>(Fellow_UpdateVitals);
+
+		for (auto &entry : _fellowship_table)
 		{
-			CPlayerWeenie *player = g_pWorld->FindPlayer(entry.first);
-			if (player)
+			if (CPlayerWeenie *player = g_pWorld->FindPlayer(entry.first))
+			{
 				player->SendNetMessage(&updateMessage, PRIVATE_MSG, TRUE, FALSE);
+			}
 		}
 	}
 }
 
-void Fellowship::SendUpdate(int updateType)
+void Fellowship::StatsUpdate(uint32_t player_id)
 {
-	UpdateData();
-
-	switch (updateType)
+	if (ShouldUpdate(player_id))
 	{
-	case Fellow_UpdateFull:
-		{
-			BinaryWriter updateMessage;
-			updateMessage.Write<DWORD>(0x2BE);
-			Pack(&updateMessage);
+		UpdateData();
+		Fellow *f = _fellowship_table.lookup(player_id);
+		if (!f)
+			return;
 
-			for (auto &entry : _fellowship_table)
+		BinaryWriter updateMessage;
+		updateMessage.Write<uint32_t>(0x2C0);
+		updateMessage.Write<uint32_t>(player_id);
+		f->Pack(&updateMessage);
+		updateMessage.Write<uint32_t>(Fellow_UpdateStats);
+
+		for (auto &entry : _fellowship_table)
+		{
+			if (CPlayerWeenie *player = g_pWorld->FindPlayer(entry.first))
 			{
-				CPlayerWeenie *player = g_pWorld->FindPlayer(entry.first);
-				if (player)
-					player->SendNetMessage(&updateMessage, PRIVATE_MSG, TRUE, FALSE);
+				player->SendNetMessage(&updateMessage, PRIVATE_MSG, TRUE, FALSE);
 			}
 		}
 	}
@@ -261,27 +397,27 @@ bool Fellowship::IsFull()
 	return false;
 }
 
-void Fellowship::Disband(DWORD disbander_id)
+void Fellowship::Disband(uint32_t disbander_id)
 {
 	BinaryWriter disbandMessage;
-	disbandMessage.Write<DWORD>(0x2BF);
+	disbandMessage.Write<uint32_t>(0x2BF);
 	for (auto &entry : _fellowship_table)
 	{
 		CPlayerWeenie *player = g_pWorld->FindPlayer(entry.first);
 		if (player)
 		{
 			player->SendNetMessage(&disbandMessage, PRIVATE_MSG, TRUE, FALSE);
-			player->m_Qualities.RemoveString(FELLOWSHIP_STRING);
+			player->LeaveFellowship();
 		}
 	}
 	_fellowship_table.clear();
 }
 
-void Fellowship::Dismiss(DWORD dismissee_id)
+void Fellowship::RemoveFellow(uint32_t dismissee_id)
 {
 	BinaryWriter dismissMessage;
-	dismissMessage.Write<DWORD>(0xA4);
-	dismissMessage.Write<DWORD>(dismissee_id);
+	dismissMessage.Write<uint32_t>(0xA4);
+	dismissMessage.Write<uint32_t>(dismissee_id);
 
 	for (auto &entry : _fellowship_table)
 	{
@@ -294,22 +430,22 @@ void Fellowship::Dismiss(DWORD dismissee_id)
 	_fellowship_table.remove(dismissee_id);
 	if (CPlayerWeenie *player = g_pWorld->FindPlayer(dismissee_id))
 	{
-		player->m_Qualities.RemoveString(FELLOWSHIP_STRING);
+		player->LeaveFellowship();
 	}
 
-	SendUpdate(Fellow_UpdateFull);
+	FullUpdate();
 }
 
-void Fellowship::Quit(DWORD quitter_id)
+void Fellowship::Quit(uint32_t quitter_id)
 {
 	BinaryWriter quitMessage;
-	quitMessage.Write<DWORD>(0xA3);
-	quitMessage.Write<DWORD>(quitter_id);
+	quitMessage.Write<uint32_t>(0xA3);
+	quitMessage.Write<uint32_t>(quitter_id);
 
 	std::string quitter_name;
 	if (CPlayerWeenie *player = g_pWorld->FindPlayer(quitter_id))
 	{
-		player->m_Qualities.RemoveString(FELLOWSHIP_STRING);
+		player->LeaveFellowship();
 		quitter_name = player->GetName();
 	}
 	// BinaryWriter *quitText = ServerText(csprintf("%s has left the Fellowship.", quitter_name.c_str()), LTT_DEFAULT);
@@ -331,12 +467,32 @@ void Fellowship::Quit(DWORD quitter_id)
 		AssignNewLeader(_fellowship_table.begin()->first);
 	}
 
-	SendUpdate(Fellow_UpdateFull);
+	if (IsLocked())
+	{
+		uint32_t what = 0;
+		_fellows_departed.add(quitter_id, &what);
+	}
+
+	FullUpdate();
 }
 
-void Fellowship::Recruit(DWORD recruitee_id)
+bool Fellowship::CanJoin(uint32_t recruitee_id)
 {
-	Fellow newFellow;
+	if (IsLocked())
+	{
+		fellows_departed_table::iterator itr = _fellows_departed.find(recruitee_id);
+		if (itr != _fellows_departed.end())
+		{
+			return true;
+		}
+		return false;
+	}
+	return true;
+}
+
+void Fellowship::AddFellow(uint32_t recruitee_id)
+{
+	Fellow newFellow(recruitee_id);
 	_fellowship_table.add(recruitee_id, &newFellow);
 
 	UpdateData();
@@ -344,10 +500,10 @@ void Fellowship::Recruit(DWORD recruitee_id)
 	Fellow *f = _fellowship_table.lookup(recruitee_id);
 
 	BinaryWriter recruitMessage;
-	recruitMessage.Write<DWORD>(0x2C0);
-	recruitMessage.Write<DWORD>(recruitee_id);
+	recruitMessage.Write<uint32_t>(0x2C0);
+	recruitMessage.Write<uint32_t>(recruitee_id);
 	f->Pack(&recruitMessage);
-	recruitMessage.Write<DWORD>(Fellow_UpdateFull);
+	recruitMessage.Write<uint32_t>(Fellow_UpdateFull);
 	
 	for (auto &entry : _fellowship_table)
 	{
@@ -357,11 +513,10 @@ void Fellowship::Recruit(DWORD recruitee_id)
 			{
 				// full update to the new recruit
 				BinaryWriter updateMessage;
-				updateMessage.Write<DWORD>(0x2BE);
+				updateMessage.Write<uint32_t>(0x2BE);
 				Pack(&updateMessage);
 
 				player->SendNetMessage(&updateMessage, PRIVATE_MSG, TRUE, FALSE);
-				player->m_Qualities.SetString(FELLOWSHIP_STRING, _name);
 			}
 			else
 			{
@@ -370,10 +525,19 @@ void Fellowship::Recruit(DWORD recruitee_id)
 			}
 		}
 	}
+
+	fellows_departed_table::iterator itr = _fellows_departed.find(recruitee_id);
+	if (itr != _fellows_departed.end())
+	{
+		_fellows_departed.erase(itr);
+	}
 }
 
 void Fellowship::ChangeOpen(BOOL open)
 {
+	if (_open_fellow == open)
+		return;
+
 	_open_fellow = open;
 	
 	std::string leader_name;
@@ -392,9 +556,11 @@ void Fellowship::ChangeOpen(BOOL open)
 				player->SendNetMessage(ServerText(csprintf("%s has %s your Fellowship.", leader_name.c_str(), open ? "opened" : "closed"), LTT_DEFAULT), PRIVATE_MSG, FALSE, TRUE);
 		}
 	}
+
+	FullUpdate();
 }
 
-void Fellowship::AssignNewLeader(DWORD new_leader_id)
+void Fellowship::AssignNewLeader(uint32_t new_leader_id)
 {
 	_leader = new_leader_id;
 
@@ -416,30 +582,31 @@ void Fellowship::AssignNewLeader(DWORD new_leader_id)
 		}
 	}
 
-	SendUpdate(Fellow_UpdateFull);
+	FullUpdate();
 }
 
-void Fellowship::Chat(DWORD sender_id, const char *text)
+void Fellowship::Chat(uint32_t sender_id, const char *text)
 {
 	CWeenieObject *sender_weenie = g_pWorld->FindPlayer(sender_id);
 	if (sender_weenie)
 	{
-		sender_weenie->SendNetMessage(ServerText(csprintf("You say to your fellowship, \"%s\"", text), LTT_FELLOWSHIP_CHANNEL), PRIVATE_MSG, FALSE, TRUE);
-
 		std::string sender_name = sender_weenie->GetName();
+
+		sender_weenie->SendNetMessage(ChannelChat(Fellow_ChannelID, NULL, text), PRIVATE_MSG, FALSE, TRUE);
+
 		for (auto &entry : _fellowship_table)
 		{
 			if (entry.first != sender_id)
 			{
 				CPlayerWeenie *player = g_pWorld->FindPlayer(entry.first);
 				if (player)
-					player->SendNetMessage(ServerText(csprintf("%s says to your fellowship, \"%s\"", sender_name.c_str(), text), LTT_FELLOWSHIP_CHANNEL), PRIVATE_MSG, FALSE, TRUE);
+					player->SendNetMessage(ChannelChat(Fellow_ChannelID, sender_name.c_str(), text), PRIVATE_MSG, FALSE, TRUE);
 			}
 		}
 	}
 }
 
-void Fellowship::SetUpdates(DWORD fellow_id, BOOL on)
+void Fellowship::SetUpdates(uint32_t fellow_id, BOOL on)
 {
 	Fellow *f = _fellowship_table.lookup(fellow_id);
 	if (!f)
@@ -448,115 +615,67 @@ void Fellowship::SetUpdates(DWORD fellow_id, BOOL on)
 	f->_updates = on;
 }
 
-FellowshipManager::FellowshipManager()
-{
-}
-
-FellowshipManager::~FellowshipManager()
-{
-	for (auto &entry : m_Fellowships)
-		delete entry.second;
-
-	m_Fellowships.clear();
-}
-
 void FellowshipManager::Tick()
 {
-	if (m_fNextUpdates <= Timer::cur_time)
-	{
-		for (auto &fs : m_Fellowships)
-		{
-			fs.second->TickUpdate();
-		}
 
-		m_fNextUpdates = Timer::cur_time + 1.0;
-	}
 }
 
-Fellowship *FellowshipManager::GetFellowship(const std::string &name)
+int FellowshipManager::Create(const std::string &name, uint32_t creator_id, BOOL shareXP)
 {
-	std::unordered_map<std::string, Fellowship *>::iterator entry = m_Fellowships.find(name);
-
-	if (entry != m_Fellowships.end())
-		return entry->second;
-
-	return NULL;
-}
-
-int FellowshipManager::Create(const std::string &name, DWORD creator_id, BOOL shareXP)
-{
-	if (GetFellowship(name))
-		return WERROR_FELLOWSHIP_UNCLEAN_NAME; // in use
-
-	Fellowship *fs = new Fellowship();
-
-	fs->_name = name;
-	fs->_leader = creator_id;
-	fs->_desiredShareXP = shareXP;
-	fs->_locked = false;
-	fs->_open_fellow = false;
-	fs->_even_xp_split = true;
-	fs->_share_loot = false;
-
-	Fellow f;
-	fs->_fellowship_table.add(creator_id, &f);
-
 	CWeenieObject *playerWeenie = g_pWorld->FindPlayer(creator_id);
 	if (CPlayerWeenie *player = playerWeenie->AsPlayer())
 	{
-		player->m_Qualities.SetString(FELLOWSHIP_STRING, name);
+		fellowship_ptr_t fs = std::make_shared<Fellowship>();
+
+		fs->_name = name;
+		fs->_leader = creator_id;
+		fs->_desiredShareXP = shareXP;
+		fs->_locked = false;
+		fs->_open_fellow = false;
+		fs->_even_xp_split = true;
+		fs->_share_loot = false;
+
+		Fellow f(player);
+		fs->_fellowship_table.add(creator_id, &f);
 		fs->_share_loot = player->ShareFellowshipLoot();
+
+		player->JoinFellowship(fs);
+
+		fs->FullUpdate();
 	}
 
-	m_Fellowships[name] = fs;
-
-	fs->SendUpdate(Fellow_UpdateFull);
 	return WERROR_NONE;
 }
 
-int FellowshipManager::Disband(const std::string &name, DWORD disbander_id)
-{	
-	std::unordered_map<std::string, Fellowship *>::iterator i = m_Fellowships.find(name);
-	if (i == m_Fellowships.end())
+int FellowshipManager::Disband(const fellowship_ptr_t &fellowship, uint32_t disbander_id)
+{
+	if (!fellowship)
 		return WERROR_FELLOWSHIP_NO_FELLOWSHIP;
 
-	Fellowship *fs = i->second;
-	if (fs->_leader != disbander_id)
+	if (fellowship->_leader != disbander_id)
 		return WERROR_FELLOWSHIP_NOT_LEADER;
 
-	m_Fellowships.erase(i);
-	fs->Disband(disbander_id);
-	delete fs;
+	fellowship->Disband(disbander_id);
 
 	return WERROR_NONE;
 }
 
-int FellowshipManager::Quit(const std::string &name, DWORD quitter_id)
+int FellowshipManager::Quit(const fellowship_ptr_t &fellowship, uint32_t quitter_id)
 {
-	std::unordered_map<std::string, Fellowship *>::iterator i = m_Fellowships.find(name);
-	if (i == m_Fellowships.end())
+	if (!fellowship)
 		return WERROR_FELLOWSHIP_NO_FELLOWSHIP;
 
-	Fellowship *fs = i->second;
-	fs->Quit(quitter_id);
-
-	if (fs->IsEmpty())
-	{
-		m_Fellowships.erase(i);
-		delete fs;
-	}
+	fellowship->Quit(quitter_id);
 
 	return WERROR_NONE;
 }
 
-int FellowshipManager::Dismiss(const std::string &name, DWORD dismisser_id, DWORD dismissee_id)
+int FellowshipManager::Dismiss(const fellowship_ptr_t &fellowship, uint32_t dismisser_id, uint32_t dismissee_id)
 {
-	std::unordered_map<std::string, Fellowship *>::iterator i = m_Fellowships.find(name);
-	if (i == m_Fellowships.end())
+	if (!fellowship)
 		return WERROR_FELLOWSHIP_NO_FELLOWSHIP;
 
-	Fellowship *fs = i->second;
-	if (fs->_leader != dismisser_id)
+	if (fellowship->_leader != dismisser_id)
 		return WERROR_FELLOWSHIP_NOT_LEADER;
 
 	CWeenieObject *dismissee_weenie = g_pWorld->FindPlayer(dismissee_id);
@@ -564,33 +683,25 @@ int FellowshipManager::Dismiss(const std::string &name, DWORD dismisser_id, DWOR
 		return WERROR_NO_OBJECT;
 	if (!dismissee_weenie->HasFellowship())
 		return WERROR_NO_OBJECT;
-	if (strcmp(dismissee_weenie->InqStringQuality(FELLOWSHIP_STRING, "").c_str(), name.c_str()))
+
+	fellowship_ptr_t other = dismissee_weenie->GetFellowship();
+	if (fellowship != other)
 		return WERROR_NO_OBJECT;
 
-	fs->Dismiss(dismissee_id);
-
-	if (fs->IsEmpty())
-	{
-		m_Fellowships.erase(i);
-		delete fs;
-	}
+	fellowship->RemoveFellow(dismissee_id);
 
 	return WERROR_NONE;
 }
 
-int FellowshipManager::Recruit(const std::string &name, DWORD recruiter_id, DWORD recruitee_id)
+int FellowshipManager::Recruit(const fellowship_ptr_t &fellowship, uint32_t recruiter_id, uint32_t recruitee_id)
 {
-	std::unordered_map<std::string, Fellowship *>::iterator i = m_Fellowships.find(name);
-	if (i == m_Fellowships.end())
+	if (!fellowship)
 		return WERROR_FELLOWSHIP_NO_FELLOWSHIP;
 
-	Fellowship *fs = i->second;
-	if (fs->IsFull())
+	if (fellowship->IsFull())
 		return WERROR_FELLOWSHIP_FULL;
-	if (!fs->IsOpen() && fs->_leader != recruiter_id)
+	if (!fellowship->IsOpen() && fellowship->_leader != recruiter_id)
 		return WERROR_FELLOWSHIP_NOT_LEADER;
-	if (fs->IsLocked())
-		return WERROR_FELLOWSHIP_LOCKED_RECRUITER;
 
 	CPlayerWeenie *recruiter_weenie = g_pWorld->FindPlayer(recruiter_id);
 	if (!recruiter_weenie)
@@ -602,7 +713,14 @@ int FellowshipManager::Recruit(const std::string &name, DWORD recruiter_id, DWOR
 	if (!recruited_weenie)
 		return WERROR_NO_OBJECT;
 
-	if (recruiter_weenie->DistanceTo(recruited_weenie, true) >= 3.0)
+	if (!fellowship->CanJoin(recruitee_id))
+	{
+		recruiter_weenie->NotifyWeenieErrorWithString(WERROR_FELLOWSHIP_LOCKED_RECRUITER, recruited_weenie->GetName().c_str());
+		recruited_weenie->NotifyWeenieError(WERROR_FELLOWSHIP_LOCKED_RECRUITEE);
+		return WERROR_NONE;
+	}
+
+	if (recruiter_weenie->DistanceTo(recruited_weenie, true) >= 16.0)
 		return WERROR_TOO_FAR;
 
 	if (recruited_weenie->IsBusyOrInAction())
@@ -612,60 +730,52 @@ int FellowshipManager::Recruit(const std::string &name, DWORD recruiter_id, DWOR
 	if (recruited_weenie->GetCharacterOptions() & IgnoreFellowshipRequests_CharacterOption)
 		return WERROR_FELLOWSHIP_IGNORING_REQUESTS;
 
-	fs->Recruit(recruitee_id);
-
-	if (fs->IsEmpty())
-	{
-		m_Fellowships.erase(i);
-		delete fs;
-	}
+	fellowship->AddFellow(recruitee_id);
+	recruited_weenie->JoinFellowship(fellowship);
 
 	recruiter_weenie->DoForcedMotion(Motion_BowDeep);
 
 	return WERROR_NONE;
 }
 
-int FellowshipManager::ChangeOpen(const std::string &name, DWORD changer_id, BOOL open)
+int FellowshipManager::ChangeOpen(const fellowship_ptr_t &fellowship, uint32_t changer_id, BOOL open)
 {
-	std::unordered_map<std::string, Fellowship *>::iterator i = m_Fellowships.find(name);
-	if (i == m_Fellowships.end())
+	if (!fellowship)
 		return WERROR_FELLOWSHIP_NO_FELLOWSHIP;
 
-	Fellowship *fs = i->second;
-	if (fs->_leader != changer_id)
+	if (fellowship->_leader != changer_id)
 		return WERROR_FELLOWSHIP_NOT_LEADER;
 
-	fs->ChangeOpen(open);
+	if (fellowship->IsLocked())
+		return WERROR_FELLOWSHIP_FELLOW_LOCKED_CAN_NOT_OPEN;
+
+	fellowship->ChangeOpen(open);
 	return WERROR_NONE;
 }
 
-int FellowshipManager::AssignNewLeader(const std::string &name, DWORD changer_id, DWORD new_leader_id)
+int FellowshipManager::AssignNewLeader(const fellowship_ptr_t &fellowship, uint32_t changer_id, uint32_t new_leader_id)
 {
-	std::unordered_map<std::string, Fellowship *>::iterator i = m_Fellowships.find(name);
-	if (i == m_Fellowships.end())
+	if (!fellowship)
 		return WERROR_FELLOWSHIP_NO_FELLOWSHIP;
 
 	if (changer_id == new_leader_id)
 		return WERROR_FELLOWSHIP_MEMBER;
 
-	Fellowship *fs = i->second;
-	if (fs->_leader != changer_id)
+	if (fellowship->_leader != changer_id)
 		return WERROR_FELLOWSHIP_NOT_LEADER;
-	if (!fs->_fellowship_table.lookup(new_leader_id))
+	if (!fellowship->_fellowship_table.lookup(new_leader_id))
 		return WERROR_NO_OBJECT;
 
-	fs->AssignNewLeader(new_leader_id);
+	fellowship->AssignNewLeader(new_leader_id);
 	return WERROR_NONE;
 }
 
-int FellowshipManager::RequestUpdates(const std::string &name, DWORD requester_id, BOOL on)
+int FellowshipManager::RequestUpdates(const fellowship_ptr_t &fellowship, uint32_t requester_id, BOOL on)
 {
-	std::unordered_map<std::string, Fellowship *>::iterator i = m_Fellowships.find(name);
-	if (i == m_Fellowships.end())
+	if (!fellowship)
 		return WERROR_FELLOWSHIP_NO_FELLOWSHIP;
 
-	Fellowship *fs = i->second;
-	fs->SetUpdates(requester_id, on);
+	fellowship->SetUpdates(requester_id, on);
 	return WERROR_NONE;
 }
 
@@ -698,17 +808,15 @@ double FellowshipManager::GetEvenSplitXPPctg(unsigned int uiNumFellows)
 	}
 }
 
-unsigned __int64 FellowshipManager::GetExperienceProportion(unsigned int level)
+uint64_t FellowshipManager::GetExperienceProportion(unsigned int level)
 {
 	return ExperienceSystem::ExperienceToRaiseLevel(level, level + 1);
 }
 
-void FellowshipManager::Chat(const std::string &name, DWORD sender_id, const char *text)
+void FellowshipManager::Chat(const fellowship_ptr_t &fellowship, uint32_t sender_id, const char *text)
 {
-	std::unordered_map<std::string, Fellowship *>::iterator i = m_Fellowships.find(name);
-	if (i == m_Fellowships.end())
+	if (!fellowship)
 		return;
 
-	Fellowship *fs = i->second;
-	fs->Chat(sender_id, text);
+	fellowship->Chat(sender_id, text);
 }

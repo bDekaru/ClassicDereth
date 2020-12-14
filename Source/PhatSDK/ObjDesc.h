@@ -3,22 +3,44 @@
 
 #include "Packable.h"
 
+enum CharacterPartIndex : uint32_t
+{
+	Abdomen = 0x00,
+	LeftLegUpper,
+	LeftLegLower,
+	LeftFoot,
+	LeftToe,
+	RightLegUpper,
+	RightLegLower,
+	RightFoot,
+	RightToe,
+	Chest,
+	LeftArmUpper,
+	LeftArmLower,
+	LeftHand_Part,
+	RightArmUpper,
+	RightArmLower,
+	RightHand,
+	Head
+};
+
 class AnimPartChange : public PackObj, public LegacyPackObj
 {
 public:
 	DECLARE_PACKABLE();
 
 	AnimPartChange() { }
-	AnimPartChange(unsigned int part_index_, DWORD part_id_) {
+	AnimPartChange(unsigned int part_index_, uint32_t part_id_) {
 		part_index = part_index_;
 		part_id = part_id_;
 	}
 
-	BOOL UnPack(BYTE **ppData, ULONG iSize);
+	using LegacyPackObj::Pack;
+	BOOL UnPack(BYTE **ppData, ULONG iSize) override;
 	BOOL replaces(AnimPartChange *pChange);
 
 	unsigned int part_index = 0;
-	DWORD part_id = 0;
+	uint32_t part_id = 0;
 	AnimPartChange *prev = NULL;
 	AnimPartChange *next = NULL;
 };
@@ -29,7 +51,7 @@ public:
 	DECLARE_PACKABLE();
 
 	TextureMapChange() { }
-	TextureMapChange(unsigned int part_index_, DWORD old_tex_id_, DWORD new_tex_id_) {
+	TextureMapChange(unsigned int part_index_, uint32_t old_tex_id_, uint32_t new_tex_id_) {
 		part_index = part_index_;
 		old_tex_id = old_tex_id_;
 		new_tex_id = new_tex_id_;
@@ -38,8 +60,8 @@ public:
 	BOOL replaces(TextureMapChange *change);
 
 	unsigned int part_index = 0;
-	DWORD old_tex_id = 0;
-	DWORD new_tex_id = 0;
+	uint32_t old_tex_id = 0;
+	uint32_t new_tex_id = 0;
 	TextureMapChange *prev = NULL;
 	TextureMapChange *next = NULL;
 };
@@ -50,7 +72,7 @@ public:
 	DECLARE_PACKABLE();
 
 	Subpalette() { }
-	Subpalette(DWORD subID_, unsigned int offset_, unsigned int numcolors_) {
+	Subpalette(uint32_t subID_, unsigned int offset_, unsigned int numcolors_) {
 		subID = subID_;
 		offset = offset_;
 		numcolors = numcolors_;
@@ -59,7 +81,7 @@ public:
 	BOOL supercedes(Subpalette *change);
 	BOOL replaces(Subpalette *change);
 
-	DWORD subID = 0;
+	uint32_t subID = 0;
 	unsigned int offset = 0;
 	unsigned int numcolors = 0;
 	Subpalette *prev = NULL;
@@ -106,13 +128,13 @@ public:
 	std::list<TextureMapChange *> GetTextureMapChanges(int part_index); // custom
 	AnimPartChange *GetAnimPartChange(int part_index); // custom
 	bool ContainsAnimPartChange(int part_index); // custom
-	bool ContainsAnimPartChange(int part_index, DWORD part_id); // custom
-	bool ContainsTextureMapChange(int part_index, DWORD new_tex_id); // custom
-	bool ContainsTextureMapChange(int part_index, DWORD old_tex_id, DWORD new_tex_id); // custom
-	bool ContainsSubpalette(DWORD subid, DWORD offset, DWORD numcolors); // custom
+	bool ContainsAnimPartChange(int part_index, uint32_t part_id); // custom
+	bool ContainsTextureMapChange(int part_index, uint32_t new_tex_id); // custom
+	bool ContainsTextureMapChange(int part_index, uint32_t old_tex_id, uint32_t new_tex_id); // custom
+	bool ContainsSubpalette(uint32_t subid, uint32_t offset, uint32_t numcolors); // custom
 	void ClearSubpalettes(); // custom
 
-	DWORD paletteID = 0;
+	uint32_t paletteID = 0;
 	Subpalette *firstSubpal = NULL;
 	Subpalette *lastSubpal = NULL;
 	int num_subpalettes = 0;

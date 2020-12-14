@@ -1,38 +1,51 @@
 
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "MathLib.h"
 #include "Frame.h"
 
-inline Vector CrossProduct(const Vector& a, const Vector& b)
-{
-	return Vector(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x);
-}
-
 float FindVectorZ(const Vector& p1, const Vector& p2, const Vector& p3, float x, float y)
 {
-	Vector v1 = p3 - p1;
-	Vector v2 = p2 - p1;
-	Vector normal = CrossProduct(v1, v2).normalize();
+	Vector v1 = p1 - p2;
+	Vector v2 = p1 - p3;
 
-	float poo = -((normal.x * p1.x) + (normal.y * p1.y) + (normal.z * p1.z));
-	float z = (-((normal.x * x) + (normal.y * y) + poo)) / normal.z;
+	Vector n = v1.cross(v2);
+
+	float k = p1.dot_product(n);
+	float z = (k - (n.x * x) - (n.y * y)) / n.z;
 
 	return z;
+
+	//static const Vector up(0, 0, 1);
+
+	//Vector pos(x, y, 0);
+
+	//Vector v1 = p2 - p1;
+	//Vector v2 = p3 - p1;
+
+	//Vector p = up.cross(v2);
+	//float det = v1.dot_product(p);
+
+	//Vector t = pos - p1;
+
+	//Vector q = t.cross(v1);
+	//float d = v2.dot_product(q);
+
+	//return d * (1.0f / det);
 }
 
 #if 0
 // Checks if the sum of two 32-bit values will overflow.
-void inline WillOF(DWORD v1, DWORD v2, BOOL *bResult)
+void inline WillOF(uint32_t v1, uint32_t v2, BOOL *bResult)
 {
 #ifdef _WIN32
 	__asm {
-		mov eax, DWORD PTR[v1]
-		add eax, DWORD PTR[v2]
+		mov eax, uint32_t PTR[v1]
+		add eax, uint32_t PTR[v2]
 		xor eax, eax
 		adc eax, eax
 
-		mov DWORD PTR[bResult], eax
+		mov uint32_t PTR[bResult], eax
 	}
 #else
 	*bResult = TRUE;
@@ -172,7 +185,8 @@ ULONG Vec2D::pack_size()
 
 Vector cross_product(const Vector& v1, const Vector& v2)
 {
-	return Vector(v1.y*v2.z - v1.z*v2.y, v1.z*v2.x - v1.x*v2.z, v1.x*v2.y - v1.y*v2.x);
+	//return Vector(v1.y*v2.z - v1.z*v2.y, v1.z*v2.x - v1.x*v2.z, v1.x*v2.y - v1.y*v2.x);
+	return v1.cross(v2);
 }
 
 BOOL Vector::is_zero() const
@@ -193,11 +207,6 @@ float Vector::get_heading()
 	return fmod(450 - RAD2DEG(atan2(heading.y, heading.x)), 360);
 }
 
-float Vector::dot_product(const Vector& v) const
-{
-	return((x * v.x) + (y * v.y) + (z * v.z));
-}
-
 BOOL Vector::normalize_check_small()
 {
 	float nfactor = magnitude();
@@ -207,27 +216,18 @@ BOOL Vector::normalize_check_small()
 
 	nfactor = 1 / nfactor;
 
-	x *= nfactor;
-	y *= nfactor;
-	z *= nfactor;
+	*this *= nfactor;
+
+	//x *= nfactor;
+	//y *= nfactor;
+	//z *= nfactor;
 
 	return FALSE;
 }
 
-Vector& Vector::normalize()
-{
-	float nfactor = 1 / magnitude();
-
-	x *= nfactor;
-	y *= nfactor;
-	z *= nfactor;
-
-	return *this;
-}
-
 BOOL Vector::IsValid() const
 {
-	if (_isnan(x) || _isnan(y) || _isnan(z))
+	if (isnan(x) || isnan(y) || isnan(z))
 		return FALSE;
 
 	return TRUE;
@@ -235,12 +235,12 @@ BOOL Vector::IsValid() const
 
 BOOL Quaternion::IsValid() const
 {
-	if (_isnan(w) || _isnan(x) || _isnan(y) || _isnan(z))
+	if (isnan(w) || isnan(x) || isnan(y) || isnan(z))
 		return FALSE;
 
 	float magn = (w * w) + (x * x) + (y * y) + (z * z);
 
-	if (_isnan(magn))
+	if (isnan(magn))
 		return FALSE;
 
 	if ((F_EPSILON * 5.0f) < fabs(magn - 1.0f))

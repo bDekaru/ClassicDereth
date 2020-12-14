@@ -1,0 +1,8 @@
+
+/Bin/
+/Build/
+/Data/
+/Intermediate/
+.git
+.vs
+.vscode

@@ -27,7 +27,7 @@ public:
     SmartBox *        m_SmartBox;                  // 0x04
     CPhysicsObj *    m_Player;                   // 0x08
     HashBaseIter<CPhysicsObj *>* m_Iter;    // 0x0C
-    DWORD            m_10;                          // 0x10
+    uint32_t            m_10;                          // 0x10
 };
 
 class PhysicsTimer

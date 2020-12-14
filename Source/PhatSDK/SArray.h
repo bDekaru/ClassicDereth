@@ -8,18 +8,18 @@ public:
     SArray();
     ~SArray();
 
-    void safe_add(T *pdata, DWORD index);
-    void shrink(DWORD new_size);
-    void grow(DWORD new_size);
+    void safe_add(T *pdata, uint32_t index);
+    void shrink(uint32_t new_size);
+    void grow(uint32_t new_size);
 
-    DWORD GetMaxCount();
+    uint32_t GetMaxCount();
 
 	union
 	{
 		T *array_data;
 		T *data;
 	};
-    DWORD array_size;
+    uint32_t array_size;
 };
 
 template<class T>
@@ -36,13 +36,13 @@ SArray<T>::~SArray()
 }
 
 template<class T>
-void SArray<T>::grow(DWORD new_size)
+void SArray<T>::grow(uint32_t new_size)
 {
     if (new_size > array_size)
     {
         T *new_data = new T[ new_size ];
 
-        for (DWORD i = 0; i < array_size; i++)
+        for (uint32_t i = 0; i < array_size; i++)
             new_data[i] = array_data[i];
 
         if (array_data)
@@ -56,7 +56,7 @@ void SArray<T>::grow(DWORD new_size)
 }
 
 template<class T>
-void SArray<T>::shrink(DWORD new_size)
+void SArray<T>::shrink(uint32_t new_size)
 {
     if (new_size <= array_size)
     {
@@ -70,7 +70,7 @@ void SArray<T>::shrink(DWORD new_size)
         {
             T *new_data = new T[ new_size ];
 
-            for (DWORD i = 0; i < new_size; i++)
+            for (uint32_t i = 0; i < new_size; i++)
                 new_data[i] = array_data[i];
 
             if (array_data)

@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "MagicSystem.h"
 
@@ -13,14 +13,14 @@ CSpellTable *MagicSystem::GetSpellTable()
 	return CachedSpellTable;
 }
 
-DWORD MagicSystem::GetLowestTaperID()
+uint32_t MagicSystem::GetLowestTaperID()
 {
 	return 63;
 }
 
-DWORD MagicSystem::DeterminePowerLevelOfComponent(DWORD scid)
+uint32_t MagicSystem::DeterminePowerLevelOfComponent(uint32_t scid)
 {
-	DWORD result = 0;
+	uint32_t result = 0;
 
 	switch (scid)
 	{
@@ -43,16 +43,16 @@ DWORD MagicSystem::DeterminePowerLevelOfComponent(DWORD scid)
 		result = 6;
 		break;
 	case 0x6Eu:
-		result = 7;
+		result = 6;
 		break;
 	case 0x70u:
-		result = 8;
+		result = 7;
 		break;
 	case 0xC0u:
-		result = 9;
+		result = 7;
 		break;
 	case 0xC1u:
-		result = 10;
+		result = 8;
 		break;
 	}
 

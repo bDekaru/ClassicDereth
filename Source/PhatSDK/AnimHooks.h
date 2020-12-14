@@ -44,12 +44,12 @@ public:
 	~AnimFrame();
 
 	void Destroy();
-	BOOL UnPack(DWORD ObjCount, BYTE **ppData, ULONG iSize);
+	BOOL UnPack(uint32_t ObjCount, BYTE **ppData, ULONG iSize);
 
 	AFrame *frame;
-	DWORD num_frame_hooks;
+	uint32_t num_frame_hooks;
 	CAnimHook *hooks; // linked-list of hookable events
-	DWORD num_parts;
+	uint32_t num_parts;
 };
 
 /*
@@ -61,8 +61,8 @@ public:
 	BOOL UnPack(BYTE **ppData, ULONG iSize);
 	BOOL replaces(AnimPartChange *pChange);
 
-	DWORD part_index;
-	DWORD part_id;
+	uint32_t part_index;
+	uint32_t part_id;
 	AnimPartChange *prev;
 	AnimPartChange *next;
 };
@@ -117,7 +117,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD _part_index;
+	uint32_t _part_index;
 };
 
 class SoundHook : public CAnimHook
@@ -132,7 +132,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD gid_;
+	uint32_t gid_;
 };
 
 class SoundTableHook : public CAnimHook
@@ -146,7 +146,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD sound_type_;
+	uint32_t sound_type_;
 };
 
 class AnimDoneHook : public CAnimHook
@@ -205,7 +205,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD part;
+	uint32_t part;
 	float start;
 	float end;
 	float time;
@@ -222,7 +222,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD part;
+	uint32_t part;
 	float start;
 	float end;
 	float time;
@@ -255,7 +255,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD part;
+	uint32_t part;
 	float start;
 	float end;
 	float time;
@@ -304,10 +304,10 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD emitter_info_id;
-	DWORD part_index;
+	uint32_t emitter_info_id;
+	uint32_t part_index;
 	Frame offset;
-	DWORD emitter_id;
+	uint32_t emitter_id;
 };
 
 class CreateBlockingParticleHook : public CreateParticleHook
@@ -330,7 +330,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD emitter_id;
+	uint32_t emitter_id;
 };
 
 class StopParticleHook : public CAnimHook
@@ -344,7 +344,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD emitter_id;
+	uint32_t emitter_id;
 };
 
 class CallPESHook : public CAnimHook
@@ -359,7 +359,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD pes;
+	uint32_t pes;
 	float pause;
 };
 
@@ -376,7 +376,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD gid_;
+	uint32_t gid_;
 	float prio;
 	float prob;
 	float vol;
@@ -422,7 +422,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD part_index;
+	uint32_t part_index;
 	float u_speed;
 	float v_speed;
 };
@@ -438,7 +438,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD _lights_on;
+	uint32_t _lights_on;
 };
 
 // Need to be moved elsewhere!
@@ -451,7 +451,7 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD part_index;
+	uint32_t part_index;
 	Vec2D left;
 	Vec2D right;
 	float radius;
@@ -483,5 +483,5 @@ public:
 	ULONG Pack(BYTE** ppData, ULONG iSize);
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 
-	DWORD ethereal;
+	uint32_t ethereal;
 };

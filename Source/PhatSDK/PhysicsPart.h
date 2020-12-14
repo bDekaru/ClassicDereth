@@ -24,12 +24,12 @@ public:
 	~CPhysicsPart();
 
 	// Static Functions.
-	static CPhysicsPart *makePhysicsPart(DWORD ID);
-	static BOOL LoadGfxObjArray(DWORD ID, GfxObjDegradeInfo*& DegradeInfo, CGfxObj**& Objects);
+	static CPhysicsPart *makePhysicsPart(uint32_t ID);
+	static BOOL LoadGfxObjArray(uint32_t ID, GfxObjDegradeInfo*& DegradeInfo, CGfxObj**& Objects);
 	static void ReleaseGfxObjArray(GfxObjDegradeInfo*& DegradeInfo, CGfxObj**& Objects);
 
 	// Static Variables.
-	static DWORD player_iid;
+	static uint32_t player_iid;
 
 	// Member Functions
 	BOOL Always2D();
@@ -38,11 +38,11 @@ public:
 	void Draw(BOOL bIsBuilding);
 	BBox *GetBoundingBox() const;
 	float GetMaxDegradeDistance();
-	DWORD GetObjectIID() const; // Probably inlined.
+	uint32_t GetObjectIID() const; // Probably inlined.
 	void RestoreSurfaces();
 	void SetGfxObjArray(GfxObjDegradeInfo* DegradeInfo, CGfxObj** Objects);
 	void SetNoDraw(BOOL NoDraw);
-	BOOL SetPart(DWORD ID);
+	BOOL SetPart(uint32_t ID);
 	void SetTranslucency(float Amount);
 	BOOL UsePalette(Palette *pPalette);
 	void UpdateViewerDistance(void);
@@ -54,9 +54,9 @@ public:
 	float m_ViewerDist; // 0x00
 	Vector viewer_heading; // 0x04
 	GfxObjDegradeInfo* degrades; // 0x10
-	DWORD deg_level; // 0x14
-	DWORD deg_mode; // 0x18
-	DWORD draw_state; // 0x1C
+	uint32_t deg_level; // 0x14
+	uint32_t deg_mode; // 0x18
+	uint32_t draw_state; // 0x1C
 #endif
 
 	CGfxObj** gfxobj; // 0x20
@@ -74,7 +74,7 @@ public:
 	CSurface** surfaces; // 0xC4
 #endif
 
-	DWORD original_palette_id; // 0xC8
+	uint32_t original_palette_id; // 0xC8
 
 	// missing some rendering related stuff here
 
@@ -85,7 +85,7 @@ public:
 	// missing some rendering related stuff here
 
 	CPhysicsObj* physobj; // 0xE0
-	long physobj_index; // 0xE4
+	int32_t physobj_index; // 0xE4
 };
 
 

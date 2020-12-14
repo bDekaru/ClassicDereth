@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhysicsObj.h"
 #include "Physics.h"
 
@@ -28,16 +28,16 @@ CPhysics::~CPhysics()
     // delete m_0C;
 }
 
-void CPhysics::AddStaticAnimatingObject(CPhysicsObj *pObject)
-{
-    static_animating_objects.RemoveUnOrdered(&pObject);
-    static_animating_objects.add(&pObject);
-}
-
-void CPhysics::RemoveStaticAnimatingObject(CPhysicsObj *pObject)
-{
-    static_animating_objects.RemoveUnOrdered(&pObject);
-}
+//void CPhysics::AddStaticAnimatingObject(CPhysicsObj *pObject)
+//{
+//    static_animating_objects.RemoveUnOrdered(&pObject);
+//    static_animating_objects.add(&pObject);
+//}
+//
+//void CPhysics::RemoveStaticAnimatingObject(CPhysicsObj *pObject)
+//{
+//    static_animating_objects.RemoveUnOrdered(&pObject);
+//}
 
 void CPhysics::SetPlayer(CPhysicsObj *Player)
 {
@@ -83,7 +83,7 @@ void CPhysics::UseTime()
    }
    */
 	/*
-    for (long i = 0; i < static_animating_objects.num_used; i++)
+    for (int32_t i = 0; i < static_animating_objects.num_used; i++)
     {
       static_animating_objects.array_data[i]->update_object();
     }
@@ -97,7 +97,7 @@ void CPhysics::UseTime()
 
     LastUpdate = Timer::cur_time;
 
-    for (long i = 0; i < static_animating_objects.num_used; i++)
+    for (int32_t i = 0; i < static_animating_objects.num_used; i++)
     {
       static_animating_objects.array_data[i]->animate_static_object();
     }

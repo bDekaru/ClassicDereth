@@ -5,9 +5,9 @@ class CPhysicsObj;
 class CServerObjectMaint
 {
 public:
-	void GotoLostCell(CPhysicsObj *, unsigned long);
+	void GotoLostCell(CPhysicsObj *, uint32_t);
 	void RemoveFromLostCell(CPhysicsObj *);
-	void AddObjectToBeDestroyed(unsigned long);
-	void RemoveObjectToBeDestroyed(unsigned long);
-	CPhysicsObj *GetObject(DWORD object_id);
+	void AddObjectToBeDestroyed(uint32_t);
+	void RemoveObjectToBeDestroyed(uint32_t);
+	CPhysicsObj *GetObject(uint32_t object_id);
 };

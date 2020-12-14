@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ClothingTable.h"
 #include "ObjDesc.h"
 #include "PalSet.h"
@@ -27,7 +27,7 @@ void ClothingTable::Destroyer(DBObj *pClothingTable)
 	delete ((ClothingTable *)pClothingTable);
 }
 
-ClothingTable *ClothingTable::Get(DWORD ID)
+ClothingTable *ClothingTable::Get(uint32_t ID)
 {
 	return (ClothingTable *)ObjCaches::ClothingTables->Get(ID);
 }
@@ -38,29 +38,105 @@ void ClothingTable::Release(ClothingTable *pClothingTable)
 		ObjCaches::ClothingTables->Release(pClothingTable->GetID());
 }
 
-BOOL ClothingTable::BuildObjDesc(DWORD setup, DWORD pt, ShadePackage *shades, ObjDesc *od)
+const uint32_t UNDEAD_MALE_UNDEAD_SETUP_0 = 33561102u;
+const uint32_t UNDEAD_MALE_UNDEAD_GEN_SETUP_0 = 33561103u;
+const uint32_t UNDEAD_MALE_SKELETON_SETUP_0 = 33561244u;
+const uint32_t UNDEAD_MALE_SKELETON_NOFLAME_SETUP_0 = 33561246u;
+const uint32_t UNDEAD_MALE_ZOMBIE_SETUP_0 = 33561245u;
+const uint32_t UNDEAD_MALE_ZOMBIE_NOFLAME_SETUP_0 = 33561238u;
+const uint32_t UNDEAD_FEMALE_UNDEAD_SETUP_0 = 33561100u;
+const uint32_t UNDEAD_FEMALE_UNDEAD_GEN_SETUP_0 = 33561101u;
+const uint32_t UNDEAD_FEMALE_SKELETON_SETUP_0 = 33561248u;
+const uint32_t UNDEAD_FEMALE_SKELETON_NOFLAME_SETUP_0 = 33561247u;
+const uint32_t UNDEAD_FEMALE_ZOMBIE_SETUP_0 = 33561249u;
+const uint32_t UNDEAD_FEMALE_ZOMBIE_NOFLAME_SETUP_0 = 33561250u;
+const uint32_t UMBRAEN_MALE_CROWN_SETUP_0 = 33560943u;
+const uint32_t UMBRAEN_MALE_CROWN_GEN_SETUP_0 = 33560946u;
+const uint32_t UMBRAEN_MALE_NOCROWN_SETUP_0 = 33561183u;
+const uint32_t UMBRAEN_MALE_VOID_SETUP_0 = 33561199u;
+const uint32_t UMBRAEN_FEMALE_CROWN_SETUP_0 = 33560944u;
+const uint32_t UMBRAEN_FEMALE_NOCROWN_SETUP_0 = 33561182u;
+const uint32_t UMBRAEN_FEMALE_VOID_SETUP_0 = 33561198u;
+const uint32_t PENUMBRAEN_MALE_CROWN_SETUP_0 = 33560942u;
+const uint32_t PENUMBRAEN_MALE_CROWN_GEN_SETUP_0 = 33560945u;
+const uint32_t PENUMBRAEN_MALE_NOCROWN_SETUP_0 = 33561181u;
+const uint32_t PENUMBRAEN_MALE_VOID_SETUP_0 = 33561200u;
+const uint32_t PENUMBRAEN_FEMALE_CROWN_SETUP_0 = 33560941u;
+const uint32_t PENUMBRAEN_FEMALE_NOCROWN_SETUP_0 = 33561180u;
+const uint32_t PENUMBRAEN_FEMALE_VOID_SETUP_0 = 33561201u;
+const uint32_t HUMAN_MALE_CLOTHING_DEFAULT_0 = 33554433u;
+const uint32_t HUMAN_FEMALE_CLOTHING_DEFAULT_0 = 33554510u;
+const uint32_t ANAKSHAY_MALE_SETUP_0 = 33561251u;
+const uint32_t ANAKSHAY_FEMALE_SETUP_0 = 33561252u;
+
+uint32_t ClothingTable::GetAltSetup(uint32_t setup)
 {
-	const ClothingBase *pClothingBase = _cloBaseHash.lookup(setup);
-
-	if (!pClothingBase)
+	switch (setup)
 	{
-		// TODO: MISSING CODE HERE TO HANDLE OTHER RACES
+	case UMBRAEN_MALE_CROWN_SETUP_0:
+	case UMBRAEN_MALE_CROWN_GEN_SETUP_0:
+	case UMBRAEN_MALE_NOCROWN_SETUP_0:
+	case UMBRAEN_MALE_VOID_SETUP_0:
+		return UMBRAEN_MALE_CROWN_SETUP_0;
 
-		pClothingBase = _cloBaseHash.lookup(0x02000001); // HUMAN MALE
+	case UMBRAEN_FEMALE_CROWN_SETUP_0:
+	case UMBRAEN_FEMALE_NOCROWN_SETUP_0:
+	case UMBRAEN_FEMALE_VOID_SETUP_0:
+			return UMBRAEN_FEMALE_CROWN_SETUP_0;
+
+	case PENUMBRAEN_MALE_CROWN_SETUP_0:
+	case PENUMBRAEN_MALE_CROWN_GEN_SETUP_0:
+	case PENUMBRAEN_MALE_NOCROWN_SETUP_0:
+	case PENUMBRAEN_MALE_VOID_SETUP_0:
+		return PENUMBRAEN_MALE_CROWN_SETUP_0;
+
+	case PENUMBRAEN_FEMALE_CROWN_SETUP_0:
+	case PENUMBRAEN_FEMALE_NOCROWN_SETUP_0:
+	case PENUMBRAEN_FEMALE_VOID_SETUP_0:
+		return PENUMBRAEN_FEMALE_CROWN_SETUP_0;
+
+	case UNDEAD_MALE_UNDEAD_GEN_SETUP_0:
+	case UNDEAD_MALE_SKELETON_SETUP_0:
+	case UNDEAD_MALE_SKELETON_NOFLAME_SETUP_0:
+	case UNDEAD_MALE_ZOMBIE_SETUP_0:
+	case UNDEAD_MALE_ZOMBIE_NOFLAME_SETUP_0:
+		return UNDEAD_MALE_UNDEAD_SETUP_0;
+
+	case UNDEAD_FEMALE_UNDEAD_GEN_SETUP_0:
+	case UNDEAD_FEMALE_SKELETON_SETUP_0:
+	case UNDEAD_FEMALE_SKELETON_NOFLAME_SETUP_0:
+	case UNDEAD_FEMALE_ZOMBIE_SETUP_0:
+	case UNDEAD_FEMALE_ZOMBIE_NOFLAME_SETUP_0:
+		return UNDEAD_FEMALE_UNDEAD_SETUP_0;
+
+	case ANAKSHAY_MALE_SETUP_0:
+		return HUMAN_MALE_CLOTHING_DEFAULT_0;
+
+	case ANAKSHAY_FEMALE_SETUP_0:
+		return HUMAN_FEMALE_CLOTHING_DEFAULT_0;
 	}
+	return setup;
+}
 
-	if (!pClothingBase)
-		return TRUE;
+BOOL ClothingTable::BuildObjDesc(uint32_t setup, uint32_t pt, ShadePackage *shades, ObjDesc *od, uint32_t *iconId)
+{
+	setup = GetAltSetup(setup);
 
-	if (!pClothingBase->ApplyPartAndTextureChanges(od))
-		return FALSE;
-
+	const ClothingBase *pClothingBase = _cloBaseHash.lookup(setup);
 	const CloPaletteTemplate *pPaletteTemplate = _paletteTemplatesHash.lookup(pt);
+
+	// TODO: MISSING CODE HERE TO HANDLE OTHER RACES ??
+
+	if (!pClothingBase || !pClothingBase->ApplyPartAndTextureChanges(od))
+		return FALSE;
 
 	if (!pPaletteTemplate)
 		return FALSE;
 
-	for (DWORD i = 0; i < pPaletteTemplate->numSubpalEffects; i++)
+	if (pPaletteTemplate->iconID && iconId)
+		*iconId = pPaletteTemplate->iconID;
+
+	for (uint32_t i = 0; i < pPaletteTemplate->numSubpalEffects; i++)
 	{
 		PalSet *pPalSet = PalSet::Get(pPaletteTemplate->subpalEffects[i].palSet);
 
@@ -72,7 +148,7 @@ BOOL ClothingTable::BuildObjDesc(DWORD setup, DWORD pt, ShadePackage *shades, Ob
 
 		PalSet::Release(pPalSet);
 
-		for (DWORD j = 0; j < pPaletteTemplate->subpalEffects[i].numRanges; j++)
+		for (uint32_t j = 0; j < pPaletteTemplate->subpalEffects[i].numRanges; j++)
 		{
 			subpalette.offset = pPaletteTemplate->subpalEffects[i].rangeStart[j];
 			subpalette.numcolors = pPaletteTemplate->subpalEffects[i].rangeLength[j];
@@ -90,7 +166,7 @@ DEFINE_PACK(ClothingTable)
 
 DEFINE_UNPACK(ClothingTable)
 {
-	DWORD file_id = pReader->ReadDWORD(); // file ID
+	uint32_t file_id = pReader->ReadUInt32(); // file ID
 
 	_cloBaseHash.UnPack(pReader);
 	_paletteTemplatesHash.UnPack(pReader);
@@ -143,13 +219,13 @@ BOOL ClothingBase::ApplyPartAndTextureChanges(ObjDesc *od) const
 	TextureMapChange tmc;
 	BOOL success = TRUE;
 
-	for (DWORD i = 0; i < numObjectEffects; i++)
+	for (uint32_t i = 0; i < numObjectEffects; i++)
 	{
 		apc.part_index = objectEffects[i].partNum;
 		apc.part_id = objectEffects[i].objectID;
 		od->AddAnimPartChange(new AnimPartChange(apc));
 
-		for (DWORD j = 0; j < objectEffects[i].numTextureEffects; j++)
+		for (uint32_t j = 0; j < objectEffects[i].numTextureEffects; j++)
 		{
 			tmc.part_index = objectEffects[i].partNum;
 			tmc.old_tex_id = objectEffects[i].textureEffects[j].oldTexID;
@@ -172,10 +248,10 @@ DEFINE_PACK(ClothingBase)
 
 DEFINE_UNPACK(ClothingBase)
 {
-	numObjectEffects = pReader->Read<DWORD>();
+	numObjectEffects = pReader->Read<uint32_t>();
 
 	objectEffects = new CloObjectEffect[numObjectEffects];
-	for (DWORD i = 0; i < numObjectEffects; i++)
+	for (uint32_t i = 0; i < numObjectEffects; i++)
 		objectEffects[i].UnPack(pReader);
 
 	return true;
@@ -185,7 +261,7 @@ DEFINE_PACK_JSON(ClothingBase)
 {
 	json& entryList = writer["objectEffects"];
 
-	for (DWORD i = 0; i < numObjectEffects; i++)
+	for (uint32_t i = 0; i < numObjectEffects; i++)
 	{
 		json entry;
 		objectEffects[i].PackJson(entry);
@@ -197,10 +273,10 @@ DEFINE_UNPACK_JSON(ClothingBase)
 {
 	const json& entryList = reader["objectEffects"];
 
-	numObjectEffects = (DWORD) entryList.size();
+	numObjectEffects = (uint32_t) entryList.size();
 	objectEffects = new CloObjectEffect[numObjectEffects];
 
-	DWORD index = 0;
+	uint32_t index = 0;
 	for (const json &entry : entryList)
 	{
 		objectEffects[index++].UnPackJson(entry);
@@ -227,12 +303,12 @@ DEFINE_PACK(CloObjectEffect)
 
 DEFINE_UNPACK(CloObjectEffect)
 {
-	partNum = pReader->Read<DWORD>();
-	objectID = pReader->Read<DWORD>();
-	numTextureEffects = pReader->Read<DWORD>();
+	partNum = pReader->Read<uint32_t>();
+	objectID = pReader->Read<uint32_t>();
+	numTextureEffects = pReader->Read<uint32_t>();
 
 	textureEffects = new CloTextureEffect[numTextureEffects];
-	for (DWORD i = 0; i < numTextureEffects; i++)
+	for (uint32_t i = 0; i < numTextureEffects; i++)
 		textureEffects[i].UnPack(pReader);
 
 	return true;
@@ -245,7 +321,7 @@ DEFINE_PACK_JSON(CloObjectEffect)
 	
 	json& entryList = writer["textureEffects"];
 
-	for (DWORD i = 0; i < numTextureEffects; i++)
+	for (uint32_t i = 0; i < numTextureEffects; i++)
 	{
 		json entry;
 		textureEffects[i].PackJson(entry);
@@ -260,10 +336,10 @@ DEFINE_UNPACK_JSON(CloObjectEffect)
 
 	const json& entryList = reader["textureEffects"];
 
-	numTextureEffects = (DWORD)entryList.size();
+	numTextureEffects = (uint32_t)entryList.size();
 	textureEffects = new CloTextureEffect[numTextureEffects];
 
-	DWORD index = 0;
+	uint32_t index = 0;
 	for (const json &entry : entryList)
 	{
 		textureEffects[index++].UnPackJson(entry);
@@ -287,8 +363,8 @@ DEFINE_PACK(CloTextureEffect)
 
 DEFINE_UNPACK(CloTextureEffect)
 {
-	oldTexID = pReader->Read<DWORD>();
-	newTexID = pReader->Read<DWORD>();
+	oldTexID = pReader->Read<uint32_t>();
+	newTexID = pReader->Read<uint32_t>();
 
 	return true;
 }
@@ -324,11 +400,11 @@ DEFINE_PACK(CloPaletteTemplate)
 
 DEFINE_UNPACK(CloPaletteTemplate)
 {
-	iconID = pReader->Read<DWORD>();
-	numSubpalEffects = pReader->Read<DWORD>();
+	iconID = pReader->Read<uint32_t>();
+	numSubpalEffects = pReader->Read<uint32_t>();
 
 	subpalEffects = new CloSubpalEffect[numSubpalEffects];
-	for (DWORD i = 0; i < numSubpalEffects; i++)
+	for (uint32_t i = 0; i < numSubpalEffects; i++)
 		subpalEffects[i].UnPack(pReader);
 
 	return true;
@@ -340,7 +416,7 @@ DEFINE_PACK_JSON(CloPaletteTemplate)
 	
 	json& entryList = writer["subpalEffects"];
 
-	for (DWORD i = 0; i < numSubpalEffects; i++)
+	for (uint32_t i = 0; i < numSubpalEffects; i++)
 	{
 		json entry;
 		subpalEffects[i].PackJson(entry);
@@ -354,10 +430,10 @@ DEFINE_UNPACK_JSON(CloPaletteTemplate)
 
 	const json& entryList = reader["subpalEffects"];
 
-	numSubpalEffects = (DWORD)entryList.size();
+	numSubpalEffects = (uint32_t)entryList.size();
 	subpalEffects = new CloSubpalEffect[numSubpalEffects];
 
-	DWORD index = 0;
+	uint32_t index = 0;
 	for (const json &entry : entryList)
 	{
 		subpalEffects[index++].UnPackJson(entry);
@@ -388,17 +464,24 @@ DEFINE_PACK(CloSubpalEffect)
 
 DEFINE_UNPACK(CloSubpalEffect)
 {
-	numRanges = pReader->Read<DWORD>();
+	numRanges = pReader->Read<uint32_t>();
+	if (pReader->GetLastError())
+		return false;
 	rangeStart = new unsigned int[numRanges];
 	rangeLength = new unsigned int[numRanges];
 
-	for (DWORD i = 0; i < numRanges; i++)
+	uint32_t requiredReaderLength = (numRanges * 8) + 4;
+
+	if (pReader->GetDataRemaining() < requiredReaderLength)
+		return false;
+
+	for (uint32_t i = 0; i < numRanges; i++)
 	{
-		rangeStart[i] = pReader->Read<DWORD>();
-		rangeLength[i] = pReader->Read<DWORD>();
+		rangeStart[i] = pReader->Read<uint32_t>();
+		rangeLength[i] = pReader->Read<uint32_t>();
 	}
 
-	palSet = pReader->Read<DWORD>();
+	palSet = pReader->Read<uint32_t>();
 
 	return true;
 }
@@ -407,7 +490,7 @@ DEFINE_PACK_JSON(CloSubpalEffect)
 {
 	json &rangesList = writer["ranges"];
 
-	for (DWORD i = 0; i < numRanges; i++)
+	for (uint32_t i = 0; i < numRanges; i++)
 	{
 		json rangeEntry;
 		rangeEntry["start"] = rangeStart[i];
@@ -422,12 +505,12 @@ DEFINE_UNPACK_JSON(CloSubpalEffect)
 {
 	const json &rangesList = reader["ranges"];
 
-	numRanges = (DWORD) rangesList.size();
+	numRanges = (uint32_t) rangesList.size();
 
 	rangeStart = new unsigned int[numRanges];
 	rangeLength = new unsigned int[numRanges];
 
-	DWORD index = 0;
+	uint32_t index = 0;
 	for (const json &rangeEntry : rangesList)
 	{
 		rangeStart[index] = rangeEntry["start"];

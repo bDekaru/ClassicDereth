@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Vertex.h"
 #include "Polygon.h"
 #include "Transition.h"
@@ -85,7 +85,7 @@ BOOL CPolygon::UnPack(BYTE** ppData, ULONG iSize)
 	UNPACK(BYTE, num_pts);
 	UNPACK(BYTE, stippling);
 
-	UNPACK(DWORD, sides_type);
+	UNPACK(uint32_t, sides_type);
 	UNPACK(short, pos_surface);
 	UNPACK(short, neg_surface);
 
@@ -96,7 +96,7 @@ BOOL CPolygon::UnPack(BYTE** ppData, ULONG iSize)
 	screen = new CVertex*[num_pts];
 #endif
 
-	for (DWORD i = 0; i < num_pts; i++)
+	for (uint32_t i = 0; i < num_pts; i++)
 	{
 		short Index;
 		UNPACK(short, Index);
@@ -110,7 +110,7 @@ BOOL CPolygon::UnPack(BYTE** ppData, ULONG iSize)
 #if PHATSDK_RENDER_AVAILABLE
 		pos_uv_indices = new char[num_pts];
 
-		for (DWORD i = 0; i < num_pts; i++)
+		for (uint32_t i = 0; i < num_pts; i++)
 			UNPACK(char, pos_uv_indices[i]);
 #else
 		*ppData = *ppData + (num_pts * sizeof(char));
@@ -122,7 +122,7 @@ BOOL CPolygon::UnPack(BYTE** ppData, ULONG iSize)
 #if PHATSDK_RENDER_AVAILABLE
 		neg_uv_indices = new char[num_pts];
 
-		for (DWORD i = 0; i < num_pts; i++)
+		for (uint32_t i = 0; i < num_pts; i++)
 			UNPACK(char, neg_uv_indices[i]);
 #else
 		*ppData = *ppData + (num_pts * sizeof(char));
@@ -276,8 +276,8 @@ int CPolygon::check_walkable(class CSphere *sphere, class Vector *up)
 	Vector center = sphere->center - (*up * (plane.dot_product(sphere->center) / dp));
 	float radMag = sphere->radius*sphere->radius;
 	
-	DWORD prev_vertex = num_pts - 1;
-	for (DWORD i = 0; i < num_pts; i++)
+	uint32_t prev_vertex = num_pts - 1;
+	for (uint32_t i = 0; i < num_pts; i++)
 	{
 		CVertex *pPrevVertex = vertices[prev_vertex];
 		prev_vertex = i;
@@ -338,8 +338,8 @@ int CPolygon::polygon_hits_sphere(CSphere *object, Vector *contact_pt)
 
 	*contact_pt = object->center - (plane.m_normal * v4);
 
-	DWORD prev_vertex = num_pts - 1;
-	for (DWORD i = 0; i < num_pts; i++)
+	uint32_t prev_vertex = num_pts - 1;
+	for (uint32_t i = 0; i < num_pts; i++)
 	{
 		CVertex *pPrevVertex = vertices[prev_vertex];
 		prev_vertex = i;
@@ -386,8 +386,8 @@ BOOL CPolygon::polygon_hits_sphere_slow_but_sure(CSphere *object, Vector *contac
 
 		if (num_pts > 0)
 		{
-			DWORD prev_vertex = num_pts - 1;
-			for (DWORD i = 0; i < num_pts; i++)
+			uint32_t prev_vertex = num_pts - 1;
+			for (uint32_t i = 0; i < num_pts; i++)
 			{
 				CVertex *pPrevVertex = vertices[prev_vertex];
 				prev_vertex = i;
@@ -489,8 +489,8 @@ BOOL CPolygon::check_small_walkable(CSphere *sphere, Vector *up)
 	Vector center = sphere->center - (*up * (plane.dot_product(sphere->center) / dp));
 	float radMag = sphere->radius*sphere->radius*0.25;
 
-	DWORD prev_vertex = num_pts - 1;
-	for (DWORD i = 0; i < num_pts; i++)
+	uint32_t prev_vertex = num_pts - 1;
+	for (uint32_t i = 0; i < num_pts; i++)
 	{
 		CVertex *pPrevVertex = vertices[prev_vertex];
 		prev_vertex = i;
@@ -605,8 +605,8 @@ int CPolygon::find_crossed_edge(CSphere *sphere, Vector *up, Vector *normal)
 	float dp2ratio = (plane.dot_product(sphere->center) / dp1);
 	Vector center = sphere->center - (*up * dp2ratio);
 
-	DWORD prev_vertex = num_pts - 1;
-	for (DWORD i = 0; i < num_pts; i++)
+	uint32_t prev_vertex = num_pts - 1;
+	for (uint32_t i = 0; i < num_pts; i++)
 	{
 		CVertex *pPrevVertex = vertices[prev_vertex];
 		prev_vertex = i;

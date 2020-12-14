@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ObjectMaint.h"
 #include "PhysicsObj.h"
 
@@ -12,7 +12,7 @@ void CObjectMaint::AddObject(CPhysicsObj *object)
 	object_table.add(object);
 }
 
-void CObjectMaint::GotoLostCell(class CPhysicsObj *, unsigned long)
+void CObjectMaint::GotoLostCell(class CPhysicsObj *, uint32_t)
 {
 	// UNFINISHED();
 }
@@ -22,17 +22,17 @@ void CObjectMaint::RemoveFromLostCell(class CPhysicsObj *)
 	// UNFINISHED();
 }
 
-void CObjectMaint::AddObjectToBeDestroyed(unsigned long)
+void CObjectMaint::AddObjectToBeDestroyed(uint32_t)
 {
 	// UNFINISHED();
 }
 
-void CObjectMaint::RemoveObjectToBeDestroyed(unsigned long)
+void CObjectMaint::RemoveObjectToBeDestroyed(uint32_t)
 {
 	// UNFINISHED();
 }
 
-CPhysicsObj *CObjectMaint::GetObject(DWORD object_id)
+CPhysicsObj *CObjectMaint::GetObject(uint32_t object_id)
 {
 	return object_table.lookup(object_id);
 }

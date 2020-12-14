@@ -64,41 +64,41 @@ public:
 
 	static DBObj *Allocator();
 	static void Destroyer(DBObj*);
-	static CEnvCell *Get(DWORD ID);
+	static CEnvCell *Get(uint32_t ID);
 	static void Release(CEnvCell *);
 
 	void Destroy();
-	BOOL UnPack(BYTE **ppData, ULONG iSize);
+	BOOL UnPack(BYTE **ppData, ULONG iSize) override;
 
 	void calc_clip_planes();
 	void init_static_objects();
-	BOOL point_in_cell(const Vector& point);
+	BOOL point_in_cell(const Vector& point) override;
 
 	virtual TransitionState find_collisions(class CTransition *) override;
 	virtual TransitionState find_env_collisions(CTransition *transition) override;
 
-	static CEnvCell *GetVisible(DWORD cell_id);
+	static CEnvCell *GetVisible(uint32_t cell_id, bool bDoPostLoad = true);
 	CEnvCell *find_visible_child_cell(Vector *origin, const int bSearchCells);
 
 	virtual void find_transit_cells(Position *p, const unsigned int num_sphere, CSphere *sphere, CELLARRAY *cell_array, SPHEREPATH *path) override;
-	virtual void find_transit_cells(const unsigned int num_parts, CPhysicsPart **parts, CELLARRAY *cell_array);
+	virtual void find_transit_cells(const unsigned int num_parts, CPhysicsPart **parts, CELLARRAY *cell_array) override;
 
 	void check_building_transit(int portal_id, Position *p, const unsigned int num_sphere, CSphere *sphere, CELLARRAY *cell_array, SPHEREPATH *path);
 	void check_building_transit(int portal_id, const unsigned int num_parts, CPhysicsPart **parts, CELLARRAY *cell_array);
 
-	CPhysicsObj *recursively_get_object(DWORD obj_iid, PackableHashTable<unsigned long, int> *visited_cells);
+	CPhysicsObj *recursively_get_object(uint32_t obj_iid, PackableHashTable<uint32_t, int32_t> *visited_cells);
 
 	// custom, this doesn't really exist
 	bool Custom_GetDungeonDrop(int dropIndex, Frame *pDropFrame, int *pNumDrops);
 
-	DWORD num_surfaces; // 0xF8
+	uint32_t num_surfaces; // 0xF8
 	CSurface **surfaces; // 0xFC
 	CCellStruct *structure; // 0x100
 	CEnvironment *env; // 0x104
-	DWORD num_portals; // 0x108
+	uint32_t num_portals; // 0x108
 	CCellPortal *portals; // 0x10C
-	DWORD num_static_objects; // 0x110
-	DWORD *static_object_ids; // 0x114
+	uint32_t num_static_objects; // 0x110
+	uint32_t *static_object_ids; // 0x114
 	Frame *static_object_frames; // 0x118
 	CPhysicsObj **static_objects; // 0x11C
 	LPVOID light_array; // 0x120
@@ -117,10 +117,10 @@ public:
 #endif
 
 #if PHATSDK_USE_EXTENDED_CELL_DATA
-	DWORD num_dynamic_objects = 0;
-	DWORD *dynamic_object_wcids = NULL;
+	uint32_t num_dynamic_objects = 0;
+	uint32_t *dynamic_object_wcids = NULL;
 	Position *dynamic_object_pos = NULL;
-	DWORD *dynamic_object_iids = NULL;
+	uint32_t *dynamic_object_iids = NULL;
 #endif
 };
 
@@ -130,10 +130,10 @@ public:
 	CCellPortal();
 	~CCellPortal();
 
-	BOOL UnPack(DWORD LandBlock, WORD *PolyIndex, BYTE **ppData, ULONG iSize);
+	BOOL UnPack(uint32_t LandBlock, WORD *PolyIndex, BYTE **ppData, ULONG iSize);
 	CEnvCell *GetOtherCell(BOOL do_not_load);
 
-	DWORD other_cell_id; // 0x0
+	uint32_t other_cell_id; // 0x0
 	CEnvCell *other_cell_ptr; // 0x4
 	CPolygon *portal; // 0x8
 	int portal_side; // 0xC

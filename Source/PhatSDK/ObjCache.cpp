@@ -1,8 +1,8 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "DATDisk.h"
 #include "ObjCache.h"
-
+#include "easylogging++.h"
 #include "RegionDesc.h"
 #include "LandBlock.h"
 #include "LandBlockInfo.h"
@@ -74,7 +74,7 @@ void ObjCaches::OutputCacheInfo()
 		if (!*cache)
 			continue;
 
-		LOG(Data, Normal, "Total %s: %u\n", (*cache)->GetName(), (*cache)->GetCachedCount());
+		DEBUG_DATA << "ObjCache - Total" << (*cache)->GetName() << ":" << (*cache)->GetCachedCount();
 	}
 }
 
@@ -149,8 +149,8 @@ void ObjCaches::InitCaches(bool initTables, const char *jsonDataPath)
 		CachedSpellComponentTable = SpellComponentTable::Get(0x0E00000F);
 		CachedExperienceTable = ExperienceTable::Get(0x0E000018);
 
-		if(g_pConfig->OverrideMaxLevel() > 0 && g_pConfig->OverrideMaxLevel() < 275)
-			CachedExperienceTable->_max_level = g_pConfig->OverrideMaxLevel();
+		if(g_pConfig->GetOverrideMaxLevel() > 0 && g_pConfig->GetOverrideMaxLevel() < 275)
+			CachedExperienceTable->_max_level = g_pConfig->GetOverrideMaxLevel();
 
 		CachedEnchantableFilter = ACQualityFilter::Get(0x0E010001);
 
@@ -235,7 +235,7 @@ void ObjCaches::DestroyCaches()
 		ObjCache *pcache = *ppcache;
 		if (pcache->GetCachedCount() > 0)
 		{
-			LOG(Data, Warning, "ObjCache \"%s\" still has %u objects cached! Missing release somewhere?\n", pcache->GetName(), pcache->GetCachedCount());
+			DEBUG_DATA << "ObjCache" << pcache->GetName() << "still has" << pcache->GetCachedCount() << "objects  cached! Missing release somewhere?";
 		}
 	}
 
@@ -257,12 +257,12 @@ DBObj::~DBObj()
 {
 }
 
-long DBObj::Link()
+int32_t DBObj::Link()
 {
 	return ++m_lLinks;
 }
 
-long DBObj::Unlink()
+int32_t DBObj::Unlink()
 {
 	--m_lLinks;
 
@@ -302,13 +302,13 @@ const char *ObjCache::GetName()
 	return m_CacheName.c_str();
 }
 
-bool ObjCache::GetDataFromJson(DWORD ID, json **ppReader)
+bool ObjCache::GetDataFromJson(uint32_t ID, json **ppReader)
 {
 #ifndef PUBLIC_BUILD
 	if (!ObjCaches::JsonDataCachePath.empty())
 	{
 		char filePath[300];
-		_snprintf(filePath, 300, "%s\\%08X.json", ObjCaches::JsonDataCachePath.c_str(), ID);
+		snprintf(filePath, 300, "%s\\%08X.json", ObjCaches::JsonDataCachePath.c_str(), ID);
 		filePath[299] = 0;
 
 		std::ifstream fileStream(filePath);
@@ -328,7 +328,7 @@ bool ObjCache::GetDataFromJson(DWORD ID, json **ppReader)
 	return false;
 }
 
-DBObj *ObjCache::Get(DWORD ID)
+DBObj *ObjCache::Get(uint32_t ID)
 {
 	DBObj *pObject = m_Objects.lookup(ID);
 
@@ -382,7 +382,7 @@ DBObj *ObjCache::Get(DWORD ID)
 
 			if (pObject)
 			{
-				BYTE *PackData = File.Data + sizeof(DWORD);
+				BYTE *PackData = File.Data + sizeof(uint32_t);
 
 				pObject->SetID(ID);
 				if (pObject->UnPack(&PackData, File.Length))
@@ -411,20 +411,27 @@ DBObj *ObjCache::Get(DWORD ID)
 	return pObject;
 }
 
-DWORD ObjCache::GetCachedCount()
+uint32_t ObjCache::GetCachedCount()
 {
-	HashBaseIter<unsigned long> Iter(&m_Objects);
+	HashBaseIter<uint32_t> Iter(&m_Objects);
 
-	DWORD Count = 0;
+	uint32_t Count = 0;
 	while (!Iter.EndReached()) {
-		Count++;
-		Iter.Next();
+		try
+		{
+			Count++;
+			Iter.Next();
+		}
+		catch (...)
+		{
+			SERVER_ERROR << "Error in Cached Count";
+		}
 	}
 
 	return Count;
 }
 
-void ObjCache::Release(DWORD ID)
+void ObjCache::Release(uint32_t ID)
 {
 	DBObj *pObject = m_Objects.lookup(ID);
 
@@ -440,9 +447,9 @@ void ObjCache::Release(DWORD ID)
 bool ObjCache::ReleaseFreeObjects(bool bForce)
 {
 	bool bReleasedAny = false;
-	for (std::set<DWORD>::iterator i = m_FreeObjects.begin(); i != m_FreeObjects.end();)
+	for (std::set<uint32_t>::iterator i = m_FreeObjects.begin(); i != m_FreeObjects.end();)
 	{
-		DWORD objectID = *i;
+		uint32_t objectID = *i;
 		DBObj *pFreedObject = m_Objects.lookup(objectID);
 		if (pFreedObject->GetLinkCount() <= 0 && (bForce || (pFreedObject->GetTimeFreed() + 30.0) <= Timer::cur_time))
 		{

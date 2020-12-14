@@ -1,27 +1,30 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Globals.h"
 
 bool g_bDebugToggle = false;
 CGlobals *g_pGlobals = NULL;
+
+double g_TimeAdjustment = time(0) - 936144000; // 24000.0 + 2700.0 + (35.0 * 60.0) + (105 * 60.0);
 
 CGlobals::CGlobals()
 {
 	m_hWnd = NULL;
 	m_hConsoleWnd = NULL;
 
-	QueryPerformanceFrequency((LARGE_INTEGER *)&m_CounterFreq);
-	QueryPerformanceCounter((LARGE_INTEGER *)&m_CounterStart);
-	QueryPerformanceCounter((LARGE_INTEGER *)&m_CounterTime);
+	m_last = m_start = steady_clock::now();
+	m_fTime = g_TimeAdjustment;
 
-	int GameDirLen = GetCurrentDirectory(MAX_PATH, m_GameDir);
-	if (GameDirLen > 0)
-	{
-		if (m_GameDir[GameDirLen - 1] == '\\')
-		{
-			m_GameDir[GameDirLen - 1] = 0;
-		}
-	}
+	m_GameDir = fs::current_path();
+
+	// int GameDirLen = GetCurrentDirectory(MAX_PATH, m_GameDir);
+	// if (GameDirLen > 0)
+	// {
+	// 	if (m_GameDir[GameDirLen - 1] == '\\')
+	// 	{
+	// 		m_GameDir[GameDirLen - 1] = 0;
+	// 	}
+	// }
 
 	ResetPackets();
 	UpdateTime();
@@ -33,15 +36,24 @@ CGlobals::~CGlobals()
 
 const char *CGlobals::GetGameDirectory()
 {
-	return (char *)m_GameDir;
+	//return (char *)m_GameDir;
+	return m_GameDir.string().c_str();
 }
 
 std::string CGlobals::GetGameFile(const char *filename)
 {
-	std::string filepath = GetGameDirectory();
-	filepath += "\\";
-	filepath += filename;
-	return filepath;
+	fs::path filepath = m_GameDir / filename;
+	return filepath.string();
+	//std::string filepath = GetGameDirectory();
+	//filepath += "\\";
+	//filepath += filename;
+	//return filepath;
+}
+
+std::string CGlobals::GetGameData(const char *type, const char *filename)
+{
+	fs::path filepath = m_GameDir / type / filename;
+	return filepath.string();
 }
 
 void CGlobals::SetWindowHandle(HWND hWnd)
@@ -74,13 +86,13 @@ WORD CGlobals::GetClientCount()
 	return (WORD)m_wClientCount;
 }
 
-void CGlobals::PacketSent(DWORD dwLength)
+void CGlobals::PacketSent(uint32_t dwLength)
 {
 	m_cPacketSendCount++;
 	m_cPacketSendSize += dwLength;
 }
 
-void CGlobals::PacketRecv(DWORD dwLength)
+void CGlobals::PacketRecv(uint32_t dwLength)
 {
 	m_cPacketRecvCount++;
 	m_cPacketRecvSize += dwLength;
@@ -125,16 +137,21 @@ int CGlobals::Timestamp()
 	return time(0);
 }
 
-double g_TimeAdjustment = time(0) - 936144000; // 24000.0 + 2700.0 + (35.0 * 60.0) + (105 * 60.0);
-
 double CGlobals::UpdateTime()
 {
-	QueryPerformanceCounter((LARGE_INTEGER *)&m_CounterTime);
-	double fTime = (m_CounterTime - m_CounterStart) / (double)m_CounterFreq;
-	fTime += g_TimeAdjustment;
-	m_fTime = fTime;
+	time_point current = steady_clock::now();
 
-	return fTime;
+	std::chrono::duration<double> elapsed = current - m_last;
+	m_last = current;
+
+	m_fTime += elapsed.count();
+	return m_fTime;
+	//QueryPerformanceCounter((LARGE_INTEGER *)&m_CounterTime);
+	//double fTime = (m_CounterTime - m_CounterStart) / (double)m_CounterFreq;
+	//fTime += g_TimeAdjustment;
+	//m_fTime = fTime;
+
+	//return fTime;
 }
 
 

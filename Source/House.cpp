@@ -1,5 +1,4 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "House.h"
 #include "World.h"
 #include "WeenieFactory.h"
@@ -8,130 +7,19 @@
 #include "AllegianceManager.h"
 #include "Client.h"
 #include "EmoteManager.h"
+#include "HouseManager.h"
 
 #define HOUSE_SAVE_INTERVAL 300.0
 
-CHouseManager::CHouseManager()
-{
-}
-
-CHouseManager::~CHouseManager()
-{
-}
-
-void CHouseManager::Load()
-{
-	void *data = NULL;
-	DWORD length = 0;
-	if (g_pDBIO->GetGlobalData(DBIO_GLOBAL_HOUSING_DATA, &data, &length))
-	{
-		BinaryReader reader(data, length);
-		_currentHouseMaintenancePeriod = reader.Read<DWORD>();
-		_nextHouseMaintenancePeriod = reader.Read<DWORD>();
-		_freeHouseMaintenancePeriod = (reader.Read<int>() > 0);
-	}
-	else
-	{
-		_currentHouseMaintenancePeriod = g_pPhatSDK->GetCurrTimeStamp();
-		_nextHouseMaintenancePeriod = _currentHouseMaintenancePeriod + (30 * 24 * 60 * 60); //in 30 days.
-		_freeHouseMaintenancePeriod = false;
-	}
-}
-
-void CHouseManager::Save()
-{
-	BinaryWriter writer;
-	writer.Write<DWORD>(_currentHouseMaintenancePeriod);
-	writer.Write<DWORD>(_nextHouseMaintenancePeriod);
-	writer.Write<int>((int)_freeHouseMaintenancePeriod);
-	g_pDBIO->CreateOrUpdateGlobalData(DBIO_GLOBAL_HOUSING_DATA, writer.GetData(), writer.GetSize());
-
-	for (auto houseData : _houseDataMap)
-		houseData.second.Save();
-}
-
-CHouseData *CHouseManager::GetHouseData(DWORD houseId)
-{
-	if (!houseId)
-		return NULL;
-
-	CHouseData *houseData = _houseDataMap.lookup(houseId);
-	if (!houseData)
-	{
-		//let's try the database
-		void *data = NULL;
-		DWORD length = 0;
-		if (g_pDBIO->GetHouseData(houseId, &data, &length))
-		{
-			BinaryReader reader(data, length);
-			houseData = new CHouseData();
-			houseData->UnPack(&reader);
-			houseData->_houseId = houseId;
-
-			_houseDataMap.add(houseId, houseData);
-		}
-	}
-
-	if (!houseData)
-	{
-		houseData = new CHouseData(); //just make a new one.
-		houseData->_houseId = houseId;
-
-		_houseDataMap.add(houseId, houseData);
-	}
-
-	return houseData;
-}
-
-void CHouseManager::SaveHouseData(DWORD houseId)
-{
-	if (!houseId)
-		return;
-
-	CHouseData *houseData = _houseDataMap.lookup(houseId);
-	if (!houseData)
-		return;
-
-	houseData->Save();
-}
-
-void CHouseManager::SendHouseData(CPlayerWeenie *player, DWORD houseId)
-{
-	if (!player)
-		return;
-
-	CHouseData *houseData = GetHouseData(houseId);
-
-	BinaryWriter houseDataPacket;
-
-	if (!houseData || houseData->_ownerId != player->GetID())
-	{
-		houseDataPacket.Write<DWORD>(0x0226);
-		houseDataPacket.Write<DWORD>(0);
-		player->SendNetMessage(&houseDataPacket, PRIVATE_MSG, TRUE, FALSE);
-	}
-	else
-	{
-		houseDataPacket.Write<DWORD>(0x0225);
-		houseDataPacket.Write<DWORD>(houseData->_purchaseTimestamp);
-		houseDataPacket.Write<DWORD>(g_pHouseManager->_currentHouseMaintenancePeriod);
-		houseDataPacket.Write<DWORD>(houseData->_houseType);
-		houseDataPacket.Write<int>((int)g_pHouseManager->_freeHouseMaintenancePeriod);
-		houseData->_buy.Pack(&houseDataPacket);
-		houseData->_rent.Pack(&houseDataPacket);
-		houseData->_position.Pack(&houseDataPacket);
-		player->SendNetMessage(&houseDataPacket, PRIVATE_MSG, TRUE, FALSE);
-	}
-}
 
 DEFINE_PACK(CHouseData)
 {
-	pWriter->Write<DWORD>(_slumLordId);
-	pWriter->Write<DWORD>(_ownerId);
-	pWriter->Write<DWORD>(_ownerAccount);
-	pWriter->Write<DWORD>(_purchaseTimestamp);
-	pWriter->Write<DWORD>(_currentMaintenancePeriod);
-	pWriter->Write<DWORD>(_houseType);
+	pWriter->Write<uint32_t>(_slumLordId);
+	pWriter->Write<uint32_t>(_ownerId);
+	pWriter->Write<uint32_t>(_ownerAccount);
+	pWriter->Write<uint32_t>(_purchaseTimestamp);
+	pWriter->Write<uint32_t>(_currentMaintenancePeriod);
+	pWriter->Write<uint32_t>(_houseType);
 	_position.Pack(pWriter);
 	_buy.Pack(pWriter);
 	_rent.Pack(pWriter);
@@ -146,12 +34,12 @@ DEFINE_PACK(CHouseData)
 
 DEFINE_UNPACK(CHouseData)
 {
-	_slumLordId = pReader->Read<DWORD>();
-	_ownerId = pReader->Read<DWORD>();
-	_ownerAccount = pReader->Read<DWORD>();
-	_purchaseTimestamp = pReader->Read<DWORD>();
-	_currentMaintenancePeriod = pReader->Read<DWORD>();
-	_houseType = pReader->Read<DWORD>();
+	_slumLordId = pReader->Read<uint32_t>();
+	_ownerId = pReader->Read<uint32_t>();
+	_ownerAccount = pReader->Read<uint32_t>();
+	_purchaseTimestamp = pReader->Read<uint32_t>();
+	_currentMaintenancePeriod = pReader->Read<uint32_t>();
+	_houseType = pReader->Read<uint32_t>();
 	_position.UnPack(pReader);
 	_buy.UnPack(pReader);
 	_rent.UnPack(pReader);
@@ -179,10 +67,14 @@ void CHouseData::ClearOwnershipData()
 	_hooksVisible = true;
 	_rent.clear();
 	_buy.clear();
+	_accessList.clear();
+	_storageAccessList.clear();
 }
 
 void CHouseData::SetHookVisibility(bool newSetting)
 {
+	_hooksVisible = newSetting;
+
 	for (auto hook_id : _hookList)
 	{
 		CWeenieObject *hookWeenie = g_pWorld->FindObject(hook_id, true);
@@ -197,26 +89,34 @@ void CHouseData::SetHookVisibility(bool newSetting)
 
 		hook->SetHookVisibility(newSetting);
 	}
+	Save();
 }
 
 void CHouseData::AbandonHouse()
 {
-		CWeenieObject *owner = g_pWorld->FindObject(_ownerId);
-		if (owner)
-		{
-			//if the player is offline we won't find him but that's okay, we will just update his housing data when he logins in UpdateHouseData()
-			owner->m_Qualities.RemoveDataID(HOUSEID_DID);
-			owner->NotifyDIDStatUpdated(HOUSEID_DID);
-		}
+	CWeenieObject *owner = g_pWorld->FindObject(_ownerId);
+	if (owner)
+	{
+		//if the player is offline we won't find him but that's okay, we will just update his housing data when he logins in UpdateHouseData()
+		owner->m_Qualities.RemoveDataID(HOUSEID_DID);
+		owner->NotifyDIDStatUpdated(HOUSEID_DID);
+	}
 
-		ClearOwnershipData();
-		SetHookVisibility(_hooksVisible);
+	ClearOwnershipData();
+	SetHookVisibility(true);
 
-		if(CWeenieObject *slumLord = g_pWorld->FindObject(_slumLordId))
-			slumLord->DoForcedMotion(Motion_Off);
+	if (CWeenieObject *slumLord = g_pWorld->FindObject(_slumLordId))
+	{
+		slumLord->DoForcedMotion(Motion_Off);
+		CHouseWeenie* house = slumLord->AsSlumLord()->GetHouse();
+		if (house)
+			house->m_Qualities.SetString(HOUSE_OWNER_NAME_STRING, "");
+	}
 
-		if (owner)
-			g_pHouseManager->SendHouseData(owner->AsPlayer(), _houseId);
+	if (owner)
+		g_pHouseManager->SendHouseData(owner->AsPlayer(), _houseId);
+
+	Save();
 }
 
 void CHouseData::Save()
@@ -235,6 +135,7 @@ CHouseWeenie::CHouseWeenie()
 void CHouseWeenie::EnsureLink(CWeenieObject *source)
 {
 	source->m_Qualities.SetInstanceID(HOUSE_IID, GetID());
+	source->m_Qualities.SetDataID(HOUSEID_DID, GetHouseDID());
 
 	if (source->AsSlumLord())
 	{
@@ -244,7 +145,7 @@ void CHouseWeenie::EnsureLink(CWeenieObject *source)
 	if (source->AsHook())
 	{
 		CHouseData *houseData = source->AsHook()->GetHouseData();
-		if(houseData)
+		if (houseData)
 			houseData->_hookList.insert(source->GetID());
 	}
 
@@ -268,22 +169,32 @@ CHouseData *CHouseWeenie::GetHouseData()
 
 std::string CHouseWeenie::GetHouseOwnerName()
 {
-	DWORD owner = GetHouseOwner();
+	uint32_t owner = GetHouseOwner();
 
 	if (!owner)
 		return "";
 
-	return g_pWorld->GetPlayerName(owner, true);
-	//return InqStringQuality(HOUSE_OWNER_NAME_STRING, "");
+	std::string ownerName;
+	ownerName = g_pWorld->GetPlayerName(owner, true);
+	if (ownerName.empty())
+	{
+		if (!m_Qualities.InqString(HOUSE_OWNER_NAME_STRING, ownerName))
+		{
+			ownerName = g_pDBIO->GetPlayerCharacterName(GetHouseData()->_ownerId);
+			m_Qualities.SetString(HOUSE_OWNER_NAME_STRING, ownerName);
+		}
+	}
+
+	return ownerName;
 }
 
-DWORD CHouseWeenie::GetHouseOwner()
+uint32_t CHouseWeenie::GetHouseOwner()
 {
 	return GetHouseData()->_ownerId;
 	//return InqIIDQuality(HOUSE_OWNER_IID, 0);
 }
 
-DWORD CHouseWeenie::GetHouseDID()
+uint32_t CHouseWeenie::GetHouseDID()
 {
 	return InqDIDQuality(HOUSEID_DID, 0);
 }
@@ -310,8 +221,8 @@ bool CHouseWeenie::HasAccess(CPlayerWeenie *requester)
 
 	CHouseData *houseData = GetHouseData();
 
-	DWORD requesterId = requester->GetID();
-	DWORD houseOwnerId = GetHouseOwner();
+	uint32_t requesterId = requester->GetID();
+	uint32_t houseOwnerId = GetHouseOwner();
 
 	if (requesterId == houseData->_ownerId)
 		return true;
@@ -327,11 +238,28 @@ bool CHouseWeenie::HasAccess(CPlayerWeenie *requester)
 
 	if (houseData->_allegianceAccess)
 	{
-		AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
-		AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
+		std::string alleg;
+		if (requester->m_Qualities.InqString(ALLEGIANCE_NAME_STRING, alleg)) {
 
-		if (ownerAllegianceNode->_monarchID == requesterAllegianceNode->_monarchID)
-			return true;
+			AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
+			AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
+
+			if (ownerAllegianceNode && requesterAllegianceNode)
+			{
+				if (ownerAllegianceNode->_monarchID == requesterAllegianceNode->_monarchID)
+					return true;
+				else
+					return false;
+			}
+			else
+			{
+				if (!ownerAllegianceNode)
+					SERVER_ERROR << "House Owner:" << houseOwnerId << " may not exist.  Check DB";
+				else
+					SERVER_ERROR << "Requestor:" << requesterId << " may not have or be in allegiance.";
+			}
+
+		}
 	}
 
 	return HasStorageAccess(requester); //storage access automatically grants access.
@@ -344,8 +272,8 @@ bool CHouseWeenie::HasStorageAccess(CPlayerWeenie *requester)
 
 	CHouseData *houseData = GetHouseData();
 
-	DWORD requesterId = requester->GetID();
-	DWORD houseOwnerId = GetHouseOwner();
+	uint32_t requesterId = requester->GetID();
+	uint32_t houseOwnerId = GetHouseOwner();
 
 	if (requesterId == houseData->_ownerId)
 		return true;
@@ -361,11 +289,17 @@ bool CHouseWeenie::HasStorageAccess(CPlayerWeenie *requester)
 
 	if (houseData->_allegianceStorageAccess)
 	{
-		AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
-		AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
+		std::string alleg;
+		if (requester->m_Qualities.InqString(ALLEGIANCE_NAME_STRING, alleg)) {
+			AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
+			AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
 
-		if (ownerAllegianceNode->_monarchID == requesterAllegianceNode->_monarchID)
-			return true;
+			if (ownerAllegianceNode && requesterAllegianceNode)
+			{
+				if (ownerAllegianceNode->_monarchID == requesterAllegianceNode->_monarchID)
+					return true;
+			}
+		}
 	}
 
 	return false;
@@ -379,36 +313,6 @@ CSlumLordWeenie::CSlumLordWeenie()
 
 void CSlumLordWeenie::Tick()
 {
-	if (_initialized && _nextSave != -1.0 && _nextSave < Timer::cur_time)
-	{
-		CHouseWeenie *house = GetHouse();
-		if (!house)
-			return;
-
-		if(house->ShouldSave())
-			house->Save();
-
-		CHouseData *houseData = house->GetHouseData();
-
-		if (houseData)
-		{
-			houseData->Save();
-
-			for (auto hook_id : houseData->_hookList)
-			{
-				CWeenieObject *hook = g_pWorld->FindObject(hook_id);
-
-				if (!hook)
-					continue;
-
-				if (hook->ShouldSave())
-					hook->Save();
-			}
-		}
-
-		_nextSave = Timer::cur_time + HOUSE_SAVE_INTERVAL;
-	}
-
 	if (_nextHeartBeat != -1.0 && _nextHeartBeat <= Timer::cur_time)
 	{
 		if (!_initialized)
@@ -425,17 +329,19 @@ void CSlumLordWeenie::Tick()
 
 			if (houseData->_ownerId)
 				DoForcedMotion(Motion_On);
+			else
+				DoForcedMotion(Motion_Off);
 
-			for (auto hook_id : houseData->_hookList)
-			{
-				CWeenieObject *hook = g_pWorld->FindObject(hook_id, true);
+			//for (auto hook_id : houseData->_hookList)
+			//{
+			//	CWeenieObject *hook = g_pWorld->FindObject(hook_id, true);
 
-				if (!hook)
-					continue;
+			//	if (!hook)
+			//		continue;
 
-				if(hook->AsHook())
-					hook->AsHook()->UpdateHookedObject();
-			}
+			//	if(hook->AsHook())
+			//		hook->AsHook()->UpdateHookedObject();
+			//}
 
 			_initialized = true;
 
@@ -443,8 +349,17 @@ void CSlumLordWeenie::Tick()
 		}
 		else
 		{
+			CHouseWeenie *house = GetHouse();
+			if (!house)
+				return;
+			CHouseData *houseData = house->GetHouseData();
+			if (houseData->_ownerId)
+				DoForcedMotion(Motion_On);
+			else
+				DoForcedMotion(Motion_Off);
+
 			//check global data and update if necessary
-			DWORD now = g_pPhatSDK->GetCurrTimeStamp();
+			uint32_t now = g_pPhatSDK->GetCurrTimeStamp();
 			if (g_pHouseManager->_nextHouseMaintenancePeriod < now)
 			{
 				if (!g_pHouseManager->_freeHouseMaintenancePeriod)
@@ -516,7 +431,7 @@ void CSlumLordWeenie::GetHouseProfile(HouseProfile &prof)
 			}
 		}
 	}
-	
+
 	if (CHouseWeenie *house = GetHouse())
 	{
 		prof._name = house->GetHouseOwnerName();
@@ -536,21 +451,27 @@ int CSlumLordWeenie::DoUseResponse(CWeenieObject *other)
 		CHouseData *houseData = house->GetHouseData();
 		if (houseData && houseData->_ownerId)
 			prof._rent = houseData->_rent; //get the real house rent information that may contain payments
+
+		uint32_t houseDID = 0;
+		if (other->GetID() == houseData->_ownerId && (!other->m_Qualities.InqDataID(HOUSEID_DID, houseDID) || houseDID == 0)) // player lost link
+		{
+			other->m_Qualities.SetDataID(HOUSEID_DID, houseData->_houseId);
+		}
 	}
-	
+
 	BinaryWriter profMsg;
-	profMsg.Write<DWORD>(0x21D);
+	profMsg.Write<uint32_t>(0x21D);
 	prof.Pack(&profMsg);
 	other->SendNetMessage(&profMsg, PRIVATE_MSG, TRUE, FALSE);
 
-	return WERROR_NONE;
+	return CWeenieObject::DoUseResponse(other);
 }
 
-void CSlumLordWeenie::BuyHouse(CPlayerWeenie *player, const PackableList<DWORD> &items)
+void CSlumLordWeenie::BuyHouse(CPlayerWeenie *player, const PackableList<uint32_t> &items)
 {
 	if (CHouseWeenie *house = GetHouse())
 	{
-		if(player->GetAccountHouseId())
+		if (player->GetAccountHouseId())
 		{
 			player->SendText("You may only own one dwelling at a time.", LTT_DEFAULT); //made up message.
 			return;
@@ -590,7 +511,7 @@ void CSlumLordWeenie::BuyHouse(CPlayerWeenie *player, const PackableList<DWORD> 
 			}
 		}
 
-		if (house->GetHouseType() != 4 && player->InqIntQuality(HOUSE_PURCHASE_TIMESTAMP_INT, 0) + (30 * 24 * 60) > g_pPhatSDK->GetCurrTimeStamp())
+		if (house->GetHouseType() != Apartment_HouseType && player->InqIntQuality(HOUSE_PURCHASE_TIMESTAMP_INT, 0) + (30 * 24 * 60) > g_pPhatSDK->GetCurrTimeStamp())
 		{
 			player->SendText("You cannot buy another landscape house yet. This restriction does not apply to apartments.", LTT_DEFAULT); //made up message.
 			return;
@@ -656,97 +577,6 @@ void CSlumLordWeenie::BuyHouse(CPlayerWeenie *player, const PackableList<DWORD> 
 			}
 		}
 
-		for (HousePayment &payment : prof._buy)
-		{
-			if (payment.wcid == W_COINSTACK_CLASS)
-			{
-				if (payment.paid > payment.num) //we have to return some money
-				{
-					int amountToReturn = payment.paid - payment.num;
-					payment.paid = payment.num;
-					while (amountToReturn > 0)
-					{
-						if (amountToReturn >= 250000)
-						{
-							player->SpawnInContainer(W_TRADENOTE250000_CLASS);
-							amountToReturn -= 250000;
-						}
-						else if (amountToReturn >= 200000)
-						{
-							player->SpawnInContainer(W_TRADENOTE200000_CLASS);
-							amountToReturn -= 200000;
-						}
-						else if (amountToReturn >= 150000)
-						{
-							player->SpawnInContainer(W_TRADENOTE150000_CLASS);
-							amountToReturn -= 150000;
-						}
-						else if (amountToReturn >= 100000)
-						{
-							player->SpawnInContainer(W_TRADENOTE100000_CLASS);
-							amountToReturn -= 100000;
-						}
-						else if (amountToReturn >= 75000)
-						{
-							player->SpawnInContainer(W_TRADENOTE75000_CLASS);
-							amountToReturn -= 75000;
-						}
-						else if (amountToReturn >= 50000)
-						{
-							player->SpawnInContainer(W_TRADENOTE50000_CLASS);
-							amountToReturn -= 50000;
-						}
-						else if (amountToReturn >= 25000)
-						{
-							player->SpawnInContainer(W_TRADENOTE25000_CLASS);
-							amountToReturn -= 25000;
-						}
-						else if (amountToReturn >= 20000)
-						{
-							player->SpawnInContainer(W_TRADENOTE200000_CLASS);
-							amountToReturn -= 20000;
-						}
-						else if (amountToReturn >= 15000)
-						{
-							player->SpawnInContainer(W_TRADENOTE15000_CLASS);
-							amountToReturn -= 15000;
-						}
-						else if (amountToReturn >= 10000)
-						{
-							player->SpawnInContainer(W_TRADENOTE10000_CLASS);
-							amountToReturn -= 10000;
-						}
-						else if (amountToReturn >= 5000)
-						{
-							player->SpawnInContainer(W_TRADENOTE5000_CLASS);
-							amountToReturn -= 5000;
-						}
-						else if (amountToReturn >= 1000)
-						{
-							player->SpawnInContainer(W_TRADENOTE1000_CLASS);
-							amountToReturn -= 1000;
-						}
-						else if (amountToReturn >= 500)
-						{
-							player->SpawnInContainer(W_TRADENOTE500_CLASS);
-							amountToReturn -= 500;
-						}
-						else if (amountToReturn >= 100)
-						{
-							player->SpawnInContainer(W_TRADENOTE100_CLASS);
-							amountToReturn -= 100;
-						}
-						else
-						{
-							player->SpawnInContainer(W_COINSTACK_CLASS, amountToReturn);
-							amountToReturn = 0;
-						}
-					}
-				}
-				break;
-			}
-		}
-
 		int timeStamp = g_pPhatSDK->GetCurrTimeStamp();
 		player->SendText("Congratulations!  You now own this dwelling.", LTT_DEFAULT);
 
@@ -781,19 +611,20 @@ void CSlumLordWeenie::BuyHouse(CPlayerWeenie *player, const PackableList<DWORD> 
 			hook->m_Qualities.SetInstanceID(HOUSE_OWNER_IID, player->GetID());
 			hook->NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
 
-			if (hook->ShouldSave())
-				hook->Save();
+			hook->Save();
 		}
 		houseData->SetHookVisibility(true);
 
 		DoForcedMotion(Motion_On);
 		g_pHouseManager->SendHouseData(player, house->GetHouseDID());
 		DoUseResponse(player);
-		player->RecalculateCoinAmount();
+		player->RecalculateCoinAmount(W_COINSTACK_CLASS);
 		player->Save();
-		if(house->ShouldSave())
-			house->Save();
+		house->m_Qualities.SetString(HOUSE_OWNER_NAME_STRING, player->GetName());
+		house->Save();
 		houseData->Save();
+
+		HOUSE_LOG << "Player:" << player->GetName() << "bought house" << houseData->_houseId;
 	}
 }
 
@@ -850,19 +681,20 @@ void CSlumLordWeenie::CheckRentPeriod()
 				//update rent and buy values from house profile, maybe the prices have changed!
 				houseData->_rent = prof._rent;
 				houseData->_buy = prof._buy;
+				houseData->Save();
 
 				if (CWeenieObject *owner = g_pWorld->FindObject(houseData->_ownerId))
 					g_pHouseManager->SendHouseData(owner->AsPlayer(), house->GetHouseDID()); //update house's owner panel if the owner is online.
 			}
 			else
 			{
-				houseData->AbandonHouse();
+				//houseData->AbandonHouse(); temporarily disable abandon house on rent not paid
 			}
 		}
 	}
 }
 
-void CSlumLordWeenie::RentHouse(CPlayerWeenie *player, const PackableList<DWORD> &items)
+void CSlumLordWeenie::RentHouse(CPlayerWeenie *player, const PackableList<uint32_t> &items)
 {
 	if (CHouseWeenie *house = GetHouse())
 	{
@@ -938,101 +770,17 @@ void CSlumLordWeenie::RentHouse(CPlayerWeenie *player, const PackableList<DWORD>
 			}
 		}
 
-		for (HousePayment &payment : houseData->_rent)
-		{
-			if (payment.wcid == W_COINSTACK_CLASS)
-			{
-				if (payment.paid > payment.num) //we have to return some money
-				{
-					int amountToReturn = payment.paid - payment.num;
-					payment.paid = payment.num;
-					while (amountToReturn > 0)
-					{
-						if (amountToReturn >= 250000)
-						{
-							player->SpawnInContainer(W_TRADENOTE250000_CLASS);
-							amountToReturn -= 250000;
-						}
-						else if (amountToReturn >= 200000)
-						{
-							player->SpawnInContainer(W_TRADENOTE200000_CLASS);
-							amountToReturn -= 200000;
-						}
-						else if (amountToReturn >= 150000)
-						{
-							player->SpawnInContainer(W_TRADENOTE150000_CLASS);
-							amountToReturn -= 150000;
-						}
-						else if (amountToReturn >= 100000)
-						{
-							player->SpawnInContainer(W_TRADENOTE100000_CLASS);
-							amountToReturn -= 100000;
-						}
-						else if (amountToReturn >= 75000)
-						{
-							player->SpawnInContainer(W_TRADENOTE75000_CLASS);
-							amountToReturn -= 75000;
-						}
-						else if (amountToReturn >= 50000)
-						{
-							player->SpawnInContainer(W_TRADENOTE50000_CLASS);
-							amountToReturn -= 50000;
-						}
-						else if (amountToReturn >= 25000)
-						{
-							player->SpawnInContainer(W_TRADENOTE25000_CLASS);
-							amountToReturn -= 25000;
-						}
-						else if (amountToReturn >= 20000)
-						{
-							player->SpawnInContainer(W_TRADENOTE200000_CLASS);
-							amountToReturn -= 20000;
-						}
-						else if (amountToReturn >= 15000)
-						{
-							player->SpawnInContainer(W_TRADENOTE15000_CLASS);
-							amountToReturn -= 15000;
-						}
-						else if (amountToReturn >= 10000)
-						{
-							player->SpawnInContainer(W_TRADENOTE10000_CLASS);
-							amountToReturn -= 10000;
-						}
-						else if (amountToReturn >= 5000)
-						{
-							player->SpawnInContainer(W_TRADENOTE5000_CLASS);
-							amountToReturn -= 5000;
-						}
-						else if (amountToReturn >= 1000)
-						{
-							player->SpawnInContainer(W_TRADENOTE1000_CLASS);
-							amountToReturn -= 1000;
-						}
-						else if (amountToReturn >= 500)
-						{
-							player->SpawnInContainer(W_TRADENOTE500_CLASS);
-							amountToReturn -= 500;
-						}
-						else if (amountToReturn >= 100)
-						{
-							player->SpawnInContainer(W_TRADENOTE100_CLASS);
-							amountToReturn -= 100;
-						}
-						else
-						{
-							player->SpawnInContainer(W_COINSTACK_CLASS, amountToReturn);
-							amountToReturn = 0;
-						}
-					}
-				}
-				break;
-			}
-		}
 		DoUseResponse(player);
-		player->RecalculateCoinAmount();
+		player->RecalculateCoinAmount(W_COINSTACK_CLASS);
+		player->Save();
+		house->Save();
+		houseData->Save();
+
 
 		if (CWeenieObject *owner = g_pWorld->FindObject(houseData->_ownerId))
 			g_pHouseManager->SendHouseData(owner->AsPlayer(), house->GetHouseDID()); //update house's owner panel if the owner is online.
+
+		HOUSE_LOG << "Player:" << player->GetName() << "paid rent" << houseData->_houseId;
 	}
 }
 
@@ -1045,33 +793,33 @@ CHookWeenie::CHookWeenie()
 
 void CHookWeenie::Tick()
 {
-	if (!_initialized && _nextInitCheck != -1.0 && _nextInitCheck <= Timer::cur_time)
-	{
-		_nextInitCheck = Timer::cur_time + Random::GenUInt(1, 10);
+	//if (!_initialized && _nextInitCheck != -1.0 && _nextInitCheck <= Timer::cur_time)
+	//{
+	//	_nextInitCheck = Timer::cur_time + Random::GenUInt(1, 10);
 
-		CHouseData *houseData = GetHouseData();
+	//	CHouseData *houseData = GetHouseData();
 
-		if (!houseData)
-			return;
+	//	if (!houseData)
+	//		return;
 
-		if (houseData->_ownerId)
-		{
-			SetHookVisibility(houseData->_hooksVisible);
-			m_Qualities.SetInstanceID(HOUSE_OWNER_IID, houseData->_ownerId);
-			NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
-		}
-		else
-		{
-			m_Qualities.RemoveInstanceID(HOUSE_OWNER_IID);
-			NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
-		}
+	//	if (houseData->_ownerId)
+	//	{
+	//		SetHookVisibility(houseData->_hooksVisible);
+	//		m_Qualities.SetInstanceID(HOUSE_OWNER_IID, houseData->_ownerId);
+	//		NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
+	//	}
+	//	else
+	//	{
+	//		m_Qualities.RemoveInstanceID(HOUSE_OWNER_IID);
+	//		NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
+	//	}
 
-		UpdateHookedObject(NULL);
-		SetHookVisibility(houseData->_hooksVisible);
+	//	UpdateHookedObject(NULL);
+	//	SetHookVisibility(houseData->_hooksVisible);
 
-		_nextInitCheck = -1.0;
-		_initialized = true;
-	}
+	//	_nextInitCheck = -1.0;
+	//	_initialized = true;
+	//}
 
 	CContainerWeenie::Tick();
 }
@@ -1080,8 +828,9 @@ void CHookWeenie::SaveEx(CWeenieSave & save)
 {
 	//if we don't clear before saving some hooked item's position and rotation changes, not sure what is causing that.
 	ClearHookedObject(false);
-
 	CContainerWeenie::SaveEx(save);
+
+	m_bSaveMe = false;
 
 	UpdateHookedObject(NULL, false);
 }
@@ -1091,6 +840,38 @@ void CHookWeenie::LoadEx(CWeenieSave & save)
 	CContainerWeenie::LoadEx(save);
 
 	_nextInitCheck = Timer::cur_time;
+}
+
+void CHookWeenie::PreSpawnCreate()
+{
+	CHouseData *houseData = GetHouseData();
+
+	if (!houseData)
+		return;
+
+	if (houseData->_ownerId)
+	{
+		//SetHookVisibility(houseData->_hooksVisible);
+		m_Qualities.SetInstanceID(HOUSE_OWNER_IID, houseData->_ownerId);
+		//NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
+	}
+	else
+	{
+		m_Qualities.RemoveInstanceID(HOUSE_OWNER_IID);
+		//NotifyIIDStatUpdated(HOUSE_OWNER_IID, false);
+	}
+
+	if (houseData->_hooksVisible)
+	{
+		m_Qualities.RemoveBool(VISIBILITY_BOOL);
+	}
+	else if (m_Items.empty())
+	{
+		m_Qualities.SetBool(VISIBILITY_BOOL, false);
+	}
+
+	UpdateHookedObject(NULL, false);
+	//SetHookVisibility(houseData->_hooksVisible);
 }
 
 int CHookWeenie::DoUseResponse(CWeenieObject *other)
@@ -1106,7 +887,12 @@ int CHookWeenie::DoUseResponse(CWeenieObject *other)
 	if (houseData->_hooksVisible)
 	{
 		if (house->HasStorageAccess(other->AsPlayer()))
-			return CContainerWeenie::DoUseResponse(other);
+		{
+			int useResponse = CContainerWeenie::DoUseResponse(other);
+			m_bSaveMe = true;
+			Save();
+			return useResponse;
+		}
 		else
 		{
 			other->SendText("You do not have permission to access that.", LTT_DEFAULT); //made up message.
@@ -1127,13 +913,17 @@ int CHookWeenie::DoUseResponse(CWeenieObject *other)
 			if (!hookedItem)
 				return WERROR_OBJECT_GONE;
 
-			if (hookedItem->InqIntQuality(HOOK_GROUP_INT, 0) >= 4 && house->GetHouseType() != 3) //todo: figure out what each value of this flag means, known values are 1, 2, 4, 8, 16, 32.
+			if (hookedItem->InqIntQuality(HOOK_GROUP_INT, 0) == 4 && house->GetHouseType() != Mansion_HouseType)
 			{
 				other->SendText("That can only be activated when hooked in a mansion.", LTT_DEFAULT); //made up message.
 				return WERROR_OBJECT_GONE;
 			}
 
-			return WERROR_NONE;
+			// Prevent hooked items from being usable if recently involved in PK Activity.
+			if (hookedItem->InqIntQuality(HOOK_GROUP_INT, 0) && other->_IsPlayer() && other->AsPlayer()->CheckPKActivity())
+			{
+				return WERROR_PORTAL_PK_ATTACKED_TOO_RECENTLY;
+			}
 		}
 		else
 		{
@@ -1141,9 +931,11 @@ int CHookWeenie::DoUseResponse(CWeenieObject *other)
 			return WERROR_HOOK_NOT_PERMITED_TO_USE_HOOK;
 		}
 	}
+
+	return CWeenieObject::DoUseResponse(other);
 }
 
-void CHookWeenie::Identify(CWeenieObject *other, DWORD overrideId)
+void CHookWeenie::Identify(CWeenieObject *other, uint32_t overrideId)
 {
 	CHouseData *houseData = GetHouseData();
 
@@ -1165,10 +957,10 @@ void CHookWeenie::Identify(CWeenieObject *other, DWORD overrideId)
 	}
 }
 
-DWORD CHookWeenie::Container_InsertInventoryItem(DWORD dwCell, CWeenieObject *pItem, DWORD slot)
+uint32_t CHookWeenie::Container_InsertInventoryItem(uint32_t dwCell, CWeenieObject *pItem, uint32_t slot)
 {
 	UpdateHookedObject(pItem);
-	
+
 	return CContainerWeenie::Container_InsertInventoryItem(dwCell, pItem, slot);
 }
 
@@ -1179,61 +971,72 @@ void CHookWeenie::ReleaseContainedItemRecursive(CWeenieObject *item)
 	CContainerWeenie::ReleaseContainedItemRecursive(item);
 }
 
+void CHookWeenie::OnContainerClosed(CWeenieObject *requestedBy)
+{
+	CContainerWeenie::OnContainerClosed(requestedBy);
+
+	m_bSaveMe = true;
+	Save();
+}
+
 void CHookWeenie::UpdateHookedObject(CWeenieObject *hookedItem, bool sendUpdate)
 {
 	if (!hookedItem && !m_Items.empty())
 		hookedItem = m_Items[0];
-	
+
 	if (!hookedItem)
 		return;
 
-	DWORD value;
+	uint32_t value;
+
 	if (hookedItem->m_Qualities.InqDataID(SETUP_DID, value))
 	{
 		m_Qualities.SetDataID(SETUP_DID, value);
-		NotifyDIDStatUpdated(SETUP_DID, false);
+		_phys_obj->part_array->SetSetupID(value, TRUE);
+		//NotifyDIDStatUpdated(SETUP_DID, false);
+		//SetPlacementFrame(Placement::Hook, FALSE);
 	}
 	else
 	{
 		m_Qualities.RemoveDataID(SETUP_DID);
-		NotifyDIDStatUpdated(SETUP_DID, false);
+		//NotifyDIDStatUpdated(SETUP_DID, false);
 	}
 
 	if (hookedItem->m_Qualities.InqDataID(MOTION_TABLE_DID, value))
 	{
 		m_Qualities.SetDataID(MOTION_TABLE_DID, value);
-		NotifyDIDStatUpdated(MOTION_TABLE_DID, false);
+		//NotifyDIDStatUpdated(MOTION_TABLE_DID, false);
 
 		_phys_obj->SetMotionTableID(value);
 	}
 	else
 	{
 		m_Qualities.RemoveDataID(MOTION_TABLE_DID);
-		NotifyDIDStatUpdated(MOTION_TABLE_DID, false);
+		//NotifyDIDStatUpdated(MOTION_TABLE_DID, false);
 	}
 
 	if (hookedItem->m_Qualities.InqDataID(SOUND_TABLE_DID, value))
 	{
 		m_Qualities.SetDataID(SOUND_TABLE_DID, value);
-		NotifyDIDStatUpdated(SOUND_TABLE_DID, false);
+		//NotifyDIDStatUpdated(SOUND_TABLE_DID, false);
 	}
 	else
 	{
 		m_Qualities.RemoveDataID(SOUND_TABLE_DID);
-		NotifyDIDStatUpdated(SOUND_TABLE_DID, false);
+		//NotifyDIDStatUpdated(SOUND_TABLE_DID, false);
 	}
 
 	if (hookedItem->m_Qualities.InqDataID(PHYSICS_EFFECT_TABLE_DID, value))
 	{
 		m_Qualities.SetDataID(PHYSICS_EFFECT_TABLE_DID, value);
-		NotifyDIDStatUpdated(PHYSICS_EFFECT_TABLE_DID, false);
+		//NotifyDIDStatUpdated(PHYSICS_EFFECT_TABLE_DID, false);
 
 		set_phstable_id(value);
 	}
 	else
 	{
 		m_Qualities.RemoveDataID(PHYSICS_EFFECT_TABLE_DID);
-		NotifyDIDStatUpdated(PHYSICS_EFFECT_TABLE_DID, false);
+		//NotifyDIDStatUpdated(PHYSICS_EFFECT_TABLE_DID, false);
 
 		if (physics_script_table)
 		{
@@ -1246,14 +1049,14 @@ void CHookWeenie::UpdateHookedObject(CWeenieObject *hookedItem, bool sendUpdate)
 	if (hookedItem->m_Qualities.InqFloat(DEFAULT_SCALE_FLOAT, floatValue))
 	{
 		m_Qualities.SetFloat(DEFAULT_SCALE_FLOAT, floatValue);
-		NotifyFloatStatUpdated(DEFAULT_SCALE_FLOAT, false);
+		//NotifyFloatStatUpdated(DEFAULT_SCALE_FLOAT, false);
 
 		_phys_obj->SetScaleStatic(floatValue);
 	}
 	else
 	{
 		m_Qualities.SetFloat(DEFAULT_SCALE_FLOAT, 1.0);
-		NotifyFloatStatUpdated(DEFAULT_SCALE_FLOAT, false);
+		//NotifyFloatStatUpdated(DEFAULT_SCALE_FLOAT, false);
 
 		_phys_obj->SetScaleStatic(1.0);
 	}
@@ -1261,14 +1064,14 @@ void CHookWeenie::UpdateHookedObject(CWeenieObject *hookedItem, bool sendUpdate)
 	if (hookedItem->m_Qualities.InqFloat(TRANSLUCENCY_FLOAT, floatValue))
 	{
 		m_Qualities.SetFloat(TRANSLUCENCY_FLOAT, floatValue);
-		NotifyFloatStatUpdated(TRANSLUCENCY_FLOAT, false);
+		//NotifyFloatStatUpdated(TRANSLUCENCY_FLOAT, false);
 
 		_phys_obj->SetTranslucencyInternal(floatValue);
 	}
 	else
 	{
 		m_Qualities.RemoveFloat(TRANSLUCENCY_FLOAT);
-		NotifyFloatStatUpdated(TRANSLUCENCY_FLOAT, false);
+		//NotifyFloatStatUpdated(TRANSLUCENCY_FLOAT, false);
 
 		_phys_obj->SetTranslucencyInternal(0.0);
 	}
@@ -1277,6 +1080,11 @@ void CHookWeenie::UpdateHookedObject(CWeenieObject *hookedItem, bool sendUpdate)
 
 	m_bObjDescOverride = true;
 	hookedItem->GetObjDesc(m_ObjDescOverride);
+
+	int32_t placement = hookedItem->InqIntQuality(HOOK_PLACEMENT_INT, Placement::Resting, TRUE);
+	if (placement != Placement::Resting)
+		SetPlacementFrame(placement, FALSE);
+
 	if (sendUpdate && InqBoolQuality(VISIBILITY_BOOL, true))
 		NotifyObjectUpdated(false);
 }
@@ -1285,53 +1093,54 @@ void CHookWeenie::ClearHookedObject(bool sendUpdate)
 {
 	CWeenieDefaults *defaults = g_pWeenieFactory->GetWeenieDefaults(m_Qualities.id);
 
-	DWORD value;
+	uint32_t value;
+
 	if (defaults->m_Qualities.InqDataID(SETUP_DID, value))
 	{
 		m_Qualities.SetDataID(SETUP_DID, value);
-		NotifyDIDStatUpdated(SETUP_DID, false);
+		//NotifyDIDStatUpdated(SETUP_DID, false);
 	}
 	else
 	{
 		m_Qualities.RemoveDataID(SETUP_DID);
-		NotifyDIDStatUpdated(SETUP_DID, false);
+		//NotifyDIDStatUpdated(SETUP_DID, false);
 	}
 
 	if (defaults->m_Qualities.InqDataID(MOTION_TABLE_DID, value))
 	{
 		m_Qualities.SetDataID(MOTION_TABLE_DID, value);
-		NotifyDIDStatUpdated(MOTION_TABLE_DID, false);
+		//NotifyDIDStatUpdated(MOTION_TABLE_DID, false);
 
 		_phys_obj->SetMotionTableID(value);
 	}
 	else
 	{
 		m_Qualities.RemoveDataID(MOTION_TABLE_DID);
-		NotifyDIDStatUpdated(MOTION_TABLE_DID, false);
+		//NotifyDIDStatUpdated(MOTION_TABLE_DID, false);
 	}
 
 	if (defaults->m_Qualities.InqDataID(SOUND_TABLE_DID, value))
 	{
 		m_Qualities.SetDataID(SOUND_TABLE_DID, value);
-		NotifyDIDStatUpdated(SOUND_TABLE_DID, false);
+		//NotifyDIDStatUpdated(SOUND_TABLE_DID, false);
 	}
 	else
 	{
 		m_Qualities.RemoveDataID(SOUND_TABLE_DID);
-		NotifyDIDStatUpdated(SOUND_TABLE_DID, false);
+		//NotifyDIDStatUpdated(SOUND_TABLE_DID, false);
 	}
 
 	if (defaults->m_Qualities.InqDataID(PHYSICS_EFFECT_TABLE_DID, value))
 	{
 		m_Qualities.SetDataID(PHYSICS_EFFECT_TABLE_DID, value);
-		NotifyDIDStatUpdated(PHYSICS_EFFECT_TABLE_DID, false);
+		//NotifyDIDStatUpdated(PHYSICS_EFFECT_TABLE_DID, false);
 
 		set_phstable_id(value);
 	}
 	else
 	{
 		m_Qualities.RemoveDataID(PHYSICS_EFFECT_TABLE_DID);
-		NotifyDIDStatUpdated(PHYSICS_EFFECT_TABLE_DID, false);
+		//NotifyDIDStatUpdated(PHYSICS_EFFECT_TABLE_DID, false);
 
 		if (physics_script_table)
 		{
@@ -1344,14 +1153,14 @@ void CHookWeenie::ClearHookedObject(bool sendUpdate)
 	if (defaults->m_Qualities.InqFloat(DEFAULT_SCALE_FLOAT, floatValue))
 	{
 		m_Qualities.SetFloat(DEFAULT_SCALE_FLOAT, floatValue);
-		NotifyFloatStatUpdated(DEFAULT_SCALE_FLOAT, false);
+		//NotifyFloatStatUpdated(DEFAULT_SCALE_FLOAT, false);
 
 		_phys_obj->SetScaleStatic(floatValue);
 	}
 	else
 	{
 		m_Qualities.SetFloat(DEFAULT_SCALE_FLOAT, 1.0);
-		NotifyFloatStatUpdated(DEFAULT_SCALE_FLOAT, false);
+		//NotifyFloatStatUpdated(DEFAULT_SCALE_FLOAT, false);
 
 		_phys_obj->SetScaleStatic(1.0);
 	}
@@ -1359,14 +1168,14 @@ void CHookWeenie::ClearHookedObject(bool sendUpdate)
 	if (defaults->m_Qualities.InqFloat(TRANSLUCENCY_FLOAT, floatValue))
 	{
 		m_Qualities.SetFloat(TRANSLUCENCY_FLOAT, floatValue);
-		NotifyFloatStatUpdated(TRANSLUCENCY_FLOAT, false);
+		//NotifyFloatStatUpdated(TRANSLUCENCY_FLOAT, false);
 
 		_phys_obj->SetTranslucencyInternal(floatValue);
 	}
 	else
 	{
 		m_Qualities.RemoveFloat(TRANSLUCENCY_FLOAT);
-		NotifyFloatStatUpdated(TRANSLUCENCY_FLOAT, false);
+		//NotifyFloatStatUpdated(TRANSLUCENCY_FLOAT, false);
 
 		_phys_obj->SetTranslucencyInternal(0.0);
 	}
@@ -1376,17 +1185,14 @@ void CHookWeenie::ClearHookedObject(bool sendUpdate)
 	m_bObjDescOverride = false;
 	m_ObjDescOverride.Clear();
 
-	if(sendUpdate && InqBoolQuality(VISIBILITY_BOOL, true))
+	SetPlacementFrame(Placement::Resting, FALSE);
+
+	if (sendUpdate && InqBoolQuality(VISIBILITY_BOOL, true))
 		NotifyObjectUpdated(false);
 }
 
 void CHookWeenie::SetHookVisibility(bool newSetting)
 {
-	CHouseData *houseData = GetHouseData();
-
-	if(houseData)
-		houseData->_hooksVisible = newSetting;
-
 	if (!m_Items.empty())
 	{
 		CWeenieObject *hookedItem = m_Items[0];
@@ -1395,7 +1201,7 @@ void CHookWeenie::SetHookVisibility(bool newSetting)
 			return;
 
 		m_Qualities.RemoveBool(VISIBILITY_BOOL); //if it's visible we remove the bool altogether.
-		NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
+		//NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
 
 		if (newSetting)
 		{
@@ -1441,16 +1247,17 @@ void CHookWeenie::SetHookVisibility(bool newSetting)
 		if (newSetting)
 		{
 			m_Qualities.RemoveBool(VISIBILITY_BOOL); //if it's visible we remove the bool altogether.
-			NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
+			//NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
 			NotifyObjectCreated(false);
 		}
 		else
 		{
 			m_Qualities.SetBool(VISIBILITY_BOOL, false);
-			NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
+			//NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
 			NotifyObjectRemoved();
 		}
 	}
+	Save();
 }
 
 
@@ -1466,6 +1273,9 @@ CHouseWeenie *CHookWeenie::GetHouse()
 
 CHouseData *CHookWeenie::GetHouseData()
 {
+	if (uint32_t hid = InqDIDQuality(HOUSEID_DID, 0))
+		return g_pHouseManager->GetHouseData(hid);
+
 	CHouseWeenie *house = GetHouse();
 	if (house)
 		return house->GetHouseData();
@@ -1567,13 +1377,25 @@ int CStorageWeenie::DoUseResponse(CWeenieObject *other)
 	if (!house)
 		return WERROR_NO_HOUSE;
 
-	if(house->HasStorageAccess(other->AsPlayer()))
-		return CContainerWeenie::DoUseResponse(other);
+	if (house->HasStorageAccess(other->AsPlayer()))
+	{
+		int storageUseResponse = CContainerWeenie::DoUseResponse(other);
+		return storageUseResponse;
+	}
 	else
 	{
 		other->SendText("You do not have permission to access that.", LTT_DEFAULT); //made up message.
-		return WERROR_NONE;
 	}
+
+	return CWeenieObject::DoUseResponse(other);
+}
+
+void CStorageWeenie::OnContainerClosed(CWeenieObject *requestedBy)
+{
+	CChestWeenie::OnContainerClosed(requestedBy);
+
+	m_bSaveMe = true;
+	Save();
 }
 
 CHouseWeenie *CStorageWeenie::GetHouse()

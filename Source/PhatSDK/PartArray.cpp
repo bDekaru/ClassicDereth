@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Frame.h"
 #include "AnimHooks.h"
 #include "Setup.h"
@@ -39,7 +39,7 @@ void CSequence::set_object(CPhysicsObj *pPhysicsObj)
 	hook_obj = pPhysicsObj;
 }
 
-void CSequence::set_placement_frame(AnimFrame *PlacementFrame, DWORD ID)
+void CSequence::set_placement_frame(AnimFrame *PlacementFrame, uint32_t ID)
 {
 	placement_frame = PlacementFrame;
 	placement_frame_id = ID;
@@ -53,9 +53,9 @@ AnimFrame *CSequence::get_curr_animframe()
 	return curr_anim->get_part_frame(get_curr_frame_number());
 }
 
-long CSequence::get_curr_frame_number()
+int32_t CSequence::get_curr_frame_number()
 {
-	return((long)((double)floor(frame_number)));
+	return((int32_t)((double)floor(frame_number)));
 }
 
 void CSequence::multiply_cyclic_animation_framerate(float rate)
@@ -115,9 +115,9 @@ void CSequence::remove_all_link_animations()
 	}
 }
 
-void CSequence::remove_link_animations(DWORD amount)
+void CSequence::remove_link_animations(uint32_t amount)
 {
-	for (DWORD i = 0; i < amount; i++)
+	for (uint32_t i = 0; i < amount; i++)
 	{
 		if (!first_cyclic->GetPrev())
 			return;
@@ -213,13 +213,13 @@ iterate_anim:
 	double framerate = (*ppanim)->get_framerate();
 	double frametime = framerate * time_elapsed;
 
-	long lastframe = (long)floor(*pframenum);
+	int32_t lastframe = (int32_t)floor(*pframenum);
 
 	double newframenum = (*pframenum) + frametime;
 	*pframenum = newframenum;
 
 	double var_10 = 0;
-	long var_28 = 0;
+	int32_t var_28 = 0;
 
 	if (frametime > 0.0)
 	{
@@ -343,7 +343,7 @@ void CSequence::advance_to_next_animation(double TimeElapsed, AnimSequenceNode**
 			if (pFrame)
 			{
 				if ((*ppAnim)->anim->pos_frames)
-					pFrame->subtract1(pFrame, (*ppAnim)->get_pos_frame((long)floor(*pFrameNum)));
+					pFrame->subtract1(pFrame, (*ppAnim)->get_pos_frame((int32_t)floor(*pFrameNum)));
 
 				if (F_EPSILON < fabs((*ppAnim)->get_framerate()))
 					apply_physics(pFrame, 1.0 / (*ppAnim)->get_framerate(), TimeElapsed);
@@ -362,7 +362,7 @@ void CSequence::advance_to_next_animation(double TimeElapsed, AnimSequenceNode**
 			if (pFrame)
 			{
 				if ((*ppAnim)->anim->pos_frames)
-					pFrame->combine(pFrame, (*ppAnim)->get_pos_frame((long)floor(*pFrameNum)));
+					pFrame->combine(pFrame, (*ppAnim)->get_pos_frame((int32_t)floor(*pFrameNum)));
 
 				if (F_EPSILON < fabs((*ppAnim)->get_framerate()))
 					apply_physics(pFrame, 1.0 / (*ppAnim)->get_framerate(), TimeElapsed);
@@ -376,7 +376,7 @@ void CSequence::advance_to_next_animation(double TimeElapsed, AnimSequenceNode**
 			if (pFrame)
 			{
 				if ((*ppAnim)->anim->pos_frames)
-					pFrame->subtract1(pFrame, (*ppAnim)->get_pos_frame((long)floor(*pFrameNum)));
+					pFrame->subtract1(pFrame, (*ppAnim)->get_pos_frame((int32_t)floor(*pFrameNum)));
 
 				if (F_EPSILON < fabs((*ppAnim)->get_framerate()))
 					apply_physics(pFrame, 1.0 / (*ppAnim)->get_framerate(), TimeElapsed);
@@ -395,7 +395,7 @@ void CSequence::advance_to_next_animation(double TimeElapsed, AnimSequenceNode**
 			if (pFrame)
 			{
 				if ((*ppAnim)->anim->pos_frames)
-					pFrame->combine(pFrame, (*ppAnim)->get_pos_frame((long)floor(*pFrameNum)));
+					pFrame->combine(pFrame, (*ppAnim)->get_pos_frame((int32_t)floor(*pFrameNum)));
 
 				if (F_EPSILON < fabs((*ppAnim)->get_framerate()))
 					apply_physics(pFrame, 1.0 / (*ppAnim)->get_framerate(), TimeElapsed);
@@ -485,7 +485,7 @@ void CPartArray::Destroy()
 	owner = NULL;
 }
 
-CPartArray *CPartArray::CreateMesh(CPhysicsObj *pPhysicsObj, DWORD ID)
+CPartArray *CPartArray::CreateMesh(CPhysicsObj *pPhysicsObj, uint32_t ID)
 {
 	CPartArray *pPartArray = new CPartArray();
 
@@ -503,7 +503,7 @@ CPartArray *CPartArray::CreateMesh(CPhysicsObj *pPhysicsObj, DWORD ID)
 	return pPartArray;
 }
 
-CPartArray *CPartArray::CreateSetup(CPhysicsObj *_owner, DWORD setup_did, BOOL bCreateParts)
+CPartArray *CPartArray::CreateSetup(CPhysicsObj *_owner, uint32_t setup_did, BOOL bCreateParts)
 {
 	CPartArray *pPartArray = new CPartArray();
 
@@ -520,7 +520,7 @@ CPartArray *CPartArray::CreateSetup(CPhysicsObj *_owner, DWORD setup_did, BOOL b
 	return pPartArray;
 }
 
-CPartArray *CPartArray::CreateParticle(CPhysicsObj *_owner, DWORD _num_parts, CSphere *sorting_sphere)
+CPartArray *CPartArray::CreateParticle(CPhysicsObj *_owner, uint32_t _num_parts, CSphere *sorting_sphere)
 {
 	CPartArray *pPartArray = new CPartArray();
 
@@ -543,7 +543,7 @@ void CPartArray::AddLightsToCell(CObjCell *pCell)
 	if (!pCell || !lights)
 		return;
 
-	for (DWORD i = 0; i < lights->num_lights; i++)
+	for (uint32_t i = 0; i < lights->num_lights; i++)
 		pCell->add_light(&lights->m_Lights[i]);
 }
 
@@ -552,20 +552,20 @@ void CPartArray::RemoveLightsFromCell(CObjCell *pCell)
 	if (!pCell || !lights)
 		return;
 
-	for (DWORD i = 0; i < lights->num_lights; i++)
+	for (uint32_t i = 0; i < lights->num_lights; i++)
 		pCell->remove_light(&lights->m_Lights[i]);
 }
 
-void CPartArray::SetCellID(DWORD ID)
+void CPartArray::SetCellID(uint32_t ID)
 {
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 	{
 		if (parts[i])
 			parts[i]->pos.objcell_id = ID;
 	}
 }
 
-BOOL CPartArray::SetMeshID(DWORD ID)
+BOOL CPartArray::SetMeshID(uint32_t ID)
 {
 	if (!ID)
 		return FALSE;
@@ -586,7 +586,7 @@ BOOL CPartArray::SetMeshID(DWORD ID)
 	return TRUE;
 }
 
-BOOL CPartArray::SetSetupID(DWORD ID, BOOL bCreateParts)
+BOOL CPartArray::SetSetupID(uint32_t ID, BOOL bCreateParts)
 {
 	if (setup && setup->GetID() == ID)
 		return TRUE;
@@ -619,7 +619,7 @@ void CPartArray::DestroyParts()
 {
 	if (parts)
 	{
-		for (DWORD i = 0; i < num_parts; i++)
+		for (uint32_t i = 0; i < num_parts; i++)
 		{
 			if (parts[i])
 				delete parts[i];
@@ -649,7 +649,7 @@ void CPartArray::DestroyPals()
 	if (pals)
 	{
 #if PHATSDK_RENDER_AVAILABLE
-		for (DWORD i = 0; i < num_parts; i++)
+		for (uint32_t i = 0; i < num_parts; i++)
 		{
 			if (pals[i])
 			{
@@ -683,7 +683,7 @@ BOOL CPartArray::InitLights()
 	{
 		lights = new LIGHTLIST(setup->num_lights);
 
-		for (DWORD i = 0; i < lights->num_lights; i++)
+		for (uint32_t i = 0; i < lights->num_lights; i++)
 		{
 			// Init the lights
 			lights->m_Lights[i].lightinfo = &setup->lights[i];
@@ -729,12 +729,12 @@ BOOL CPartArray::InitParts()
 	if (!parts)
 		return FALSE;
 
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 		parts[i] = NULL;
 
 	if (setup->parts)
 	{
-		DWORD i;
+		uint32_t i;
 
 		for (i = 0; i < num_parts; i++)
 		{
@@ -773,7 +773,7 @@ int CPartArray::GetActivePlacementFrameID() // custom
 	return sequence.curr_anim ? 0 : sequence.placement_frame_id;
 }
 
-BOOL CPartArray::SetPlacementFrame(DWORD ID)
+BOOL CPartArray::SetPlacementFrame(uint32_t ID)
 {
 	PlacementType *pt;
 
@@ -811,7 +811,7 @@ void CPartArray::SetTranslucencyInternal(float Amount)
 {
 	if (setup)
 	{
-		for (DWORD i = 0; i < num_parts; i++)
+		for (uint32_t i = 0; i < num_parts; i++)
 		{
 			CPhysicsPart *pPart = parts[i];
 
@@ -823,7 +823,7 @@ void CPartArray::SetTranslucencyInternal(float Amount)
 
 BOOL CPartArray::CacheHasPhysicsBSP()
 {
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 	{
 		if (parts[i]->gfxobj[0]->physics_bsp)
 		{
@@ -859,9 +859,9 @@ void CPartArray::UpdateParts(Frame *pFrame)
 	if (!CurrFrame)
 		return;
 
-	DWORD PartCount = min(CurrFrame->num_parts, num_parts);
+	uint32_t PartCount = min(CurrFrame->num_parts, num_parts);
 
-	for (DWORD i = 0; i < PartCount; i++)
+	for (uint32_t i = 0; i < PartCount; i++)
 		parts[i]->pos.frame.combine(pFrame, &CurrFrame->frame[i], &scale);
 #endif 
 }
@@ -874,7 +874,7 @@ void CPartArray::Update(float fTimeElapsed, Frame *pFrame)
 #if PHATSDK_RENDER_AVAILABLE
 void CPartArray::UpdateViewerDistance(void)
 {
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 	{
 		if (parts[i])
 			parts[i]->UpdateViewerDistance();
@@ -887,7 +887,7 @@ void CPartArray::SetNoDrawInternal(BOOL NoDraw)
 	if (!setup)
 		return;
 
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 	{
 		CPhysicsPart *pPart = parts[i];
 
@@ -899,7 +899,7 @@ void CPartArray::SetNoDrawInternal(BOOL NoDraw)
 #if PHATSDK_RENDER_AVAILABLE
 void CPartArray::Draw(Position *Pos)
 {
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 	{
 		CPhysicsPart *pPart = parts[i];
 
@@ -909,7 +909,7 @@ void CPartArray::Draw(Position *Pos)
 }
 #endif
 
-DWORD CPartArray::GetDataID(void)
+uint32_t CPartArray::GetDataID(void)
 {
 	if (setup->GetID())
 	{
@@ -926,7 +926,7 @@ DWORD CPartArray::GetDataID(void)
 			return 0;
 }
 
-DWORD CPartArray::GetNumSphere()
+uint32_t CPartArray::GetNumSphere()
 {
 	return setup->num_sphere;
 }
@@ -961,7 +961,7 @@ void CPartArray::HandleExitWorld()
 		motion_table_manager->HandleExitWorld();
 }
 
-DWORD CPartArray::DoInterpretedMotion(DWORD mid, MovementParameters *params)
+uint32_t CPartArray::DoInterpretedMotion(uint32_t mid, MovementParameters *params)
 {
 	if (!motion_table_manager)
 		return 7;
@@ -974,7 +974,7 @@ DWORD CPartArray::DoInterpretedMotion(DWORD mid, MovementParameters *params)
 	return motion_table_manager->PerformMovement(cmd, &sequence);
 }
 
-DWORD CPartArray::StopInterpretedMotion(DWORD mid, MovementParameters *params)
+uint32_t CPartArray::StopInterpretedMotion(uint32_t mid, MovementParameters *params)
 {
 	if (!motion_table_manager)
 		return 7;
@@ -987,7 +987,7 @@ DWORD CPartArray::StopInterpretedMotion(DWORD mid, MovementParameters *params)
 	return motion_table_manager->PerformMovement(cmd, &sequence);
 }
 
-DWORD CPartArray::StopCompletely_Internal()
+uint32_t CPartArray::StopCompletely_Internal()
 {
 	if (!motion_table_manager)
 		return 7;
@@ -1004,7 +1004,7 @@ void CPartArray::InitializeMotionTables()
 		motion_table_manager->initialize_state(&sequence);
 }
 
-DWORD CPartArray::GetSetupID()
+uint32_t CPartArray::GetSetupID()
 {
 	if (setup)
 		return setup->GetID();
@@ -1012,7 +1012,7 @@ DWORD CPartArray::GetSetupID()
 	return 0;
 }
 
-DWORD CPartArray::GetMotionTableID()
+uint32_t CPartArray::GetMotionTableID()
 {
 	if (motion_table_manager)
 		return motion_table_manager->GetMotionTableID();
@@ -1020,7 +1020,7 @@ DWORD CPartArray::GetMotionTableID()
 	return 0;
 }
 
-BOOL CPartArray::SetMotionTableID(DWORD ID)
+BOOL CPartArray::SetMotionTableID(uint32_t ID)
 {
 	if (motion_table_manager)
 	{
@@ -1047,7 +1047,7 @@ BOOL CPartArray::SetMotionTableID(DWORD ID)
 	return TRUE;
 }
 
-LIGHTLIST::LIGHTLIST(DWORD LightCount)
+LIGHTLIST::LIGHTLIST(uint32_t LightCount)
 {
 	num_lights = LightCount;
 	m_Lights = new LIGHTOBJ[LightCount];
@@ -1060,7 +1060,7 @@ LIGHTLIST::~LIGHTLIST()
 
 void LIGHTLIST::set_frame(Frame *pFrame)
 {
-	for (DWORD i = 0; i < num_lights; i++)
+	for (uint32_t i = 0; i < num_lights; i++)
 		m_Lights[i].global_offset = *pFrame;
 }
 
@@ -1079,7 +1079,7 @@ CSphere *CPartArray::GetSphere()
 	return setup->sphere;
 }
 
-DWORD CPartArray::GetNumCylsphere()
+uint32_t CPartArray::GetNumCylsphere()
 {
 	return setup->num_cylsphere;
 }
@@ -1109,7 +1109,7 @@ TransitionState CPartArray::FindObjCollisions(class CTransition *transition)
 {
 	TransitionState ts = OK_TS;
 
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 	{
 		CPhysicsPart *part = parts[i];
 		if (part)
@@ -1125,7 +1125,7 @@ TransitionState CPartArray::FindObjCollisions(class CTransition *transition)
 
 void CPartArray::RemoveParts(CObjCell *obj_cell)
 {
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 	{
 		if (parts[i])
 			obj_cell->remove_part(parts[i]);
@@ -1152,7 +1152,7 @@ void CPartArray::AddPartsShadow(CObjCell *obj_cell, unsigned int num_shadow_part
 	if (num_shadow_parts > 1)
 		clip_planes_ = obj_cell->clip_planes;
 
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 	{
 		if (parts[i])
 			obj_cell->add_part(parts[i], clip_planes_, &obj_cell->pos.frame, num_shadow_parts);
@@ -1173,7 +1173,7 @@ BOOL CPartArray::SetScaleInternal(Vector &new_scale)
 {
 	scale = new_scale;
 
-	for (DWORD i = 0; i < num_parts; i++)
+	for (uint32_t i = 0; i < num_parts; i++)
 	{
 		if (parts[i])
 		{

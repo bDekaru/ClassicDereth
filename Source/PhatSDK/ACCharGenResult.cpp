@@ -1,7 +1,12 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "ACCharGenResult.h"
+
+ACCharGenResult::~ACCharGenResult()
+{
+	SafeDeleteArray(skillAdvancementClasses);
+}
 
 DEFINE_PACK(ACCharGenResult)
 {
@@ -15,12 +20,12 @@ DEFINE_UNPACK(ACCharGenResult)
 
 bool ACCharGenResult::CG_UnPack(BinaryReader *pReader)
 {
-	DWORD version = pReader->Read<DWORD>();
+	uint32_t version = pReader->Read<uint32_t>();
 	if (version != 1)
 		return false;
 
-	heritageGroup = (HeritageGroup) pReader->Read<DWORD>();
-	gender = (Gender) pReader->Read<DWORD>();
+	heritageGroup = (HeritageGroup) pReader->Read<uint32_t>();
+	gender = (Gender) pReader->Read<uint32_t>();
 	eyesStrip = pReader->Read<int>();
 	noseStrip = pReader->Read<int>();
 	mouthStrip = pReader->Read<int>();
@@ -28,13 +33,13 @@ bool ACCharGenResult::CG_UnPack(BinaryReader *pReader)
 	eyeColor = pReader->Read<int>();
 	hairStyle = pReader->Read<int>();
 	headgearStyle = pReader->Read<int>();
-	headgearColor = (PALETTE_TEMPLATE_ID) pReader->Read<DWORD>();
+	headgearColor = (PALETTE_TEMPLATE_ID) pReader->Read<uint32_t>();
 	shirtStyle = pReader->Read<int>();
-	shirtColor = (PALETTE_TEMPLATE_ID)pReader->Read<DWORD>();
+	shirtColor = (PALETTE_TEMPLATE_ID)pReader->Read<uint32_t>();
 	trousersStyle = pReader->Read<int>();
-	trousersColor = (PALETTE_TEMPLATE_ID)pReader->Read<DWORD>();
+	trousersColor = (PALETTE_TEMPLATE_ID)pReader->Read<uint32_t>();
 	footwearStyle = pReader->Read<int>();
-	footwearColor = (PALETTE_TEMPLATE_ID)pReader->Read<DWORD>();
+	footwearColor = (PALETTE_TEMPLATE_ID)pReader->Read<uint32_t>();
 	skinShade = pReader->Read<double>();
 	hairShade = pReader->Read<double>();
 	headgearShade = pReader->Read<double>();
@@ -49,18 +54,21 @@ bool ACCharGenResult::CG_UnPack(BinaryReader *pReader)
 	focus = pReader->Read<int>();
 	self = pReader->Read<int>();
 	slot = pReader->Read<int>();
-	classID = pReader->Read<DWORD>();
+	classID = pReader->Read<uint32_t>();
 	numSkills = pReader->Read<int>();
 	if (numSkills >= NUM_SKILL)
 		numSkills = NUM_SKILL;
 
 	SafeDeleteArray(skillAdvancementClasses);
-	skillAdvancementClasses = new SKILL_ADVANCEMENT_CLASS[numSkills];
-	for (int i = 0; i < numSkills; i++)
-		skillAdvancementClasses[i] = (SKILL_ADVANCEMENT_CLASS) pReader->Read<DWORD>();
+	if (numSkills > 0)
+	{
+		skillAdvancementClasses = new SKILL_ADVANCEMENT_CLASS[numSkills];
+		for (int i = 0; i < numSkills; i++)
+			skillAdvancementClasses[i] = (SKILL_ADVANCEMENT_CLASS)pReader->Read<uint32_t>();
+	}
 
 	name = pReader->ReadString();
-	startArea = pReader->Read<DWORD>();
+	startArea = pReader->Read<uint32_t>();
 	isAdmin = pReader->Read<int>();
 	isEnvoy = pReader->Read<int>();
 	return true;

@@ -4,6 +4,8 @@
 
 class CPlayerWeenie;
 
+class TradeManager;
+
 const float sidestep_factor = 0.5f;
 const float backwards_factor = 0.64999998f;
 const float run_turn_factor = 1.5f;
@@ -22,62 +24,74 @@ public:
 	void Think();
 
 	void DetachPlayer();
-	DWORD GetPlayerID();
+	uint32_t GetPlayerID();
 	CPlayerWeenie* GetPlayer();
 
 	void LoginError(int iError);
-	void LoginCharacter(DWORD dwGUID, const char *szAccount);
+	void LoginCharacter(uint32_t dwGUID, const char *szAccount);
 	void BeginLogout();
 	void OnLogoutCompleted();
 	void ExitWorld();
+	void ForceLogout();
 
 	void ActionComplete(int error = WERROR_NONE);
-	void SendText(const char *szText, long lColor);
+	void SendText(const char *szText, int32_t lColor);
+
+	bool IsServerGagged();
+	bool IsAllegGagged();
 
 	bool CheckForChatSpam();
 
 	// Network events
 	void ActionText(const char* szText);
-	void Attack(DWORD dwTarget, DWORD dwHeight, float flPower);
-	void MissileAttack(DWORD dwTarget, DWORD dwHeight, float flPower);
+	void Attack(uint32_t dwTarget, uint32_t dwHeight, float flPower);
+	void MissileAttack(uint32_t dwTarget, uint32_t dwHeight, float flPower);
 	void ChangeCombatStance(COMBAT_MODE mode);
-	void ChannelText(DWORD dwChannel, const char* szText);
+	void ChannelText(uint32_t dwChannel, const char* szText);
 	void ClientText(const char* szText);
 	void EmoteText(const char* szText);
 	void ExitPortal();
-	void Identify(DWORD dwObjectID);
+	void Identify(uint32_t dwObjectID);
 	void LifestoneRecall();
 	void MarketplaceRecall();
+	void PKArenaRecall();
+	void PKLArenaRecall();
 	void Ping();
-	void RequestHealthUpdate(DWORD dwGUID);
-	void SendTellByGUID(const char *text, DWORD dwGUID);
+	void RequestHealthUpdate(uint32_t dwGUID);
+	void SendTellByGUID(const char *text, uint32_t dwGUID);
 	void SendTellByName(const char *text, const char *name);
-	void SpendAttributeXP(STypeAttribute key, DWORD exp);
-	void SpendAttribute2ndXP(STypeAttribute2nd key, DWORD exp);
-	void SpendSkillXP(STypeSkill key, DWORD exp);
-	void SpendSkillCredits(STypeSkill key, DWORD credits);
-	void TryBuyItems(DWORD vendor_id, std::list<class ItemProfile *> &items);
-	void TrySellItems(DWORD vendor_id, std::list<class ItemProfile *> &items);
-	void TryInscribeItem(DWORD object_id, const std::string &text);
-	void UseItemEx(DWORD dwSourceID, DWORD dwDestID);
-	void UseObject(DWORD dwEID);
+	void SpendAttributeXP(STypeAttribute key, uint32_t exp);
+	void SpendAttribute2ndXP(STypeAttribute2nd key, uint32_t exp);
+	void SpendSkillXP(STypeSkill key, uint32_t exp);
+	void SpendSkillCredits(STypeSkill key, uint32_t credits);
+	void TryBuyItems(uint32_t vendor_id, std::list<class ItemProfile *> &items);
+	void TrySellItems(uint32_t vendor_id, std::list<class ItemProfile *> &items);
+	void TryInscribeItem(uint32_t object_id, const std::string &text);
+	void UseItemEx(uint32_t dwSourceID, uint32_t dwDestID);
+	void UseObject(uint32_t dwEID);
+	void SendTellByGUID(const char* szText, const CPlayerWeenie *pTarget);
+	void SendTell(const char* szText, const char* targetName, const uint32_t targetId = 0);
+	void GetHousesAvailable(uint32_t houseType);
 
 	void ProcessEvent(BinaryReader *);
 
 	// Fellowship functionality
 	void TryFellowshipCreate(const std::string name, int shareXP);
 	void TryFellowshipQuit(int disband);
-	void TryFellowshipDismiss(DWORD dismissed);
-	void TryFellowshipRecruit(DWORD target);
+	void TryFellowshipDismiss(uint32_t dismissed);
+	void TryFellowshipRecruit(uint32_t target);
 	void TryFellowshipUpdate(int on);
-	void TryFellowshipAssignNewLeader(DWORD target);
+	void TryFellowshipAssignNewLeader(uint32_t target);
 	void TryFellowshipChangeOpenness(int open);
 	void SendFellowshipUpdate();
+	void SetCharacterSquelchSetting(bool squelchSet, uint32_t squelchPlayer, std::string squelchName, BYTE squelchChatType, bool account);
+	void SendSquelchDB();
+	void SendGearRatings();
 
 	// Allegiance functionality
-	void TrySwearAllegiance(DWORD target);
-	void TryBreakAllegiance(DWORD target);
-	void SetRequestAllegianceUpdate(int on);
+	void TrySwearAllegiance(uint32_t target);
+	void TryBreakAllegiance(uint32_t target);
+	void SetRequestAllegianceUpdate(bool on);
 	void SendAllegianceUpdate();
 	void SendAllegianceMOTD();
 	void AllegianceInfoRequest(const std::string &target);
@@ -88,8 +102,8 @@ public:
 	void ChangePlayerOption(PlayerOptions option, bool value);
 
 	// House
-	void HouseBuy(DWORD slumlord, const PackableList<DWORD> &items);
-	void HouseRent(DWORD slumlord, const PackableList<DWORD> &items);
+	void HouseBuy(uint32_t slumlord, const PackableList<uint32_t> &items);
+	void HouseRent(uint32_t slumlord, const PackableList<uint32_t> &items);
 	void HouseAbandon();
 	void HouseRequestData();
 
@@ -114,7 +128,9 @@ public:
 	void HouseClearStorageAccess();
 
 	// Remote Container
-	void NoLongerViewingContents(DWORD container_id);
+	void NoLongerViewingContents(uint32_t container_id);
+
+	void PKLiteEnable();
 
 private:
 	CClient *m_pClient;
@@ -126,6 +142,7 @@ private:
 	double m_fNextAllegianceUpdate = 0.0;
 	BOOL m_bSendAllegianceUpdates = FALSE;
 	BOOL m_bSentFirstAllegianceUpdate = FALSE;
+	int last_age_update = 0;
 
 	double _next_chat_interval = 0.0;
 	double _next_chat_allowed = 0.0;

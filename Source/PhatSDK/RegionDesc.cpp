@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "GameTime.h"
 #include "RegionDesc.h"
 #include "LandDefs.h"
@@ -42,7 +42,7 @@ void CRegionDesc::Destroyer(DBObj* pRegionDesc)
 	delete ((CRegionDesc *)pRegionDesc);
 }
 
-CRegionDesc *CRegionDesc::Get(DWORD ID)
+CRegionDesc *CRegionDesc::Get(uint32_t ID)
 {
 	return (CRegionDesc *)ObjCaches::RegionDescs->Get(ID);
 }
@@ -53,7 +53,7 @@ void CRegionDesc::Release(CRegionDesc *pRegionDesc)
 		ObjCaches::RegionDescs->Release(pRegionDesc->GetID());
 }
 
-BOOL CRegionDesc::SetRegion(DWORD Instance, BOOL Hardware)
+BOOL CRegionDesc::SetRegion(uint32_t Instance, BOOL Hardware)
 {
 	// Omits the instance checks..
 	CRegionDesc *pRegion = CRegionDesc::Get(Hardware ? 0x130F0000 : 0x13000000);
@@ -87,7 +87,7 @@ int CRegionDesc::GetSky(float time_of_day, SmartArray<CelestialPosition> *sky_po
 
 CTerrainDesc::~CTerrainDesc()
 {
-	for (DWORD i = 0; i < terrain_types.num_used; i++)
+	for (uint32_t i = 0; i < terrain_types.num_used; i++)
 	{
 		SafeDelete(terrain_types.array_data[i]);
 	}
@@ -128,7 +128,7 @@ unsigned int CRegionDesc::SceneCount(unsigned int terrain_id, unsigned int scene
 	return terrain_info->SceneCount(terrain_id, scene_type_id);
 }
 
-DWORD CTerrainDesc::GetScene(unsigned int terrain_id, unsigned int scene_type_id, unsigned int scene_index)
+uint32_t CTerrainDesc::GetScene(unsigned int terrain_id, unsigned int scene_type_id, unsigned int scene_index)
 {
 	CSceneType *pSceneType = terrain_types.array_data[terrain_id]->scene_types.array_data[scene_type_id];
 	if (scene_index >= pSceneType->scenes.num_used)
@@ -137,7 +137,7 @@ DWORD CTerrainDesc::GetScene(unsigned int terrain_id, unsigned int scene_type_id
 	return pSceneType->scenes.array_data[scene_index];
 }
 
-DWORD CRegionDesc::GetScene(unsigned int terrain_id, unsigned int scene_type_id, unsigned int scene_index)
+uint32_t CRegionDesc::GetScene(unsigned int terrain_id, unsigned int scene_type_id, unsigned int scene_index)
 {
 	return terrain_info->GetScene(terrain_id, scene_type_id, scene_index);
 }
@@ -195,11 +195,11 @@ BOOL CRegionDesc::UnPack(BYTE **ppData, ULONG iSize)
 {
 	Destroy();
 
-	if (!UNPACK(DWORD, id))
+	if (!UNPACK(uint32_t, id))
 		goto check_version;
-	if (!UNPACK(DWORD, region_number))
+	if (!UNPACK(uint32_t, region_number))
 		goto check_version;
-	if (!UNPACK(DWORD, version))
+	if (!UNPACK(uint32_t, version))
 		goto check_version;
 
 check_version:
@@ -223,7 +223,7 @@ check_version:
 	{
 		// Close your eyes and pretend this isn't here.
 		// This was probably a bug on their part, subtracts the pack length of the region
-		DWORD NamePackSize = 2 + ((((DWORD)region_name.m_str.length()) >= 0xFFFF) ? 4 : 0) + ((DWORD)region_name.m_str.length());
+		uint32_t NamePackSize = 2 + ((((uint32_t)region_name.m_str.length()) >= 0xFFFF) ? 4 : 0) + ((uint32_t)region_name.m_str.length());
 		if (NamePackSize & 3)
 			NamePackSize += 4 - (NamePackSize & 3);
 		iSize -= NamePackSize;
@@ -233,14 +233,14 @@ check_version:
 
 	// Excludes size checks. They were worthless anyways.
 
-	long NumBlockLength, NumBlockWidth, LBlockLength, VertexPerCell;
+	int32_t NumBlockLength, NumBlockWidth, LBlockLength, VertexPerCell;
 	float SquareLength, MaxObjHeight, SkyHeight, RoadWidth;
 
-	UNPACK(long, NumBlockLength);
-	UNPACK(long, NumBlockWidth);
+	UNPACK(int32_t, NumBlockLength);
+	UNPACK(int32_t, NumBlockWidth);
 	UNPACK(float, SquareLength);
-	UNPACK(long, LBlockLength);
-	UNPACK(long, VertexPerCell);
+	UNPACK(int32_t, LBlockLength);
+	UNPACK(int32_t, VertexPerCell);
 	UNPACK(float, MaxObjHeight);
 	UNPACK(float, SkyHeight);
 	UNPACK(float, RoadWidth);
@@ -263,7 +263,7 @@ check_version:
 		GameTime::current_game_time = pGameTime;
 	}
 
-	UNPACK(DWORD, parts_mask); // 0x21F
+	UNPACK(uint32_t, parts_mask); // 0x21F
 
 	if (FBitSet(parts_mask, 4)) // 0x10
 	{
@@ -283,10 +283,10 @@ check_version:
 
 		BinaryReader reader(*ppData, iSize);
 
-		DWORD num_scene_types = reader.Read<DWORD>();
+		uint32_t num_scene_types = reader.Read<uint32_t>();
 		scene_info->scene_types.grow(num_scene_types);
 
-		for (DWORD i = 0; i < num_scene_types; i++)
+		for (uint32_t i = 0; i < num_scene_types; i++)
 		{
 			CSceneType *sceneType = new CSceneType();
 
@@ -297,7 +297,7 @@ check_version:
 			scene_info->scene_types.add(&sceneType);
 		}
 
-		DWORD numRead = reader.GetOffset();
+		uint32_t numRead = reader.GetOffset();
 		if (numRead > iSize)
 			numRead = iSize;
 
@@ -310,10 +310,10 @@ check_version:
 
 		BinaryReader reader(*ppData, iSize);
 
-		DWORD num_terrain_types = reader.Read<DWORD>();
+		uint32_t num_terrain_types = reader.Read<uint32_t>();
 		terrain_info->terrain_types.grow(num_terrain_types);
 
-		for (DWORD i = 0; i < num_terrain_types; i++)
+		for (uint32_t i = 0; i < num_terrain_types; i++)
 		{
 			CTerrainType *terrainType = new CTerrainType();
 
@@ -322,18 +322,18 @@ check_version:
 			{
 				// Close your eyes and pretend this isn't here.
 				// This was probably a bug on their part
-				DWORD NamePackSize = 2 + (((terrainType->terrain_name.m_str.length()) >= 0xFFFF) ? 4 : 0) + (terrainType->terrain_name.m_str.length());
+				uint32_t NamePackSize = 2 + (((terrainType->terrain_name.m_str.length()) >= 0xFFFF) ? 4 : 0) + (terrainType->terrain_name.m_str.length());
 				if (NamePackSize & 3)
 					NamePackSize += 4 - (NamePackSize & 3);
 				iSize -= NamePackSize;
 			}
 
-			terrainType->terrain_color.color = reader.Read<DWORD>();
+			terrainType->terrain_color.color = reader.Read<uint32_t>();
 
-			DWORD num_stypes = reader.Read<DWORD>();
+			uint32_t num_stypes = reader.Read<uint32_t>();
 			terrainType->scene_types.grow(num_stypes);
 
-			for (DWORD j = 0; j < num_stypes; j++)
+			for (uint32_t j = 0; j < num_stypes; j++)
 			{
 				int scene_index = reader.Read<int>();
 				CSceneType *scene_type_value = (scene_index != -1) ? scene_info->scene_types.array_data[scene_index] : NULL;
@@ -343,7 +343,7 @@ check_version:
 			terrain_info->terrain_types.add(&terrainType);
 		}
 
-		DWORD numRead = reader.GetOffset();
+		uint32_t numRead = reader.GetOffset();
 		if (numRead > iSize)
 			numRead = iSize;
 
@@ -380,12 +380,12 @@ DEFINE_PACK(RegionMisc)
 
 DEFINE_UNPACK(RegionMisc)
 {
-	version = pReader->Read<DWORD>();
-	game_map = pReader->Read<DWORD>();
-	autotest_map = pReader->Read<DWORD>();
-	autotest_map_size = pReader->Read<DWORD>();
-	clear_cell = pReader->Read<DWORD>();
-	clear_monster = pReader->Read<DWORD>();
+	version = pReader->Read<uint32_t>();
+	game_map = pReader->Read<uint32_t>();
+	autotest_map = pReader->Read<uint32_t>();
+	autotest_map_size = pReader->Read<uint32_t>();
+	clear_cell = pReader->Read<uint32_t>();
+	clear_monster = pReader->Read<uint32_t>();
 
 	return true;
 }
@@ -401,7 +401,7 @@ CSceneDesc::~CSceneDesc()
 
 void CSceneDesc::Destroy()
 {
-	for (DWORD i = 0; i < scene_types.num_used; i++)
+	for (uint32_t i = 0; i < scene_types.num_used; i++)
 		delete scene_types.array_data[i];
 	scene_types.num_used = 0;
 }
@@ -413,12 +413,12 @@ DEFINE_PACK(CSceneType)
 
 DEFINE_UNPACK(CSceneType)
 {
-	DWORD num_scenes = pReader->Read<DWORD>();
+	uint32_t num_scenes = pReader->Read<uint32_t>();
 	scenes.grow(num_scenes);
 
-	for (DWORD i = 0; i < num_scenes; i++)
+	for (uint32_t i = 0; i < num_scenes; i++)
 	{
-		DWORD scene_type_value = pReader->Read<DWORD>();
+		uint32_t scene_type_value = pReader->Read<uint32_t>();
 		scenes.add(&scene_type_value);
 	}
 
@@ -494,7 +494,7 @@ PalShift::~PalShift()
 
 void PalShift::Destroy()
 {
-	for (DWORD i = 0; i < land_tex.num_used; i++)
+	for (uint32_t i = 0; i < land_tex.num_used; i++)
 		delete land_tex.array_data[i];
 	land_tex.num_used = 0;
 }
@@ -506,11 +506,11 @@ DEFINE_PACK(PalShift)
 
 DEFINE_UNPACK(PalShift)
 {
-	DWORD numTex = pReader->Read<DWORD>();
+	uint32_t numTex = pReader->Read<uint32_t>();
 	land_tex.grow(numTex);
 
 	Destroy();
-	for (DWORD i = 0; i < numTex; i++)
+	for (uint32_t i = 0; i < numTex; i++)
 	{
 		PalShiftTex *tex = new PalShiftTex();
 		tex->tex_gid = 0;
@@ -532,15 +532,15 @@ PalShiftTex::~PalShiftTex()
 
 void PalShiftTex::Destroy()
 {
-	for (DWORD i = 0; i < sub_pal.num_used; i++)
+	for (uint32_t i = 0; i < sub_pal.num_used; i++)
 		delete sub_pal.array_data[i];
 	sub_pal.num_used = 0;
 
-	for (DWORD i = 0; i < road_code.num_used; i++)
+	for (uint32_t i = 0; i < road_code.num_used; i++)
 		delete road_code.array_data[i];
 	road_code.num_used = 0;
 
-	for (DWORD i = 0; i < terrain_pal.num_used; i++)
+	for (uint32_t i = 0; i < terrain_pal.num_used; i++)
 		delete terrain_pal.array_data[i];
 	terrain_pal.num_used = 0;
 }
@@ -552,42 +552,42 @@ DEFINE_PACK(PalShiftTex)
 
 DEFINE_UNPACK(PalShiftTex)
 {
-	DWORD num_sub_pal = pReader->Read<DWORD>();
+	uint32_t num_sub_pal = pReader->Read<uint32_t>();
 	sub_pal.grow(num_sub_pal);
 
-	for (DWORD i = 0; i < num_sub_pal; i++)
+	for (uint32_t i = 0; i < num_sub_pal; i++)
 	{
 		PalShiftSubPal *entry = new PalShiftSubPal;
-		entry->sub_pal_index = pReader->Read<DWORD>();
-		entry->sub_pal_length = pReader->Read<DWORD>();
+		entry->sub_pal_index = pReader->Read<uint32_t>();
+		entry->sub_pal_length = pReader->Read<uint32_t>();
 		pReader->ReadAlign();
 
 		sub_pal.add(&entry);
 	}
 
-	DWORD num_road_code = pReader->Read<DWORD>();
+	uint32_t num_road_code = pReader->Read<uint32_t>();
 	road_code.grow(num_road_code);
 
-	for (DWORD i = 0; i < num_road_code; i++)
+	for (uint32_t i = 0; i < num_road_code; i++)
 	{
 		PalShiftRoadCode *entry = new PalShiftRoadCode;
-		entry->road_code = pReader->Read<DWORD>();
+		entry->road_code = pReader->Read<uint32_t>();
 		entry->sub_pal_type = new LandDefs::PalType[sub_pal.num_used];
 
-		for (DWORD j = 0; j < sub_pal.num_used; j++)
+		for (uint32_t j = 0; j < sub_pal.num_used; j++)
 			entry->sub_pal_type[j] = (LandDefs::PalType) pReader->Read<int>();
 
 		road_code.add(&entry);
 	}
 
-	DWORD num_terrain_pal = pReader->Read<DWORD>();
+	uint32_t num_terrain_pal = pReader->Read<uint32_t>();
 	terrain_pal.grow(num_terrain_pal);
 
-	for (DWORD i = 0; i < num_terrain_pal; i++)
+	for (uint32_t i = 0; i < num_terrain_pal; i++)
 	{
 		PalShiftTerrainPal *entry = new PalShiftTerrainPal;
-		entry->terrain_index = (LandDefs::TerrainType)pReader->Read<DWORD>();
-		entry->pal_id = pReader->Read<DWORD>();
+		entry->terrain_index = (LandDefs::TerrainType)pReader->Read<uint32_t>();
+		entry->pal_id = pReader->Read<uint32_t>();
 		pReader->ReadAlign();
 
 		terrain_pal.add(&entry);
@@ -644,16 +644,16 @@ DEFINE_PACK(TerrainTex)
 
 DEFINE_UNPACK(TerrainTex)
 {
-	tex_gid = pReader->Read<DWORD>();
-	tex_tiling = pReader->Read<DWORD>();
-	max_vert_bright = pReader->Read<DWORD>();
-	min_vert_bright = pReader->Read<DWORD>();
-	max_vert_saturate = pReader->Read<DWORD>();
-	min_vert_saturate = pReader->Read<DWORD>();
-	max_vert_hue = pReader->Read<DWORD>();
-	min_vert_hue= pReader->Read<DWORD>();
-	detail_tex_tiling = pReader->Read<DWORD>();
-	detail_tex_gid = pReader->Read<DWORD>();
+	tex_gid = pReader->Read<uint32_t>();
+	tex_tiling = pReader->Read<uint32_t>();
+	max_vert_bright = pReader->Read<uint32_t>();
+	min_vert_bright = pReader->Read<uint32_t>();
+	max_vert_saturate = pReader->Read<uint32_t>();
+	min_vert_saturate = pReader->Read<uint32_t>();
+	max_vert_hue = pReader->Read<uint32_t>();
+	min_vert_hue= pReader->Read<uint32_t>();
+	detail_tex_tiling = pReader->Read<uint32_t>();
+	detail_tex_gid = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -669,7 +669,7 @@ TMTerrainDesc::~TMTerrainDesc()
 void TMTerrainDesc::Destroy()
 {
 	// missing code here
-	for (DWORD i = 0; i < terrain_tex.num_used; i++)
+	for (uint32_t i = 0; i < terrain_tex.num_used; i++)
 	{
 		delete terrain_tex.array_data[i];
 	}
@@ -703,25 +703,25 @@ TexMerge::~TexMerge()
 
 void TexMerge::Destroy()
 {
-	for (DWORD i = 0; i < corner_terrain_maps.num_used; i++)
+	for (uint32_t i = 0; i < corner_terrain_maps.num_used; i++)
 	{
 		delete corner_terrain_maps.array_data[i];
 	}
 	corner_terrain_maps.num_used = 0;
 
-	for (DWORD i = 0; i < side_terrain_maps.num_used; i++)
+	for (uint32_t i = 0; i < side_terrain_maps.num_used; i++)
 	{
 		delete side_terrain_maps.array_data[i];
 	}
 	side_terrain_maps.num_used = 0;
 
-	for (DWORD i = 0; i < road_maps.num_used; i++)
+	for (uint32_t i = 0; i < road_maps.num_used; i++)
 	{
 		delete road_maps.array_data[i];
 	}
 	road_maps.num_used = 0;
 
-	for (DWORD i = 0; i < terrain_desc.num_used; i++)
+	for (uint32_t i = 0; i < terrain_desc.num_used; i++)
 	{
 		delete terrain_desc.array_data[i];
 	}
@@ -734,52 +734,52 @@ DEFINE_PACK(TexMerge)
 
 DEFINE_UNPACK(TexMerge)
 {
-	base_tex_size = pReader->Read<DWORD>();
+	base_tex_size = pReader->Read<uint32_t>();
 
 	{
-		DWORD num_entries = pReader->Read<DWORD>();
+		uint32_t num_entries = pReader->Read<uint32_t>();
 		corner_terrain_maps.grow(num_entries);
 
-		for (DWORD i = 0; i < num_entries; i++)
+		for (uint32_t i = 0; i < num_entries; i++)
 		{
 			TerrainAlphaMap *entry = new TerrainAlphaMap();
-			entry->tcode = pReader->Read<DWORD>();
-			entry->tex_gid = pReader->Read<DWORD>();
+			entry->tcode = pReader->Read<uint32_t>();
+			entry->tex_gid = pReader->Read<uint32_t>();
 			corner_terrain_maps.add(&entry);
 		}
 	}
 
 	{
-		DWORD num_entries = pReader->Read<DWORD>();
+		uint32_t num_entries = pReader->Read<uint32_t>();
 		side_terrain_maps.grow(num_entries);
 
-		for (DWORD i = 0; i < num_entries; i++)
+		for (uint32_t i = 0; i < num_entries; i++)
 		{
 			TerrainAlphaMap *entry = new TerrainAlphaMap();
-			entry->tcode = pReader->Read<DWORD>();
-			entry->tex_gid = pReader->Read<DWORD>();
+			entry->tcode = pReader->Read<uint32_t>();
+			entry->tex_gid = pReader->Read<uint32_t>();
 			side_terrain_maps.add(&entry);
 		}
 	}
 
 	{
-		DWORD num_entries = pReader->Read<DWORD>();
+		uint32_t num_entries = pReader->Read<uint32_t>();
 		road_maps.grow(num_entries);
 
-		for (DWORD i = 0; i < num_entries; i++)
+		for (uint32_t i = 0; i < num_entries; i++)
 		{
 			RoadAlphaMap *entry = new RoadAlphaMap();
-			entry->rcode = pReader->Read<DWORD>();
-			entry->road_tex_gid = pReader->Read<DWORD>();
+			entry->rcode = pReader->Read<uint32_t>();
+			entry->road_tex_gid = pReader->Read<uint32_t>();
 			road_maps.add(&entry);
 		}
 	}
 
 	{
-		DWORD num_entries = pReader->Read<DWORD>();
+		uint32_t num_entries = pReader->Read<uint32_t>();
 		terrain_desc.grow(num_entries);
 
-		for (DWORD i = 0; i < num_entries; i++)
+		for (uint32_t i = 0; i < num_entries; i++)
 		{
 			TMTerrainDesc *entry = new TMTerrainDesc();
 			entry->UnPack(pReader);

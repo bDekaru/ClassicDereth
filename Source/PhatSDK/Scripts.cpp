@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhysicsObj.h"
 #include "Scripts.h"
 #include "AnimHooks.h"
@@ -7,7 +7,7 @@
 BOOL ScriptAndModData::UnPack(BYTE **ppData, ULONG iSize)
 {
     UNPACK(float, m_Mod);
-    UNPACK(DWORD, m_ScriptID);
+    UNPACK(uint32_t, m_ScriptID);
 
     return TRUE;
 }
@@ -57,7 +57,7 @@ void ScriptManager::ClearScripts()
     }
 }
 
-BOOL ScriptManager::AddScript(DWORD ScriptID)
+BOOL ScriptManager::AddScript(uint32_t ScriptID)
 {
     PhysicsScript *pScript = PhysicsScript::Get(ScriptID);
 
@@ -106,8 +106,8 @@ CAnimHook *ScriptManager::NextHook()
 {
     PhysicsScript *pCurrentScript = m_pScriptsBegin->m_pScript;
 
-    long HookIndex = ++m_0C;
-    long TotalHooks = pCurrentScript->m_ScriptData.num_used;
+    int32_t HookIndex = ++m_0C;
+    int32_t TotalHooks = pCurrentScript->m_ScriptData.num_used;
 
     if (HookIndex >= TotalHooks)
         return NULL; // Now beyond current script.
@@ -212,7 +212,7 @@ void PhysicsScript::Destroyer(DBObj *pScript)
     delete ((PhysicsScript *)pScript);
 }
 
-PhysicsScript *PhysicsScript::Get(DWORD ID)
+PhysicsScript *PhysicsScript::Get(uint32_t ID)
 {
     return (PhysicsScript *)ObjCaches::PhysicsScripts->Get(ID);
 }
@@ -225,7 +225,7 @@ void PhysicsScript::Release(PhysicsScript *pScript)
 
 void PhysicsScript::Destroy()
 {
-    for (long i = 0; i < m_ScriptData.num_used; i++)
+    for (int32_t i = 0; i < m_ScriptData.num_used; i++)
     {
         PhysicsScriptData *pData = m_ScriptData.array_data[i];
 
@@ -244,14 +244,14 @@ BOOL PhysicsScript::UnPack(BYTE** ppData, ULONG iSize)
 {
     Destroy();
 
-    UNPACK(DWORD, id);
+    UNPACK(uint32_t, id);
 
-    DWORD ScriptDataCount;
-    UNPACK(DWORD, ScriptDataCount);
+    uint32_t ScriptDataCount;
+    UNPACK(uint32_t, ScriptDataCount);
 
     m_ScriptData.Grow(ScriptDataCount);
 
-    for (DWORD i = 0; i < ScriptDataCount; i++)
+    for (uint32_t i = 0; i < ScriptDataCount; i++)
     {
         PhysicsScriptData *pScriptData = new PhysicsScriptData;
 
@@ -301,7 +301,7 @@ void PhysicsScriptTable::Destroyer(DBObj *pScriptTable)
     delete ((PhysicsScriptTable *)pScriptTable);
 }
 
-PhysicsScriptTable *PhysicsScriptTable::Get(DWORD ID)
+PhysicsScriptTable *PhysicsScriptTable::Get(uint32_t ID)
 {
     return (PhysicsScriptTable *)ObjCaches::PhysicsScriptTables->Get(ID);
 }
@@ -328,16 +328,16 @@ BOOL PhysicsScriptTable::UnPack(BYTE** ppData, ULONG iSize)
 {
     Destroy();
 
-    long EntryCount;
+    int32_t EntryCount;
 
-    UNPACK(DWORD, id);    
-    UNPACK(long, EntryCount);
+    UNPACK(uint32_t, id);    
+    UNPACK(int32_t, EntryCount);
 
-    for (long i = 0; i < EntryCount; i++)
+    for (int32_t i = 0; i < EntryCount; i++)
     {
         // The key the data will be referenced by.
-        DWORD DataKey;
-        UNPACK(DWORD, DataKey);
+        uint32_t DataKey;
+        UNPACK(uint32_t, DataKey);
 
         // Unpack the data.
         PhysicsScriptTableData *pData = new PhysicsScriptTableData;
@@ -353,7 +353,7 @@ BOOL PhysicsScriptTable::UnPack(BYTE** ppData, ULONG iSize)
     return TRUE;
 }
 
-DWORD PhysicsScriptTable::GetScript(DWORD Index, float Mod)
+uint32_t PhysicsScriptTable::GetScript(uint32_t Index, float Mod)
 {
     PhysicsScriptTableData *pEntry = NULL;
 
@@ -373,12 +373,12 @@ PhysicsScriptTableData::~PhysicsScriptTableData()
 
 BOOL PhysicsScriptTableData::UnPack(BYTE** ppData, ULONG iSize)
 {
-    long SAMCount;
+    int32_t SAMCount;
 
-    UNPACK(long, SAMCount);
+    UNPACK(int32_t, SAMCount);
     m_SAMDataArray.grow(SAMCount);
 
-    for (long i = 0; i < SAMCount; i++)
+    for (int32_t i = 0; i < SAMCount; i++)
     {
         ScriptAndModData SAMData;
         UNPACK_OBJ(SAMData);
@@ -389,9 +389,9 @@ BOOL PhysicsScriptTableData::UnPack(BYTE** ppData, ULONG iSize)
     return TRUE;
 }
 
-DWORD PhysicsScriptTableData::GetScript(float Mod)
+uint32_t PhysicsScriptTableData::GetScript(float Mod)
 {
-    for (long i = 0; i < m_SAMDataArray.num_used; i++)
+    for (int32_t i = 0; i < m_SAMDataArray.num_used; i++)
     {
         if (Mod <= m_SAMDataArray.array_data[i].m_Mod)
             return m_SAMDataArray.array_data[i].m_ScriptID;

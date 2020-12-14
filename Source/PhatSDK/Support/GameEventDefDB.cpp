@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 
 DEFINE_PACK_JSON(GameEventDef)

@@ -9,7 +9,7 @@ public:
 	CPKModifierWeenie();
 	virtual ~CPKModifierWeenie() override;
 
-	virtual class CPKModifierWeenie *AsPKModifier() { return this; }
+	virtual class CPKModifierWeenie *AsPKModifier() override { return this; }
 
 	virtual int Use(CPlayerWeenie *player) override;
 	virtual int DoUseResponse(CWeenieObject *player) override;

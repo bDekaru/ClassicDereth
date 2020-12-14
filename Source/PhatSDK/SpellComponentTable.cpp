@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "SpellComponentTable.h"
 
 SpellComponentBase::SpellComponentBase()
@@ -19,20 +19,34 @@ DEFINE_UNPACK(SpellComponentBase)
 {
 	_name = pReader->ReadString();
 
-	// these are obfuscated, swap low/high nibbles
-	for (int i = 0; i < _name.size(); i++)
-		_name[i] = (char)(BYTE)((BYTE)((BYTE)_name[i] << 4) | (BYTE)((BYTE)_name[i] >> 4));
+	try
+	{
+		// these are obfuscated, swap low/high nibbles
+		for (int i = 0; i < _name.size(); i++)
+			_name[i] = (char)(BYTE)((BYTE)((BYTE)_name[i] << 4) | (BYTE)((BYTE)_name[i] >> 4));
+	}
+	catch(...)
+	{
+		SERVER_ERROR << "Error unpacking spell components";
+	}
 
 	_category = (SpellComponentCategory)pReader->Read<int>();
-	_iconID = pReader->Read<DWORD>();
+	_iconID = pReader->Read<uint32_t>();
 	_type = (SpellComponentType)pReader->Read<int>();
-	_gesture = pReader->Read<DWORD>();
+	_gesture = pReader->Read<uint32_t>();
 	_time = pReader->Read<float>();
 	_text = pReader->ReadString();
 
-	// these are obfuscated, swap low/high nibbles
+	try
+	{
+		// these are obfuscated, swap low/high nibbles
 	for (int i = 0; i < _text.size(); i++)
 		_text[i] = (char)(BYTE)((BYTE)((BYTE)_text[i] << 4) | (BYTE)((BYTE)_text[i] >> 4));
+	}
+	catch (...)
+	{
+		SERVER_ERROR << "Error unpacking spell component names";
+	}
 
 	_CDM = pReader->Read<float>();
 
@@ -56,7 +70,7 @@ DEFINE_PACK(SpellComponentTable)
 
 DEFINE_UNPACK(SpellComponentTable)
 {
-	pReader->Read<DWORD>(); // id
+	pReader->Read<uint32_t>(); // id
 
 	_spellComponentBaseHash.UnPack(pReader);
 	return true;
@@ -64,7 +78,7 @@ DEFINE_UNPACK(SpellComponentTable)
 
 DEFINE_LEGACY_PACK_MIGRATOR(SpellComponentTable);
 
-ITEM_TYPE SpellComponentTable::GetTargetTypeFromComponentID(DWORD scid)
+ITEM_TYPE SpellComponentTable::GetTargetTypeFromComponentID(uint32_t scid)
 {
 	switch (scid)
 	{
@@ -92,7 +106,7 @@ ITEM_TYPE SpellComponentTable::GetTargetTypeFromComponentID(DWORD scid)
 	return TYPE_UNDEF;
 }
 
-const SpellComponentBase *SpellComponentTable::InqSpellComponentBase(DWORD key)
+const SpellComponentBase *SpellComponentTable::InqSpellComponentBase(uint32_t key)
 {
 	return _spellComponentBaseHash.lookup(key);
 }

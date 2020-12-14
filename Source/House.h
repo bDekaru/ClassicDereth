@@ -5,11 +5,12 @@
 #include "Portal.h"
 #include "Chest.h"
 
-class CHouseData: PackObj
+
+class CHouseData : public PackObj
 {
 public:
-	CHouseData() { };
-	~CHouseData() { };
+	CHouseData() = default;
+	virtual ~CHouseData() = default;
 	DECLARE_PACKABLE()
 
 	void ClearOwnershipData();
@@ -17,17 +18,17 @@ public:
 	void AbandonHouse();
 	void Save();
 
-	DWORD _slumLordId = 0;
+	uint32_t _slumLordId = 0;
 	Position _position;
-	DWORD _houseType = 0;
-	DWORD _ownerId = 0;
-	DWORD _ownerAccount = 0;
-	DWORD _purchaseTimestamp = 0;
-	DWORD _currentMaintenancePeriod = 0;
+	uint32_t _houseType = 0;
+	uint32_t _ownerId = 0;
+	uint32_t _ownerAccount = 0;
+	uint32_t _purchaseTimestamp = 0;
+	uint32_t _currentMaintenancePeriod = 0;
 	HousePaymentList _buy;
 	HousePaymentList _rent;
-	PackableList<DWORD> _accessList;
-	PackableList<DWORD> _storageAccessList;
+	PackableList<uint32_t> _accessList;
+	PackableList<uint32_t> _storageAccessList;
 	bool _allegianceAccess = false;
 	bool _allegianceStorageAccess = false;
 	bool _everyoneAccess = false;
@@ -35,57 +36,35 @@ public:
 	bool _hooksVisible = true;
 
 	//dynamic fields
-	DWORD _houseId = 0;
-	std::set<DWORD> _hookList;
+	uint32_t _houseId = 0;
+	std::set<uint32_t> _hookList;
 };
 
-class CHouseManager
-{
-public:
-	CHouseManager();
-	~CHouseManager();
-
-	void Load();
-	void Save();
-
-	DWORD _currentHouseMaintenancePeriod = 0;
-	DWORD _nextHouseMaintenancePeriod = 0;
-	bool _freeHouseMaintenancePeriod = false;
-
-	CHouseData *GetHouseData(DWORD houseId);
-	void SaveHouseData(DWORD houseId);
-	void SendHouseData(CPlayerWeenie *player, DWORD houseId);
-
-private:
-	PackableHashTable<DWORD, CHouseData> _houseDataMap;
-};
 
 class CHouseWeenie : public CWeenieObject
 {
 public:
 	CHouseWeenie();
 
-	virtual class CHouseWeenie *AsHouse() { return this; }
+	virtual class CHouseWeenie *AsHouse() override { return this; }
 
 	virtual void EnsureLink(CWeenieObject *source) override;
 
-	virtual bool ShouldSave() override { return true; }
-	
 	virtual bool HasAccess(CPlayerWeenie *requester);
 	virtual bool HasStorageAccess(CPlayerWeenie *requester);
 
 	CHouseData *GetHouseData();
 	std::string GetHouseOwnerName();
-	DWORD GetHouseOwner();
-	DWORD GetHouseDID();
+	uint32_t GetHouseOwner();
+	uint32_t GetHouseDID();
 	int GetHouseType();
 	CSlumLordWeenie *GetSlumLord();
 
-	//std::set<DWORD> _hookList;
-	//DWORD _currentMaintenancePeriod;
+	//std::set<uint32_t> _hookList;
+	//uint32_t _currentMaintenancePeriod;
 	//HousePaymentList _rent;
-	//PackableList<DWORD> _accessList;
-	//PackableList<DWORD> _storageAccessList;
+	//PackableList<uint32_t> _accessList;
+	//PackableList<uint32_t> _storageAccessList;
 	//bool _allegianceAccess = false;
 	//bool _allegianceStorageAccess = false;
 	//bool _everyoneAccess = false;
@@ -99,15 +78,15 @@ public:
 
 	virtual void Tick() override;
 
-	virtual class CSlumLordWeenie *AsSlumLord() { return this; }
+	virtual class CSlumLordWeenie *AsSlumLord() override { return this; }
 
 	CHouseWeenie *GetHouse();
 	void GetHouseProfile(HouseProfile &prof);
 
 	virtual int DoUseResponse(CWeenieObject *other) override;
 
-	void BuyHouse(CPlayerWeenie *player, const PackableList<DWORD> &items);
-	void RentHouse(CPlayerWeenie *player, const PackableList<DWORD> &items);
+	void BuyHouse(CPlayerWeenie *player, const PackableList<uint32_t> &items);
+	void RentHouse(CPlayerWeenie *player, const PackableList<uint32_t> &items);
 	void CheckRentPeriod();
 
 	bool _initialized = false;
@@ -119,19 +98,22 @@ class CHookWeenie : public CContainerWeenie
 public:
 	CHookWeenie();
 
-	virtual class CHookWeenie *AsHook() { return this; }
+	virtual class CHookWeenie *AsHook() override { return this; }
 
 	virtual void Tick() override;
 
-	virtual bool ShouldSave() override { return true; }
 	virtual void SaveEx(class CWeenieSave &save) override;
 	virtual void LoadEx(class CWeenieSave &save) override;
 
-	int DoUseResponse(CWeenieObject *other) override;
-	void Identify(CWeenieObject *other, DWORD overrideId = 0) override;
+	virtual void PreSpawnCreate() override;
 
-	virtual DWORD Container_InsertInventoryItem(DWORD dwCell, CWeenieObject *pItem, DWORD slot) override;
+	int DoUseResponse(CWeenieObject *other) override;
+	void Identify(CWeenieObject *other, uint32_t overrideId = 0) override;
+
+	virtual uint32_t Container_InsertInventoryItem(uint32_t dwCell, CWeenieObject *pItem, uint32_t slot) override;
 	virtual void ReleaseContainedItemRecursive(CWeenieObject *item) override;
+	void OnContainerClosed(CWeenieObject *requestedBy = NULL) override;
+
 	void UpdateHookedObject(CWeenieObject *hookedItem = NULL, bool sendUpdate = true);
 	void ClearHookedObject(bool sendUpdate = true);
 	void SetHookVisibility(bool newSetting);
@@ -148,7 +130,7 @@ class CDeedWeenie : public CWeenieObject
 public:
 	CDeedWeenie();
 
-	virtual class CDeedWeenie *AsDeed() { return this; }
+	virtual class CDeedWeenie *AsDeed() override { return this; }
 
 	class CHouseWeenie *GetHouse();
 };
@@ -158,7 +140,7 @@ class CBootSpotWeenie : public CWeenieObject
 public:
 	CBootSpotWeenie();
 
-	virtual class CBootSpotWeenie *AsBootSpot() { return this; }
+	virtual class CBootSpotWeenie *AsBootSpot() override { return this; }
 
 	class CHouseWeenie *GetHouse();
 };
@@ -168,7 +150,7 @@ class CHousePortalWeenie : public CPortal
 public:
 	CHousePortalWeenie();
 
-	virtual class CHousePortalWeenie *AsHousePortal() { return this; }
+	virtual class CHousePortalWeenie *AsHousePortal() override { return this; }
 	virtual void ApplyQualityOverrides() override;
 
 	class CHouseWeenie *GetHouse();
@@ -183,10 +165,10 @@ class CStorageWeenie : public CChestWeenie
 public:
 	CStorageWeenie();
 
-	virtual class CStorageWeenie *AsStorage() { return this; }
-	virtual bool ShouldSave() override { return true; }
+	virtual class CStorageWeenie *AsStorage() override { return this; }
 
 	int DoUseResponse(CWeenieObject *other) override;
+	void OnContainerClosed(CWeenieObject *requestedBy = NULL) override;
 
 	class CHouseWeenie *GetHouse();
 };

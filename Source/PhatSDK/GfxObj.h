@@ -17,7 +17,7 @@ public:
 
 	static DBObj *Allocator();
 	static void Destroyer(DBObj *);
-	static CGfxObj *Get(DWORD ID);
+	static CGfxObj *Get(uint32_t ID);
 	static void Release(CGfxObj *);
 
 	void Destroy();
@@ -31,11 +31,11 @@ public:
 	class CMaterial *material; // 0x1C / 0x28
 #endif
 
-	DWORD num_surfaces; // 0x20 / 0x2C
+	uint32_t num_surfaces; // 0x20 / 0x2C
 	CSurface **m_rgSurfaces; // 0x24 / 0x30
 	CVertexArray vertex_array; // 0x28 / 0x34 - size: 0x10
 
-	DWORD num_physics_polygons; // 0x38 / 0x44
+	uint32_t num_physics_polygons; // 0x38 / 0x44
 	CPolygon *physics_polygons; // 0x3C / 0x48
 
 #if PHATSDK_RENDER_AVAILABLE
@@ -51,24 +51,24 @@ public:
 #endif
 
 #ifdef PRE_TOD // surface triangle fans
-	DWORD m_dw60;
-	DWORD m_dw64;
+	uint32_t m_dw60;
+	uint32_t m_dw64;
 #endif
 
-	DWORD num_polygons; // 0x5C / 0x68
+	uint32_t num_polygons; // 0x5C / 0x68
 	CPolygon *polygons; // 0x60 / 0x6C
 	CSphere *drawing_sphere; // 0x64 / 0x70
 	BSPTREE *drawing_bsp; // 0x68 / 0x74
 
 	BBox gfx_bound_box; // 0x6C / 0x78 - size: 0x18?
 
-	DWORD m_didDegrade;
+	uint32_t m_didDegrade;
 };
 
 struct GfxObjDegradeLevel
 {
-	DWORD gfxobj_id;
-	DWORD degrade_mode;
+	uint32_t gfxobj_id;
+	uint32_t degrade_mode;
 	float min_dist;
 	float ideal_dist;
 	float max_dist;
@@ -82,16 +82,16 @@ public:
 
 	static DBObj *Allocator();
 	static void Destroyer(DBObj*);
-	static GfxObjDegradeInfo *Get(DWORD ID);
+	static GfxObjDegradeInfo *Get(uint32_t ID);
 	static void Release(GfxObjDegradeInfo *);
 
 	void Destroy();
 	BOOL UnPack(BYTE **ppData, ULONG iSize);
 
-	void get_degrade(float ViewerDist, DWORD *GfxIndex, DWORD *GfxFrameMod) const;
+	void get_degrade(float ViewerDist, uint32_t *GfxIndex, uint32_t *GfxFrameMod) const;
 	float get_max_degrade_distance(void) const;
 
-	DWORD num_degrades; // 0x1C / 0x28
+	uint32_t num_degrades; // 0x1C / 0x28
 	GfxObjDegradeLevel *degrades; // 0x20 / 0x2C
 };
 

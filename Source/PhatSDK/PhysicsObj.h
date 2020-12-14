@@ -45,7 +45,7 @@ enum SetPositionFlag
 struct SetPositionStruct
 {
 	void SetPosition(Position *new_pos) { pos = *new_pos; }
-	void SetFlags(DWORD _flags) { flags = _flags; }
+	void SetFlags(uint32_t _flags) { flags = _flags; }
 
 	Position pos;
 	unsigned int flags = 0;
@@ -67,8 +67,8 @@ public:
 	virtual ~PhysicsObjHook() { UNFINISHED(); }
 
 	HookType hook_type;
-	long double time_created;
-	long double interpolation_time;
+	double time_created;
+	double interpolation_time;
 	PhysicsObjHook *prev;
 	PhysicsObjHook *next;
 	void *user_data;
@@ -96,9 +96,9 @@ public:
 
 	unsigned int id = 0;
 	Vector velocity;
-	DWORD wcid = 0;
+	uint32_t wcid = 0;
 	ITEM_TYPE itemType = TYPE_UNDEF;
-	DWORD _bitfield = Undef_OCPB;
+	uint32_t _bitfield = Undef_OCPB;
 };
 
 class CPhysicsObj : public LongHashData
@@ -115,8 +115,8 @@ public:
 	static class CServerObjectMaint *obj_maint;
 #endif
 
-	static CPhysicsObj *GetObject(DWORD object_id);
-	static CPhysicsObj *makeObject(DWORD data_did, DWORD object_iid, BOOL bDynamic);
+	static CPhysicsObj *GetObject(uint32_t object_id);
+	static CPhysicsObj *makeObject(uint32_t data_did, uint32_t object_iid, BOOL bDynamic);
 	static CPhysicsObj *makeParticleObject(unsigned int num_parts, CSphere *sorting_sphere);
 
 	void SetScaleStatic(float new_scale);
@@ -124,7 +124,7 @@ public:
 	BOOL set_active(BOOL active);
 	void clear_target();
 	void unstick_from_object();
-	void stick_to_object(DWORD target);
+	void stick_to_object(uint32_t target);
 	void cancel_moveto();
 	void RemoveLinkAnimations();
 	float get_heading();
@@ -133,25 +133,25 @@ public:
 	Vector get_velocity();
 	double get_target_quantum();
 	void set_target_quantum(double new_quantum);
-	void add_voyeur(DWORD object_id, float radius, float quantum);
-	int remove_voyeur(DWORD object_id);
+	void add_voyeur(uint32_t object_id, float radius, float quantum);
+	int remove_voyeur(uint32_t object_id);
 	void receive_detection_update(class DetectionInfo *info);
 	void receive_target_update(class TargetInfo *info);
 	void HandleUpdateTarget(TargetInfo target_info);
-	void MoveToObject(DWORD object_id, MovementParameters *params);
-	void MoveToObject_Internal(DWORD object_id, DWORD top_level_id, float object_radius, float object_height, MovementParameters *params);
-	DWORD get_sticky_object_id();
+	void MoveToObject(uint32_t object_id, MovementParameters *params);
+	void MoveToObject_Internal(uint32_t object_id, uint32_t top_level_id, float object_radius, float object_height, MovementParameters *params);
+	uint32_t get_sticky_object_id();
 	double GetAutonomyBlipDistance();
 
 	void MakePositionManager();
 	void InterpolateTo(Position *p, int keep_heading);
 
-	void set_target(unsigned int context_id, unsigned int object_id, float radius, long double quantum);
+	void set_target(unsigned int context_id, unsigned int object_id, float radius, double quantum);
 
 	BOOL IsInterpolating();
 	BOOL motions_pending();
-	DWORD StopInterpretedMotion(DWORD motion, class MovementParameters *params);
-	DWORD DoInterpretedMotion(DWORD motion, class MovementParameters *params);
+	uint32_t StopInterpretedMotion(uint32_t motion, class MovementParameters *params);
+	uint32_t DoInterpretedMotion(uint32_t motion, class MovementParameters *params);
 	BOOL movement_is_autonomous();
 	void TurnToHeading(MovementParameters *params);
 	BOOL HasAnims();
@@ -174,7 +174,7 @@ public:
 	void UpdateChild(CPhysicsObj *child_obj, unsigned int part_index, Frame *child_frame);
 	void DrawRecursive();
 	void UpdateViewerDistance();
-	void set_sequence_animation(DWORD AnimationID, BOOL ClearAnimations, long StartFrame, float FrameRate);
+	void set_sequence_animation(uint32_t AnimationID, BOOL ClearAnimations, int32_t StartFrame, float FrameRate);
 
 	void MakeMovementManager(BOOL init_motion);
 
@@ -193,37 +193,37 @@ public:
 	void Hook_AnimDone();
 	void calc_cross_cells_static();
 	void add_obj_to_cell(CObjCell *pCell, Frame *pFrame);
-	void MotionDone(DWORD motion, BOOL success);
+	void MotionDone(uint32_t motion, BOOL success);
 	void add_anim_hook(class CAnimHook *pHook);
 	void InitDefaults(class CSetup *pSetup);
 	int report_object_collision_end(const unsigned int object_id);
 	void report_collision_end(const int force_end);
 	void remove_shadows_from_cells();
 	void leave_cell(BOOL is_changing_cell);
-	void set_cell_id(DWORD CellID);
+	void set_cell_id(uint32_t CellID);
 	void calc_acceleration();
 	void enter_cell(CObjCell *pCell);
 	void set_initial_frame(Frame *Pos);
-	DWORD create_particle_emitter(DWORD emitter_info_id, unsigned int part_index, Frame *offset, unsigned int emitter_id);
+	uint32_t create_particle_emitter(uint32_t emitter_info_id, unsigned int part_index, Frame *offset, unsigned int emitter_id);
 	void remove_parts(CObjCell *obj_cell);
 	int build_collision_profile(ObjCollisionProfile *prof, CPhysicsObj *obj, Vector *vel, const int amIInContact, const int objIsMissile, const int objHasContact) const;
 	int report_object_collision(CPhysicsObj *object, int prev_has_contact);
 
-	BOOL InitObjectBegin(DWORD object_iid, BOOL bDynamic);
-	BOOL InitPartArrayObject(DWORD data_did, BOOL bCreateParts);
+	BOOL InitObjectBegin(uint32_t object_iid, BOOL bDynamic);
+	BOOL InitPartArrayObject(uint32_t data_did, BOOL bCreateParts);
 	BOOL CacheHasPhysicsBSP();
 	void SetTranslucencyInternal(float Amount);
 
 	BOOL InitObjectEnd();
-	BOOL SetPlacementFrameInternal(DWORD frame_id);
-	BOOL SetPlacementFrame(DWORD frame_id, BOOL send_event);
-	BOOL play_script_internal(DWORD ScriptID);
+	BOOL SetPlacementFrameInternal(uint32_t frame_id);
+	BOOL SetPlacementFrame(uint32_t frame_id, BOOL send_event);
+	BOOL play_script_internal(uint32_t ScriptID);
 
-	DWORD SetMotionTableID(DWORD ID);
-	void set_stable_id(DWORD ID);
-	void set_phstable_id(DWORD ID);
+	uint32_t SetMotionTableID(uint32_t ID);
+	void set_stable_id(uint32_t ID);
+	void set_phstable_id(uint32_t ID);
 
-	BOOL makeAnimObject(DWORD setup_id, BOOL bCreateParts);
+	BOOL makeAnimObject(uint32_t setup_id, BOOL bCreateParts);
 
 	void UpdatePartsInternal();
 	void process_hooks();
@@ -235,10 +235,10 @@ public:
 	float GetHeight() const;
 	float GetRadius() const;
 
-	DWORD GetNumSphere(); // Inlined
+	uint32_t GetNumSphere(); // Inlined
 	class CSphere *GetSphere(); // inlined
 
-	DWORD GetNumCylsphere(); // Inlined
+	uint32_t GetNumCylsphere(); // Inlined
 	class CCylSphere *GetCylsphere(); // inlined
 
 	float GetStepDownHeight();
@@ -254,17 +254,17 @@ public:
 	float get_walkable_z();
 	void set_velocity(const Vector &new_velocity, int send_event);
 	CTransition *transition(Position *old_pos, Position *new_pos, int admin_move);
-	DWORD DoMotion(DWORD motion, MovementParameters *params, int send_event);
+	uint32_t DoMotion(uint32_t motion, MovementParameters *params, int send_event);
 
-	DWORD GetSetupID();
+	uint32_t GetSetupID();
 	void SetNoDraw(int no_draw);
 	void unset_parent();
 	void unparent_children();
 	void clear_transient_states();
 	BOOL set_parent(CPhysicsObj *obj, unsigned int part_index, Frame *frame);
-	BOOL set_parent(CPhysicsObj *obj, DWORD placement);
+	BOOL set_parent(CPhysicsObj *obj, uint32_t placement);
 	void recalc_cross_cells();
-	BOOL add_child(CPhysicsObj *obj, DWORD location_id);
+	BOOL add_child(CPhysicsObj *obj, uint32_t location_id);
 	BOOL add_child(CPhysicsObj *obj, unsigned int part_index, Frame *frame);
 	void RemovePartFromShadowCells(CPhysicsPart *part);
 	void AddPartToShadowCells(CPhysicsPart *part);
@@ -292,14 +292,14 @@ public:
 	void add_shadows_to_cells(struct CELLARRAY *cell_array);
 	void add_particle_shadow_to_cell();
 	void find_bbox_cell_list(CELLARRAY *cell_array);
-	BOOL set_state(DWORD new_state, BOOL send_event);
+	BOOL set_state(uint32_t new_state, BOOL send_event);
 	void set_hidden(BOOL hidden, BOOL send_event);
 	static BOOL AdjustPosition(Position *p, Vector *low_pt, CObjCell **new_cell, int bDontCreateCells, int bSearchCells);
 
-	void TurnToObject(DWORD object_id, MovementParameters *params);
-	void TurnToObject_Internal(DWORD object_id, DWORD top_level_id, MovementParameters *params);
+	void TurnToObject(uint32_t object_id, MovementParameters *params);
+	void TurnToObject_Internal(uint32_t object_id, uint32_t top_level_id, MovementParameters *params);
 
-	DWORD PerformMovement(MovementStruct &mvs); // not seen in client but seems logical it should exist
+	uint32_t PerformMovement(MovementStruct &mvs); // not seen in client but seems logical it should exist
 
 	struct CollisionRecord
 	{
@@ -322,16 +322,17 @@ public:
 	bool m_bExaminationObject = false; // 0x2C
 	class ScriptManager *script_manager = NULL; // 0x30
 	class PhysicsScriptTable *physics_script_table = NULL; // 0x34
-	DWORD m_DefaultScript = 0; // 0x38
+	uint32_t m_DefaultScript = 0; // 0x38
 	float m_DefaultScriptIntensity = 0.0f; // 0x3C
 	CPhysicsObj *parent = NULL; // 0x40
 	class CHILDLIST *children = NULL; // 0x44
 	Position m_Position; // 0x48
+	Position m_LastValidPosition;	// custom
 	class CObjCell *cell = NULL; // 0x90
-	DWORD num_shadow_objects = 0; // 0x94
+	uint32_t num_shadow_objects = 0; // 0x94
 	DArray<CShadowObj> shadow_objects; // 0x98
-	DWORD m_PhysicsState = 123; // 0xA8
-	DWORD transient_state = 0; // 0xAC
+	uint32_t m_PhysicsState = 123; // 0xA8
+	uint32_t transient_state = 0; // 0xAC
 	float m_fElasticity = DEFAULT_ELASTICITY; // 0xB0
 	float m_fTranslucency = DEFAULT_TRANSLUCENCY; // 0xB4
 	float translucencyOriginal = DEFAULT_TRANSLUCENCY; // 0xB8
@@ -355,7 +356,7 @@ public:
 	class ParticleManager * particle_manager = NULL;// 0x128
 	class CWeenieObject *weenie_obj = NULL; // 0x12C
 	Plane contact_plane; // 0x130
-	DWORD contact_plane_cell_id = 0; // 0x140
+	uint32_t contact_plane_cell_id = 0; // 0x140
 	Vector sliding_normal; // 0x144
 	Vector cached_velocity; // 0x150
 	class LongNIValHash<CPhysicsObj::CollisionRecord> * collision_table;
@@ -391,8 +392,8 @@ public:
 	};
 
 #if PHATSDK_IS_SERVER
-#include "animate.h"
-#include "moves.h"
+#include "Animate.h"
+#include "Moves.h"
 #include "PhysicsObjCustom.h"
 
 	WORD _last_teleport_timestamp = 0;

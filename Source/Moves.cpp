@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "WeenieObject.h"
 #include "PhysicsObj.h"
 #include "World.h"
@@ -36,12 +36,12 @@ void CPhysicsObj::Movement_Think()
 	}
 }
 
-void CPhysicsObj::Movement_SendUpdate(DWORD dwCell)
+void CPhysicsObj::Movement_SendUpdate(uint32_t dwCell)
 {
 	if (CWeenieObject *pWeenie = GetWeenie())
 	{
 		BinaryWriter* poo = MoveUpdate(pWeenie);
-		g_pWorld->BroadcastPVS(dwCell, poo->GetData(), poo->GetSize());
+		g_pWorld->BroadcastPVS(dwCell, poo->GetData(), poo->GetSize(), OBJECT_MSG, false, false, true);
 		delete poo;
 	}
 }
@@ -57,8 +57,8 @@ void CPhysicsObj::Movement_UpdatePos()
 	_position_timestamp++;
 	_last_update_pos = Timer::cur_time;
 
-	DWORD dwNewCell = GetLandcell();
-	DWORD dwOldCell = m_LastMovePosition.objcell_id;
+	uint32_t dwNewCell = GetLandcell();
+	uint32_t dwOldCell = m_LastMovePosition.objcell_id;
 
 	if (BLOCK_WORD(dwOldCell) != BLOCK_WORD(dwNewCell))
 	{
@@ -83,8 +83,8 @@ void CPhysicsObj::Movement_UpdateVector()
 		return;
 
 	BinaryWriter moveMsg;
-	moveMsg.Write<DWORD>(0xF74E);
-	moveMsg.Write<DWORD>(id);
+	moveMsg.Write<uint32_t>(0xF74E);
+	moveMsg.Write<uint32_t>(id);
 
 	// velocity
 	Vector localVel = m_velocityVector;
@@ -96,5 +96,5 @@ void CPhysicsObj::Movement_UpdateVector()
 	moveMsg.Write<WORD>(_instance_timestamp);
 	moveMsg.Write<WORD>(++_vector_timestamp);
 
-	g_pWorld->BroadcastPVS(this, moveMsg.GetData(), moveMsg.GetSize(), OBJECT_MSG);
+	g_pWorld->BroadcastPVS(this, moveMsg.GetData(), moveMsg.GetSize(), OBJECT_MSG, false, false, true);
 }

@@ -32,7 +32,7 @@ public:
 	DECLARE_PACKABLE()
 
 	std::string name;
-	DWORD iconImage;
+	uint32_t iconImage;
 	unsigned int titleID;
 	int strength;
 	int endurance;
@@ -49,9 +49,9 @@ class HairStyle_CG : public PackObj
 public:
 	DECLARE_PACKABLE()
 
-	DWORD iconImage;
+	uint32_t iconImage;
 	bool bald;
-	DWORD alternateSetup;
+	uint32_t alternateSetup;
 	ObjDesc objDesc;
 };
 
@@ -60,8 +60,8 @@ class EyesStrip_CG : public PackObj
 public:
 	DECLARE_PACKABLE()
 
-	DWORD iconImage;
-	DWORD iconImage_Bald;
+	uint32_t iconImage;
+	uint32_t iconImage_Bald;
 	ObjDesc objDesc;
 	ObjDesc objDesc_Bald;
 };
@@ -71,7 +71,7 @@ class FaceStrip_CG : public PackObj
 public:
 	DECLARE_PACKABLE()
 
-	DWORD iconImage;
+	uint32_t iconImage;
 	ObjDesc objDesc;
 };
 
@@ -81,8 +81,8 @@ public:
 	DECLARE_PACKABLE()
 
 	std::string name;
-	DWORD clothingTable;
-	DWORD weenieDefault;
+	uint32_t clothingTable;
+	uint32_t weenieDefault;
 };
 
 class Sex_CG : public PackObj
@@ -92,18 +92,18 @@ public:
 
 	std::string name;
 	int scaling;
-	DWORD setup;
-	DWORD soundTable;
-	DWORD iconImage;
+	uint32_t setup;
+	uint32_t soundTable;
+	uint32_t iconImage;
 	ObjDesc objDesc;
-	DWORD physicsTable;
-	DWORD motionTable;
-	DWORD combatTable;
-	DWORD basePalette;
-	DWORD skinPalSet;
-	SmartArray<DWORD> mHairColorList;
+	uint32_t physicsTable;
+	uint32_t motionTable;
+	uint32_t combatTable;
+	uint32_t basePalette;
+	uint32_t skinPalSet;
+	SmartArray<uint32_t> mHairColorList;
 	SmartArray<HairStyle_CG> mHairStyleList;
-	SmartArray<DWORD> mEyeColorList;
+	SmartArray<uint32_t> mEyeColorList;
 	SmartArray<EyesStrip_CG> mEyeStripList;
 	SmartArray<FaceStrip_CG> mNoseStripList;
 	SmartArray<FaceStrip_CG> mMouthStripList;
@@ -111,7 +111,33 @@ public:
 	SmartArray<Style_CG> mShirtList;
 	SmartArray<Style_CG> mPantsList;
 	SmartArray<Style_CG> mFootwearList;
-	SmartArray<DWORD> mClothingColorsList;
+	SmartArray<uint32_t> mClothingColorsList;
+
+	inline HairStyle_CG* FindHairStyle(uint32_t head_id)
+	{
+		for (int i = 0; i < mHairStyleList.num_used; i++)
+		{
+			AnimPartChange *change = mHairStyleList.array_data[i].objDesc.firstAPChange;
+			while (change != nullptr)
+			{
+				if (change->part_index == Head && change->part_id == head_id)
+					return &(mHairStyleList.array_data[i]);
+				
+				change = change->next;
+			}
+		}
+		return nullptr;
+	}
+
+	inline HairStyle_CG* FindHairStyleAltSetup(uint32_t setup_id)
+	{
+		for (int i = 0; i < mHairStyleList.num_used; i++)
+		{
+			if (mHairStyleList.array_data[i].alternateSetup == setup_id)
+				return &(mHairStyleList.array_data[i]);
+		}
+		return nullptr;
+	}
 };
 
 class HeritageGroup_CG : public PackObj
@@ -120,16 +146,16 @@ public:
 	DECLARE_PACKABLE()
 
 	std::string name;
-	DWORD iconImage;
-	DWORD setupID;
-	DWORD environmentSetupID;
+	uint32_t iconImage;
+	uint32_t setupID;
+	uint32_t environmentSetupID;
 	int numAttributeCredits;
 	int numSkillCredits;
-	SmartArray<DWORD> mPrimaryStartAreaList;
-	SmartArray<DWORD> mSecondaryStartAreaList;
+	SmartArray<uint32_t> mPrimaryStartAreaList;
+	SmartArray<uint32_t> mSecondaryStartAreaList;
 	SmartArray<Skill_CG> mSkillList;
 	SmartArray<Template_CG> mTemplateList;
-	HashTable<unsigned long, Sex_CG> mGenderList; // actually a HashTable
+	HashTable<uint32_t, Sex_CG> mGenderList; // actually a HashTable
 };
 
 class CharGenData : public DBObj
@@ -145,5 +171,5 @@ public:
 	DECLARE_LEGACY_PACK_MIGRATOR();
 
 	SmartArray<ACCharGenStartArea> mStartAreaList;
-	HashTable<unsigned long, HeritageGroup_CG> mHeritageGroupList; // actually a HashTable
+	HashTable<uint32_t, HeritageGroup_CG> mHeritageGroupList; // actually a HashTable
 };

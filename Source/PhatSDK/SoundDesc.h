@@ -24,7 +24,7 @@ public:
 	void Destroy();
 	DECLARE_PACKABLE();
 
-	DWORD stb_id = 0;
+	uint32_t stb_id = 0;
 	int stb_not_found = 0;
 	SmartArray<AmbientSoundDesc *> ambient_sounds;
 	class CSoundTable *sound_table = NULL;

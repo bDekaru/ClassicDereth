@@ -13,9 +13,9 @@ public:
 	CShadowPart(unsigned int nump, Frame *_frame, CPhysicsPart *_part);
 	~CShadowPart();
 
-	void draw(DWORD ClipPlaneIndex);
+	void draw(uint32_t ClipPlaneIndex);
 
-	DWORD num_planes; // 0x00
+	uint32_t num_planes; // 0x00
 	ClipPlaneList** planes; // 0x04
 	Frame* frame; // 0x08
 	CPhysicsPart* part; // 0x0C
@@ -30,7 +30,7 @@ public:
 	virtual void add_part(CPhysicsPart *part, ClipPlaneList **planes, Frame *frame, unsigned int num_shadow_parts);
 	virtual void remove_part(CPhysicsPart *part);
 
-	DWORD num_shadow_parts;
+	uint32_t num_shadow_parts;
 	DArray<CShadowPart *> shadow_part_list;
 };
 

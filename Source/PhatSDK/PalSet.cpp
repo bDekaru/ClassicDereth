@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PalSet.h"
 
 PalSet::PalSet()
@@ -21,7 +21,7 @@ void PalSet::Destroyer(DBObj *pPalSet)
 	delete ((PalSet *)pPalSet);
 }
 
-PalSet *PalSet::Get(DWORD ID)
+PalSet *PalSet::Get(uint32_t ID)
 {
 	return (PalSet *)ObjCaches::PalSets->Get(ID);
 }
@@ -39,19 +39,19 @@ DEFINE_PACK(PalSet)
 
 DEFINE_UNPACK(PalSet)
 {
-	pReader->ReadDWORD(); // file ID
+	pReader->ReadUInt32(); // file ID
 
-	numPals = pReader->Read<DWORD>();
-	palette_IDs = new DWORD[numPals];
+	numPals = pReader->Read<uint32_t>();
+	palette_IDs = new uint32_t[numPals];
 	for (int i = 0; i < numPals; i++)
-		palette_IDs[i] = pReader->Read<DWORD>();
+		palette_IDs[i] = pReader->Read<uint32_t>();
 
 	return true;
 }
 
 DEFINE_LEGACY_PACK_MIGRATOR(PalSet);
 
-DWORD PalSet::GetPaletteID(double v)
+uint32_t PalSet::GetPaletteID(double v)
 {
 	if (!numPals)
 		return 0;

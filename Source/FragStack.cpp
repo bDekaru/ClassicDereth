@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "FragStack.h"
 
 FragmentStack::FragmentStack(FragPacket_s *frag)
@@ -26,8 +26,14 @@ FragmentStack::~FragmentStack()
 
 void FragmentStack::AddFragment(FragPacket_s *frag)
 {
+	if (frag->header.wSize == 0)
+	{
+		SERVER_WARN << "Received bad Frag";
+		return;
+	}
+
 	BYTE* data = frag->data;
-	DWORD datalen = frag->header.wSize - sizeof(FragHeader_s);
+	uint32_t datalen = frag->header.wSize - sizeof(FragHeader_s);
 
 	WORD index = frag->header.wIndex;
 	WORD count = frag->header.wCount;
@@ -42,7 +48,7 @@ void FragmentStack::AddFragment(FragPacket_s *frag)
 	else if (datalen < 0x1C0)
 	{
 		//Size should never be less than 0x1C0 if it isn't the last chunk
-		LOG(Temp, Normal, "This should never happen\n");
+		SERVER_WARN << "This should never happen";
 	}
 }
 

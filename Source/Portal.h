@@ -16,7 +16,9 @@ public:
 	CPortal();
 	virtual ~CPortal();
 
-	virtual class CPortal *AsPortal() { return this; }
+	virtual class CPortal *AsPortal() override { return this; }
+
+	virtual void PostSpawn() override;
 
 	virtual int Use(CPlayerWeenie *) override;
 	virtual void Tick() override;
@@ -35,6 +37,6 @@ public:
 private:
 #if 0 // deprecated
 	double m_fLastCacheClear;
-	std::set<DWORD> m_RecentlyTeleported;
+	std::set<uint32_t> m_RecentlyTeleported;
 #endif
 };

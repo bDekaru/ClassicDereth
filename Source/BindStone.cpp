@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "WeenieObject.h"
 #include "PhysicsObj.h"
 #include "BindStone.h"
@@ -27,7 +27,7 @@ int CBindStone::Use(CPlayerWeenie *pOther)
 
 int CBindStone::DoUseResponse(CWeenieObject *player)
 {
-	DWORD playerId = player->GetID();
+	uint32_t playerId = player->GetID();
 	AllegianceTreeNode *allegianceNode = g_pAllegianceManager->GetTreeNode(playerId);
 	if (!allegianceNode)
 		return WERROR_ALLEGIANCE_NONEXISTENT;
@@ -40,9 +40,12 @@ int CBindStone::DoUseResponse(CWeenieObject *player)
 		officerLevel = iterator->second;
 
 	if (allegianceNode->_monarchID == playerId || officerLevel >= eAllegianceOfficerLevel::Castellan_AllegianceOfficerLevel)
+	{
 		allegianceInfo->_info.m_BindPoint = m_Position;
+		g_pAllegianceManager->Save();
+	}
 	else
 		return WERROR_ALLEGIANCE_NOT_AUTHORIZED;
 
-	return WERROR_NONE;
+	return CWeenieObject::DoUseResponse(player);
 }

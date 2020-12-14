@@ -13,8 +13,8 @@ class MovementSystem
 {
 public:
 	static float GetRunRate(const float load, const int runskill, const float scaling);
-	static float GetJumpHeight(float, long, float, float);
-	static long JumpStaminaCost(float power, float load, int bPK);
+	static float GetJumpHeight(float, int32_t, float, float);
+	static int32_t JumpStaminaCost(float power, float load, int bPK);
 };
 
 class MovementParameters : public PackObj
@@ -30,10 +30,10 @@ public:
 
 	void towards_and_away(float curr_distance, float curr_heading, unsigned int *command, int *moving_away);
 	void get_command(float curr_distance, float curr_heading, unsigned int *command, HoldKey *key, int *moving_away);
-	float get_desired_heading(DWORD command, BOOL moving_away);
+	float get_desired_heading(uint32_t command, BOOL moving_away);
 
 	union {
-		unsigned long bitfield;
+		uint32_t bitfield;
 		struct {
 			int can_walk : 1; // (1 >> 0) 1
 			int can_run : 1; // (1 >> 1) 2
@@ -61,14 +61,14 @@ public:
 	float speed; // 0x14
 	float fail_distance; // 0x18
 	float walk_run_threshhold; // 0x1C
-	unsigned long context_id; // 0x20
+	uint32_t context_id; // 0x20
 	HoldKey hold_key_to_apply; // 0x24
-	unsigned long action_stamp; // 0x28
+	uint32_t action_stamp; // 0x28
 };
 
 struct ActionNode
 {
-	ActionNode(DWORD action_ = 0, float speed_ = 1.0f, DWORD stamp_ = 0, BOOL autonomous_ = FALSE)
+	ActionNode(uint32_t action_ = 0, float speed_ = 1.0f, uint32_t stamp_ = 0, BOOL autonomous_ = FALSE)
 	{
 		action = action_;
 		speed = speed_;
@@ -79,9 +79,9 @@ struct ActionNode
 	void Pack(BinaryWriter *pWriter);
 	bool UnPack(BinaryReader *pReader);
 
-	DWORD action;
+	uint32_t action;
 	float speed;
-	DWORD stamp;
+	uint32_t stamp;
 	BOOL autonomous;
 };
 
@@ -98,7 +98,7 @@ public:
 	struct PackBitfield
 	{
 		union {
-			unsigned long bitfield;
+			uint32_t bitfield;
 			struct {
 				int current_holdkey : 1;
 				int current_style : 1;
@@ -117,21 +117,21 @@ public:
 	};
 
 	void AddAction(const ActionNode &node);
-	DWORD RemoveAction();
+	uint32_t RemoveAction();
 
-	void ApplyMotion(DWORD motion, MovementParameters *params);
-	void RemoveMotion(DWORD motion);
+	void ApplyMotion(uint32_t motion, MovementParameters *params);
+	void RemoveMotion(uint32_t motion);
 
 	std::list<ActionNode> actions;
 	HoldKey current_holdkey = HoldKey_None; // 0x0C
-	unsigned long current_style = 0x8000003D; // 0x10
-	unsigned long forward_command = 0x41000003; // 0x14
+	uint32_t current_style = 0x8000003D; // 0x10
+	uint32_t forward_command = 0x41000003; // 0x14
 	HoldKey forward_holdkey = HoldKey_Invalid; // 0x18
 	float forward_speed = 1.0f; // 0x1C
-	unsigned long sidestep_command = 0; // 0x20
+	uint32_t sidestep_command = 0; // 0x20
 	HoldKey sidestep_holdkey = HoldKey_Invalid;
 	float sidestep_speed = 1.0f; // 0x28
-	unsigned long turn_command = 0;
+	uint32_t turn_command = 0;
 	HoldKey turn_holdkey = HoldKey_Invalid; // 0x30
 	float turn_speed = 1.0f;
 };
@@ -150,7 +150,7 @@ public:
 	struct PackBitfield
 	{
 		union {
-			unsigned long bitfield;
+			uint32_t bitfield;
 			struct {
 				int current_style : 1; // 1
 				int forward_command : 1; // 2
@@ -164,21 +164,21 @@ public:
 		};
 	};
 
-	DWORD GetNumActions();
+	uint32_t GetNumActions();
 	void AddAction(const ActionNode &node);
-	DWORD RemoveAction();
+	uint32_t RemoveAction();
 
-	void ApplyMotion(DWORD motion, MovementParameters *params);
-	void RemoveMotion(DWORD motion);
+	void ApplyMotion(uint32_t motion, MovementParameters *params);
+	void RemoveMotion(uint32_t motion);
 
 	void copy_movement_from(const InterpretedMotionState &other);
 
-	DWORD current_style; // 0x04 (DWORD)
-	DWORD forward_command; // 0x08 (DWORD)
+	uint32_t current_style; // 0x04 (uint32_t)
+	uint32_t forward_command; // 0x08 (uint32_t)
 	float forward_speed; // 0x0C (float)
-	DWORD sidestep_command; // 0x10 (DWORD?)
+	uint32_t sidestep_command; // 0x10 (uint32_t?)
 	float sidestep_speed; // 0x14 (float)
-	DWORD turn_command; // 0x18 (DWORD)
+	uint32_t turn_command; // 0x18 (uint32_t)
 	float turn_speed; // 0x1C (float)
 	std::list<ActionNode> actions; // 0x20, 0x24
 };
@@ -202,5 +202,5 @@ public:
 	short force_position_ts = 0; // 0x92
 };
 
-extern DWORD GetCommandID(WORD index);
-extern DWORD OldToNewCommandID(DWORD command_id);
+extern uint32_t GetCommandID(WORD index);
+extern uint32_t OldToNewCommandID(uint32_t command_id);

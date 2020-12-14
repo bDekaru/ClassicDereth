@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "WeenieFactory.h"
 #include "Door.h"
 #include "Lifestone.h"
@@ -22,6 +22,7 @@
 #include "Healer.h"
 #include "House.h"
 #include "Scroll.h"
+#include "ManaStone.h"
 #include "MeleeWeapon.h"
 #include "Missile.h"
 #include "MissileLauncher.h"
@@ -35,6 +36,11 @@
 #include "SkillAlterationDevice.h"
 #include "GameEventManager.h"
 #include "TreasureFactory.h"
+#include "AugmentationDevice.h"
+#include "Game.h"
+#include "GamePiece.h"
+#include "weenie/PetDevice.h"
+#include "WorldLandBlock.h"
 
 CWeenieFactory::CWeenieFactory()
 {
@@ -58,21 +64,37 @@ void CWeenieFactory::Reset()
 void CWeenieFactory::Initialize()
 {
 	LOG_PRIVATE(Data, Normal, "Loading weenies...\n");
+	SERVER_INFO << "Loading weenies...\n";
+
+	CStopWatch watch;
+	double elapsed = 0;
+
 	LoadLocalStorage();
+	elapsed = watch.GetElapsed();
+	LOG_PRIVATE(Data, Normal, "LocalStorage loaded in %fs\n", elapsed);
+	SERVER_INFO << "LocalStorage loaded in" << elapsed;
+
+	watch.Reset();
 	LoadLocalStorageIndexed();
-	LoadAvatarData();
+	elapsed = watch.GetElapsed();
+	LOG_PRIVATE(Data, Normal, "Cache.bin loaded in %fs\n", elapsed);
+	SERVER_INFO << "Cache.bin loaded in" << elapsed;
+
+	//LoadAvatarData();
 
 	MapScrollWCIDs();
 	LOG_PRIVATE(Data, Normal, "Loaded %d weenie defaults...\n", m_WeenieDefaults.size());
+	SERVER_INFO << "Loaded" << m_WeenieDefaults.size() << "weenie defaults...";
 }
 
-DWORD CWeenieFactory::GetScrollSpellForWCID(DWORD wcid)
+uint32_t CWeenieFactory::GetScrollSpellForWCID(uint32_t wcid)
 {
 	if (CWeenieDefaults *defaults = GetWeenieDefaults(wcid))
 	{
 		if (defaults->m_Qualities.m_WeenieType == Scroll_WeenieType)
 		{
-			DWORD spell_id = 0;
+			uint32_t spell_id = 0;
+
 			if (defaults->m_Qualities.InqDataID(SPELL_DID, spell_id))
 			{
 				return spell_id;
@@ -83,7 +105,7 @@ DWORD CWeenieFactory::GetScrollSpellForWCID(DWORD wcid)
 	return 0;
 }
 
-DWORD CWeenieFactory::GetWCIDForScrollSpell(DWORD spell_id)
+uint32_t CWeenieFactory::GetWCIDForScrollSpell(uint32_t spell_id)
 {
 	auto i = m_ScrollWeenies.find(spell_id);
 	if (i != m_ScrollWeenies.end())
@@ -102,7 +124,8 @@ void CWeenieFactory::MapScrollWCIDs()
 			continue;
 		}
 
-		DWORD spell_id;
+		uint32_t spell_id;
+
 		if (entry.second->m_Qualities.InqDataID(SPELL_DID, spell_id))
 		{
 			m_ScrollWeenies[spell_id] = entry.first;
@@ -110,13 +133,14 @@ void CWeenieFactory::MapScrollWCIDs()
 	}
 }
 
-std::list<DWORD> CWeenieFactory::GetWCIDsWithMotionTable(DWORD mtable)
+std::list<uint32_t> CWeenieFactory::GetWCIDsWithMotionTable(uint32_t mtable)
 {
-	std::list<DWORD> results;
+	std::list<uint32_t> results;
 
 	for (auto &entry : m_WeenieDefaults)
 	{
-		DWORD mid = 0;
+		uint32_t mid = 0;
+
 		if (entry.second->m_Qualities.InqDataID(MOTION_TABLE_DID, mid))
 		{
 			if (mtable == mid)
@@ -129,7 +153,7 @@ std::list<DWORD> CWeenieFactory::GetWCIDsWithMotionTable(DWORD mtable)
 	return results;
 }
 
-CWeenieDefaults *CWeenieFactory::GetWeenieDefaults(DWORD wcid)
+CWeenieDefaults *CWeenieFactory::GetWeenieDefaults(uint32_t wcid)
 {
 	auto i = m_WeenieDefaults.find(wcid);
 	if (i != m_WeenieDefaults.end())
@@ -138,7 +162,7 @@ CWeenieDefaults *CWeenieFactory::GetWeenieDefaults(DWORD wcid)
 	return NULL;
 }
 
-DWORD CWeenieFactory::GetWCIDByName(const char *name, int index)
+uint32_t CWeenieFactory::GetWCIDByName(const char *name, int index)
 {
 	CWeenieDefaults *defaults = GetWeenieDefaults(name, index);
 
@@ -151,11 +175,11 @@ DWORD CWeenieFactory::GetWCIDByName(const char *name, int index)
 CWeenieDefaults *CWeenieFactory::GetWeenieDefaults(const char *name, int index)
 {
 	std::string search = name;
-	
+
 	// convert name for easier matching, lowercase and remove any spaces
 	std::transform(search.begin(), search.end(), search.begin(), ::tolower);
 	search.erase(remove_if(search.begin(), search.end(), isspace), search.end());
-	
+
 	std::pair<
 		std::multimap<std::string, CWeenieDefaults *>::iterator,
 		std::multimap<std::string, CWeenieDefaults *>::iterator> range = m_WeenieDefaultsByName.equal_range(search);
@@ -171,7 +195,18 @@ CWeenieDefaults *CWeenieFactory::GetWeenieDefaults(const char *name, int index)
 	return NULL;
 }
 
-bool CWeenieFactory::ApplyWeenieDefaults(CWeenieObject *weenie, DWORD wcid)
+bool CWeenieFactory::UpdateWeenieBody(uint32_t wcid, Body* newBody)
+{
+	auto i = m_WeenieDefaults.find(wcid);
+	if (i != m_WeenieDefaults.end())
+	{
+		i->second->m_Qualities._body = new Body(*newBody);
+	}
+
+	return false;
+}
+
+bool CWeenieFactory::ApplyWeenieDefaults(CWeenieObject *weenie, uint32_t wcid)
 {
 	auto defaults = GetWeenieDefaults(wcid);
 
@@ -183,6 +218,7 @@ bool CWeenieFactory::ApplyWeenieDefaults(CWeenieObject *weenie, DWORD wcid)
 	else
 	{
 		LOG_PRIVATE(Data, Warning, "Failed to find defaults for WCID %u! This is bad!\n", wcid);
+		SERVER_WARN << "Failed to find defaults for WCID " << wcid << "! This is bad!";
 		return false;
 	}
 }
@@ -192,6 +228,62 @@ void CWeenieFactory::ApplyWeenieDefaults(CWeenieObject *weenie, CWeenieDefaults 
 	weenie->m_Qualities.CopyFrom(&defaults->m_Qualities);
 
 	weenie->m_Qualities.RemoveInt(PARENT_LOCATION_INT);
+
+	int weaponSkill;
+	if (weenie->m_Qualities.InqInt(WEAPON_SKILL_INT, weaponSkill, TRUE, FALSE))
+		weenie->m_Qualities.SetInt(WEAPON_SKILL_INT, weaponSkill);
+
+	int wieldReq;
+	wieldReq = weenie->m_Qualities.GetInt(WIELD_REQUIREMENTS_INT, 0);
+	if (wieldReq == 1 || wieldReq == 2 || wieldReq == 8)
+	{
+		if (weenie->m_Qualities.InqInt(WIELD_SKILLTYPE_INT, weaponSkill, TRUE, FALSE))
+			weenie->m_Qualities.SetInt(WIELD_SKILLTYPE_INT, weaponSkill);
+	}
+
+	wieldReq = weenie->m_Qualities.GetInt(WIELD_REQUIREMENTS_2_INT, 0);
+	if (wieldReq == 1 || wieldReq == 2 || wieldReq == 8)
+	{
+		if (weenie->m_Qualities.InqInt(WIELD_SKILLTYPE_2_INT, weaponSkill, TRUE, FALSE))
+			weenie->m_Qualities.SetInt(WIELD_SKILLTYPE_2_INT, weaponSkill);
+	}
+
+	wieldReq = weenie->m_Qualities.GetInt(WIELD_REQUIREMENTS_3_INT, 0);
+	if (wieldReq == 1 || wieldReq == 2 || wieldReq == 8)
+	{
+		if (weenie->m_Qualities.InqInt(WIELD_SKILLTYPE_3_INT, weaponSkill, TRUE, FALSE))
+			weenie->m_Qualities.SetInt(WIELD_SKILLTYPE_3_INT, weaponSkill);
+	}
+
+	wieldReq = weenie->m_Qualities.GetInt(WIELD_REQUIREMENTS_4_INT, 0);
+	if (wieldReq == 1 || wieldReq == 2 || wieldReq == 8)
+	{
+		if (weenie->m_Qualities.InqInt(WIELD_SKILLTYPE_4_INT, weaponSkill, TRUE, FALSE))
+			weenie->m_Qualities.SetInt(WIELD_SKILLTYPE_4_INT, weaponSkill);
+	}
+
+	//Skill uaSkill;
+	//if (weenie->m_Qualities.InqSkill(UNARMED_COMBAT_SKILL, uaSkill))
+	//{
+	//	Skill finSkill;
+	//	if (!weenie->m_Qualities.InqSkill(LIGHT_WEAPONS_SKILL, finSkill))
+	//	{
+	//		weenie->m_Qualities.SetSkill(LIGHT_WEAPONS_SKILL, uaSkill);
+	//	}
+	//}
+
+	if (weenie->m_Qualities._skillStatsTable)
+	{
+		for (auto &entry : *weenie->m_Qualities._skillStatsTable)
+		{
+			STypeSkill newSkill = (STypeSkill)entry.first;
+
+			if (newSkill != entry.first)
+			{
+				weenie->m_Qualities.SetSkill(newSkill, entry.second);
+			}
+		}
+	}
 
 	std::string eventString;
 	if (weenie->m_Qualities.InqString(GENERATOR_EVENT_STRING, eventString))
@@ -210,138 +302,42 @@ void CWeenieFactory::RefreshLocalStorage()
 	MapScrollWCIDs();
 }
 
+bool CWeenieFactory::RefreshLocalWeenie(uint32_t wcid)
+{
+	return LoadLocalWeenie(wcid);
+}
+
 void CWeenieFactory::LoadLocalStorage(bool refresh)
 {
-#if 0 // old
-	std::list<std::string> filePaths;
-	// EnumerateFolderFilePaths(filePaths, "data\\weenie\\defaults", "*.wqd", true);
-	EnumerateFolderFilePaths(filePaths, "data\\weenie\\defaults\\custom", "*.wqd", true);
+	std::mutex mapLock;
+	std::mutex multiMapLock;
 
-	if (atoi(g_pConfig->GetValue("weapons_testing", "0")) != 0)
-	{
-		EnumerateFolderFilePaths(filePaths, "data\\weenie\\defaults\\manual_content", "*.wqd", true);
-	}
+	fs::path root = g_pGlobals->GetGameData("Data", "json");
 
-	for (auto filePath : filePaths)
-	{
-		BYTE *data = NULL;
-		DWORD length = 0;
-		if (LoadDataFromFile(filePath.c_str(), &data, &length))
+	PerformLoad(root / "weenies", [&](fs::path path)
 		{
-			BinaryReader reader(data, length);
-			
-			CWeenieDefaults *pDefaults = new CWeenieDefaults();
-			if (pDefaults->UnPack(&reader))
-			{
-				bool bShouldInsert = true;
-				bool bDuplicate = false;
+			std::ifstream fs(path);
 
-				auto existing = m_WeenieDefaults.find(pDefaults->m_WCID);
-				if (existing != m_WeenieDefaults.end())
-				{
-					if (refresh)
-					{
-					}
-					else
-					{
-						if (existing->second->m_bIsAutoGenerated)
-						{
-							if (pDefaults->m_bIsAutoGenerated)
-							{
-								bDuplicate = true;
-								bShouldInsert = false;
-							}
-						}
-						else
-						{
-							// existing was not auto-generated
-							bShouldInsert = false;
-
-							if (!pDefaults->m_bIsAutoGenerated)
-							{
-								bDuplicate = true;
-							}
-						}
-					}
-				}
-
-				if (bShouldInsert)
-				{
-					CWeenieDefaults *toDelete = NULL;
-
-					auto existing = m_WeenieDefaults.find(pDefaults->m_WCID);
-					if (existing != m_WeenieDefaults.end())
-					{
-						toDelete = existing->second;
-					}
-
-					pDefaults->m_sourceFile = filePath;
-					m_WeenieDefaults[pDefaults->m_WCID] = pDefaults;
-
-					std::string name;
-					if (pDefaults->m_Qualities.InqString(NAME_STRING, name))
-					{
-						// convert name for easier matching, lowercase and remove any spaces
-						std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-						name.erase(remove_if(name.begin(), name.end(), isspace), name.end());
-
-						// remove if this WCID is already in here
-						for (std::multimap<std::string, CWeenieDefaults *>::iterator i = m_WeenieDefaultsByName.begin(); i != m_WeenieDefaultsByName.end(); i++)
-						{
-							if (i->second->m_Qualities.GetID() == pDefaults->m_Qualities.GetID())
-							{
-								m_WeenieDefaultsByName.erase(i);
-								break;
-							}
-						}
-
-						m_WeenieDefaultsByName.insert(std::pair<std::string, CWeenieDefaults *>(name, pDefaults));
-					}
-
-					if (toDelete)
-					{
-						delete toDelete;
-					}
-				}
-				else
-				{
-					if (bDuplicate)
-					{
-						LOG_PRIVATE(Data, Warning, "Duplicate WCID %d, ignoring WQD file: \"%s\" due to \"%s\"\n", pDefaults->m_WCID, filePath.c_str(), m_WeenieDefaults[pDefaults->m_WCID]->m_sourceFile.c_str());
-					}
-
-					delete pDefaults;
-				}
-			}
-			else
-			{
-				LOG_PRIVATE(Data, Warning, "Error parsing WQD file: %s\n", filePath.c_str());
-				delete pDefaults;
-			}
-
-			delete [] data;
-		}
-	}
-#endif
-
-	std::list<std::string> filePaths;
-	EnumerateFolderFilePaths(filePaths, "data\\json\\weenies\\", "*.json", true);
-
-	for (const auto &filePath : filePaths)
-	{
-		std::ifstream fileStream(filePath.c_str());
-
-		if (fileStream.is_open())
-		{
 			json jsonData;
-			fileStream >> jsonData;
-			fileStream.close();
-
 			CWeenieDefaults *pDefaults = new CWeenieDefaults();
-			if (pDefaults->m_Qualities.UnPackJson(jsonData))
+			bool parsed = false;
+			try
+			{
+				fs >> jsonData;
+				parsed = pDefaults->m_Qualities.UnPackJson(jsonData);
+			}
+			catch (std::exception &ex)
+			{
+				LOG_PRIVATE(Data, Error, "Failed to parse Weenie file %s\n", path.string().c_str());
+				SERVER_ERROR << "Failed to parse Weenie file" << path.string();
+			}
+
+			fs.close();
+
+			if (parsed)
 			{
 				pDefaults->m_WCID = pDefaults->m_Qualities.id;
-				pDefaults->m_sourceFile = filePath;
+				pDefaults->m_sourceFile = path.string();
 
 				bool bShouldInsert = true;
 				bool bDuplicate = false;
@@ -379,14 +375,16 @@ void CWeenieFactory::LoadLocalStorage(bool refresh)
 				{
 					CWeenieDefaults *toDelete = NULL;
 
-					auto existing = m_WeenieDefaults.find(pDefaults->m_WCID);
-					if (existing != m_WeenieDefaults.end())
 					{
-						toDelete = existing->second;
-					}
+						std::scoped_lock lock(mapLock);
 
-					pDefaults->m_sourceFile = filePath;
-					m_WeenieDefaults[pDefaults->m_WCID] = pDefaults;
+						if (existing != m_WeenieDefaults.end())
+						{
+							toDelete = existing->second;
+						}
+
+						m_WeenieDefaults[pDefaults->m_WCID] = pDefaults;
+					}
 
 					std::string name;
 					if (pDefaults->m_Qualities.InqString(NAME_STRING, name))
@@ -400,11 +398,13 @@ void CWeenieFactory::LoadLocalStorage(bool refresh)
 						{
 							if (i->second->m_Qualities.GetID() == pDefaults->m_Qualities.GetID())
 							{
+								std::scoped_lock lock(multiMapLock);
 								m_WeenieDefaultsByName.erase(i);
 								break;
 							}
 						}
 
+						std::scoped_lock lock(multiMapLock);
 						m_WeenieDefaultsByName.insert(std::pair<std::string, CWeenieDefaults *>(name, pDefaults));
 					}
 
@@ -417,11 +417,100 @@ void CWeenieFactory::LoadLocalStorage(bool refresh)
 				{
 					if (bDuplicate)
 					{
-						LOG_PRIVATE(Data, Warning, "Duplicate WCID %d, ignoring WQF file: \"%s\" due to \"%s\"\n", pDefaults->m_WCID, filePath.c_str(), m_WeenieDefaults[pDefaults->m_WCID]->m_sourceFile.c_str());
+						LOG_PRIVATE(Data, Warning, "Duplicate WCID %d, ignoring WQF file: \"%s\" due to \"%s\"\n", pDefaults->m_WCID, path.string().c_str(), existing->second->m_sourceFile.c_str());
+						SERVER_WARN << "Duplicate WCID" << pDefaults->m_WCID << ", ignoring file \"" << path.string() << "\" due to \"" << existing->second->m_sourceFile << "\"";
 					}
 
 					delete pDefaults;
 				}
+			}
+		});
+
+}
+
+bool CWeenieFactory::LoadLocalWeenie(uint32_t wcid)
+{
+	auto existing = m_WeenieDefaults.find(wcid);
+	if (existing != m_WeenieDefaults.end())
+	{
+		fs::path path = m_WeenieDefaults[wcid]->m_sourceFile.c_str();
+
+		if (path.extension().compare(".json") != 0)
+		{
+			path = g_pGlobals->GetGameData("Data", "json");
+			path = path / "weenies" / (std::to_string(wcid) + " - " + m_WeenieDefaults[wcid]->m_Description + ".json");
+		}
+
+		std::mutex mapLock;
+		std::mutex multiMapLock;
+
+		std::ifstream fs(path);
+
+		if (fs.is_open())
+		{
+			json jsonData;
+			CWeenieDefaults *pDefaults = new CWeenieDefaults();
+			bool parsed = false;
+			try
+			{
+				fs >> jsonData;
+				parsed = pDefaults->m_Qualities.UnPackJson(jsonData);
+			}
+			catch (std::exception &ex)
+			{
+				LOG_PRIVATE(Data, Error, "Failed to parse Weenie file %s\n", path.string().c_str());
+				SERVER_ERROR << "Failed to parse Weenie file" << path.string();
+			}
+
+			fs.close();
+
+			if (parsed)
+			{
+				pDefaults->m_WCID = pDefaults->m_Qualities.id;
+				pDefaults->m_sourceFile = path.string();
+
+
+				CWeenieDefaults *toDelete = NULL;
+				{
+					std::scoped_lock lock(mapLock);
+
+					if (existing != m_WeenieDefaults.end())
+					{
+						toDelete = existing->second;
+					}
+
+					m_WeenieDefaults[pDefaults->m_WCID] = pDefaults;
+				}
+
+				std::string name;
+				if (pDefaults->m_Qualities.InqString(NAME_STRING, name))
+				{
+					// convert name for easier matching, lowercase and remove any spaces
+					std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+					name.erase(remove_if(name.begin(), name.end(), isspace), name.end());
+
+					// remove if this WCID is already in here
+					for (std::multimap<std::string, CWeenieDefaults *>::iterator i = m_WeenieDefaultsByName.begin(); i != m_WeenieDefaultsByName.end(); i++)
+					{
+						if (i->second->m_Qualities.GetID() == pDefaults->m_Qualities.GetID())
+						{
+							std::scoped_lock lock(multiMapLock);
+							m_WeenieDefaultsByName.erase(i);
+							break;
+						}
+					}
+
+					std::scoped_lock lock(multiMapLock);
+					m_WeenieDefaultsByName.insert(std::pair<std::string, CWeenieDefaults *>(name, pDefaults));
+
+				}
+
+				if (toDelete)
+				{
+					delete toDelete;
+				}
+
+				return true;
 			}
 			else
 			{
@@ -429,20 +518,112 @@ void CWeenieFactory::LoadLocalStorage(bool refresh)
 			}
 		}
 	}
+
+	return false;
 }
+
+bool CWeenieFactory::LoadLocalWeenieByWcid(uint32_t wcid)
+{
+	auto existing = m_WeenieDefaults.find(wcid);
+	if (existing == m_WeenieDefaults.end())
+	{
+		fs::path path = g_pGlobals->GetGameData("Data", "json");
+		path = path / "weenies" / (std::to_string(wcid) + ".json");
+
+		std::mutex mapLock;
+		std::mutex multiMapLock;
+
+		std::ifstream fs(path);
+
+		if (fs.is_open())
+		{
+			json jsonData;
+			CWeenieDefaults *pDefaults = new CWeenieDefaults();
+			bool parsed = false;
+			try
+			{
+				fs >> jsonData;
+				parsed = pDefaults->m_Qualities.UnPackJson(jsonData);
+			}
+			catch (std::exception &ex)
+			{
+				LOG_PRIVATE(Data, Error, "Failed to parse Weenie file %s\n", path.string().c_str());
+			}
+
+			fs.close();
+
+			if (parsed)
+			{
+				pDefaults->m_WCID = pDefaults->m_Qualities.id;
+				pDefaults->m_sourceFile = path.string();
+
+
+				CWeenieDefaults *toDelete = NULL;
+				{
+					std::scoped_lock lock(mapLock);
+
+					if (existing != m_WeenieDefaults.end())
+					{
+						toDelete = existing->second;
+					}
+
+					m_WeenieDefaults[pDefaults->m_WCID] = pDefaults;
+				}
+
+				std::string name;
+				if (pDefaults->m_Qualities.InqString(NAME_STRING, name))
+				{
+					// convert name for easier matching, lowercase and remove any spaces
+					std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+					name.erase(remove_if(name.begin(), name.end(), isspace), name.end());
+
+					// remove if this WCID is already in here
+					for (std::multimap<std::string, CWeenieDefaults *>::iterator i = m_WeenieDefaultsByName.begin(); i != m_WeenieDefaultsByName.end(); i++)
+					{
+						if (i->second->m_Qualities.GetID() == pDefaults->m_Qualities.GetID())
+						{
+							std::scoped_lock lock(multiMapLock);
+							m_WeenieDefaultsByName.erase(i);
+							break;
+						}
+					}
+
+					std::scoped_lock lock(multiMapLock);
+					m_WeenieDefaultsByName.insert(std::pair<std::string, CWeenieDefaults *>(name, pDefaults));
+
+				}
+
+				if (toDelete)
+				{
+					delete toDelete;
+				}
+
+				return true;
+			}
+			else
+			{
+				delete pDefaults;
+			}
+		}
+	}
+
+	return false;
+}
+
+
 
 void CWeenieFactory::LoadLocalStorageIndexed()
 {
 	BYTE *data = NULL;
-	DWORD length = 0;
+	uint32_t length = 0;
 	if (LoadDataFromPhatDataBin(9, &data, &length, 0xd8fd6b02, 0xa0427974))
 	{
 		BinaryReader reader(data, length);
 
-		DWORD count = reader.Read<DWORD>();
-		for (DWORD i = 0; i < count; i++)
+		uint32_t count = reader.Read<uint32_t>();
+		for (uint32_t i = 0; i < count; i++)
 		{
-			DWORD the_wcid = reader.Read<DWORD>();
+			uint32_t the_wcid = reader.Read<uint32_t>();
 
 			CWeenieDefaults *pDefaults = new CWeenieDefaults();
 			if (pDefaults->UnPack(&reader))
@@ -491,7 +672,7 @@ void CWeenieFactory::LoadLocalStorageIndexed()
 
 				if (bShouldInsert)
 				{
-					auto existing = m_WeenieDefaults.find(pDefaults->m_WCID);
+					//auto existing = m_WeenieDefaults.find(pDefaults->m_WCID);
 					if (existing != m_WeenieDefaults.end())
 						delete existing->second;
 
@@ -524,7 +705,7 @@ void CWeenieFactory::LoadLocalStorageIndexed()
 				{
 					if (bDuplicate)
 					{
-						LOG(Data, Warning, "Duplicate WCID %d, ignoring due to \"%s\"\n", pDefaults->m_WCID, m_WeenieDefaults[pDefaults->m_WCID]->m_sourceFile.c_str());
+						SERVER_ERROR << "Duplicate WCID" << pDefaults->m_WCID << ", ignoring due to" << m_WeenieDefaults[pDefaults->m_WCID]->m_sourceFile.c_str();
 					}
 
 					delete pDefaults;
@@ -532,13 +713,13 @@ void CWeenieFactory::LoadLocalStorageIndexed()
 			}
 			else
 			{
-				LOG(Data, Warning, "Error parsing weenie defaults file\n");
+				SERVER_ERROR << "Error parsing weenie defaults file";
 				delete pDefaults;
 			}
 		}
 
 		delete[] data;
-	}	
+	}
 }
 
 void CWeenieFactory::LoadAvatarData()
@@ -546,15 +727,15 @@ void CWeenieFactory::LoadAvatarData()
 	m_NumAvatars = 0;
 
 	BYTE *data = NULL;
-	DWORD length = 0;
+	uint32_t length = 0;
 	if (LoadDataFromPhatDataBin(7, &data, &length, 0x591c34e9, 0x2250b020))
 	{
 		BinaryReader reader(data, length);
 		PackableHashTable<std::string, ObjDesc, std::string> avatarTable;
 		avatarTable.UnPack(&reader);
 		CWeenieDefaults *pRobeWithHood = GetWeenieDefaults(5851);
-		
-		DWORD autoWcid = m_FirstAvatarWCID = 7000000;
+
+		uint32_t autoWcid = m_FirstAvatarWCID = 7000000;
 
 		if (pRobeWithHood)
 		{
@@ -617,13 +798,16 @@ void CWeenieFactory::LoadAvatarData()
 	}
 }
 
-CWeenieObject *CWeenieFactory::CreateWeenieByClassID(DWORD wcid, const Position *pos, bool bSpawn)
+CWeenieObject *CWeenieFactory::CreateWeenieByClassID(uint32_t wcid, const Position *pos, bool bSpawn)
 {
 	if (!wcid)
 		return NULL;
 
 	CWeenieDefaults *defaults = GetWeenieDefaults(wcid);
 	if (!defaults)
+		return NULL;
+
+	if (!g_pConfig->CreateTemplates() && (!strcmp(defaults->m_Qualities.GetString(NAME_STRING, "").c_str(), "Name Me Please") || !strcmp(defaults->m_Qualities.GetString(NAME_STRING, "").c_str(), "CreatureName")))
 		return NULL;
 
 	return CreateWeenie(defaults, pos, bSpawn);
@@ -633,6 +817,9 @@ CWeenieObject *CWeenieFactory::CreateWeenieByName(const char *name, const Positi
 {
 	CWeenieDefaults *defaults = GetWeenieDefaults(name);
 	if (!defaults)
+		return NULL;
+
+	if (!g_pConfig->CreateTemplates() && (!strcmp(defaults->m_Qualities.GetString(NAME_STRING, "").c_str(), "Name Me Please") || !strcmp(defaults->m_Qualities.GetString(NAME_STRING, "").c_str(), "CreatureName")))
 		return NULL;
 
 	return CreateWeenie(defaults, pos, bSpawn);
@@ -651,205 +838,232 @@ CWeenieObject *CWeenieFactory::CreateBaseWeenieByType(int weenieType, unsigned i
 	{
 	case Generic_WeenieType:
 	case Admin_WeenieType:
-		{
-			weenie = new CWeenieObject();
-			break;
-		}
+	{
+		weenie = new CWeenieObject();
+		break;
+	}
 
 	case Cow_WeenieType:
 	case Creature_WeenieType:
-		{
-			if (!strcmp(weenieName, "Town Crier"))
-				weenie = new CTownCrier();
-			else
-				weenie = new CMonsterWeenie();
-			break;
-		}
+	{
+		if (!strcmp(weenieName, "Town Crier"))
+			weenie = new CTownCrier();
+		else
+			weenie = new CMonsterWeenie();
+		break;
+	}
 	case AttributeTransferDevice_WeenieType:
-		{
-			weenie = new CAttributeTransferDeviceWeenie();
-			break;
-		}
+	{
+		weenie = new CAttributeTransferDeviceWeenie();
+		break;
+	}
 	case SkillAlterationDevice_WeenieType:
-		{
-			weenie = new CSkillAlterationDeviceWeenie();
-			break;
-		}
+	{
+		weenie = new CSkillAlterationDeviceWeenie();
+		break;
+	}
 	case Container_WeenieType:
-		{
-			weenie = new CContainerWeenie();
-			break;
-		}
+	{
+		weenie = new CContainerWeenie();
+		break;
+	}
 	case Portal_WeenieType:
-		{
-			weenie = new CPortal();
-			break;
-		}
+	{
+		weenie = new CPortal();
+		break;
+	}
 	case LifeStone_WeenieType:
-		{
-			weenie = new CBaseLifestone();
-			break;
-		}
+	{
+		weenie = new CBaseLifestone();
+		break;
+	}
 	case AllegianceBindstone_WeenieType:
-		{
-			weenie = new CBindStone();
-			break;
-		}
+	{
+		weenie = new CBindStone();
+		break;
+	}
 	case Door_WeenieType:
-		{
-			weenie = new CBaseDoor();
-			break;
-		}
+	{
+		weenie = new CBaseDoor();
+		break;
+	}
 	case HotSpot_WeenieType:
-		{
-			weenie = new CHotSpotWeenie();
-			break;
-		}
+	{
+		weenie = new CHotSpotWeenie();
+		break;
+	}
 	case Switch_WeenieType:
-		{
-			weenie = new CSwitchWeenie();
-			break;
-		}
+	{
+		weenie = new CSwitchWeenie();
+		break;
+	}
 	case PressurePlate_WeenieType:
-		{
-			weenie = new CPressurePlateWeenie();
-			break;
-		}
+	{
+		weenie = new CPressurePlateWeenie();
+		break;
+	}
 	case Vendor_WeenieType:
-		{
-			/*
-			if (wcid == 719)
-				weenie = new CAvatarVendor(); // holtburg avatar vendor
-			else
-			*/
-			weenie = new CVendor();
-			break;
-		}
+	{
+		/*
+		if (wcid == 719)
+			weenie = new CAvatarVendor(); // holtburg avatar vendor
+		else
+		*/
+		weenie = new CVendor();
+		break;
+	}
 
 	case Clothing_WeenieType:
-		{
-			weenie = new CClothingWeenie();
-			break;
-		}
+	{
+		weenie = new CClothingWeenie();
+		break;
+	}
 	case Caster_WeenieType:
-		{
-			weenie = new CCasterWeenie();
-			break;
-		}
+	{
+		weenie = new CCasterWeenie();
+		break;
+	}
 	case Healer_WeenieType:
-		{
-			weenie = new CHealerWeenie();
-			break;
-		}
+	{
+		weenie = new CHealerWeenie();
+		break;
+	}
 	case House_WeenieType:
-		{
-			weenie = new CHouseWeenie();
-			break;
-		}
+	{
+		weenie = new CHouseWeenie();
+		break;
+	}
 	case SlumLord_WeenieType:
-		{
-			weenie = new CSlumLordWeenie();
-			break;
-		}
+	{
+		weenie = new CSlumLordWeenie();
+		break;
+	}
 	case Scroll_WeenieType:
-		{
-			weenie = new CScrollWeenie();
-			break;
-		}
+	{
+		weenie = new CScrollWeenie();
+		break;
+	}
 
 	case Ammunition_WeenieType:
-		{
-			weenie = new CAmmunitionWeenie();
-			break;
-		}
+	{
+		weenie = new CAmmunitionWeenie();
+		break;
+	}
 
 	case Missile_WeenieType:
-		{
-			weenie = new CMissileWeenie();
-			break;
-		}
+	{
+		weenie = new CMissileWeenie();
+		break;
+	}
 
 	case ManaStone_WeenieType:
+	{
+		weenie = new CManaStoneWeenie();
+		break;
+	}
 	case Coin_WeenieType:
-		{
-			weenie = new CWeenieObject();
-			break;
-		}
+	{
+		weenie = new CWeenieObject();
+		break;
+	}
 	case Book_WeenieType:
-		{
-			weenie = new CBookWeenie();
-			break;
-		}
+	{
+		weenie = new CBookWeenie();
+		break;
+	}
 	case Food_WeenieType:
-		{
-			weenie = new CFoodWeenie();
-			break;
-		}
+	{
+		weenie = new CFoodWeenie();
+		break;
+	}
 	case PKModifier_WeenieType:
-		{
-			weenie = new CPKModifierWeenie();
-			break;
-		}
+	{
+		weenie = new CPKModifierWeenie();
+		break;
+	}
 	case Gem_WeenieType:
-		{
-			weenie = new CGemWeenie();
-			break;
-		}
+	{
+		weenie = new CGemWeenie();
+		break;
+	}
 	case Key_WeenieType:
-		{
-			weenie = new CKeyWeenie();
-			break;
-		}
+	{
+		weenie = new CKeyWeenie();
+		break;
+	}
 	case Lockpick_WeenieType:
-		{
-			weenie = new CLockpickWeenie();
-			break;
-		}
+	{
+		weenie = new CLockpickWeenie();
+		break;
+	}
 	case Corpse_WeenieType:
-		{
-			weenie = new CCorpseWeenie();
-			break;
-		}
+	{
+		weenie = new CCorpseWeenie();
+		break;
+	}
 	case MeleeWeapon_WeenieType:
-		{
-			weenie = new CMeleeWeaponWeenie();
-			break;
-		}
+	{
+		weenie = new CMeleeWeaponWeenie();
+		break;
+	}
 	case MissileLauncher_WeenieType:
-		{
-			weenie = new CMissileLauncherWeenie();
-			break;
-		}
+	{
+		weenie = new CMissileLauncherWeenie();
+		break;
+	}
 	case Hook_WeenieType:
-		{
-			weenie = new CHookWeenie();
-			break;
-		}
+	{
+		weenie = new CHookWeenie();
+		break;
+	}
 	case Deed_WeenieType:
-		{
-			weenie = new CDeedWeenie();
-			break;
-		}
+	{
+		weenie = new CDeedWeenie();
+		break;
+	}
 	case BootSpot_WeenieType:
-		{
-			weenie = new CBootSpotWeenie();
-			break;
-		}
+	{
+		weenie = new CBootSpotWeenie();
+		break;
+	}
 	case HousePortal_WeenieType:
-		{
-			weenie = new CHousePortalWeenie();
-			break;
-		}
+	{
+		weenie = new CHousePortalWeenie();
+		break;
+	}
 	case Chest_WeenieType:
-		{
-			weenie = new CChestWeenie();
-			break;
-		}
+	{
+		weenie = new CChestWeenie();
+		break;
+	}
 	case Storage_WeenieType:
-		{
-			weenie = new CStorageWeenie();
-			break;
-		}
+	{
+		weenie = new CStorageWeenie();
+		break;
+	}
+	case AugmentationDevice_WeenieType:
+	{
+		weenie = new CAugmentationDeviceWeenie();
+		break;
+	}
+	case Game_WeenieType:
+		weenie = new GameWeenie();
+		break;
+	case GamePiece_WeenieType:
+		weenie = new GamePieceWeenie();
+		break;
+
+	case Pet_WeenieType:
+		weenie = new PetPassive();
+		break;
+
+	case PetDevice_WeenieType:
+		weenie = new PetDevice();
+		break;
+
+	case CombatPet_WeenieType:
+		weenie = new PetCombat();
+		break;
 
 	default:
 		weenie = new CWeenieObject();
@@ -870,7 +1084,7 @@ CWeenieObject *CWeenieFactory::CreateWeenie(CWeenieDefaults *defaults, const Pos
 	if (!weenie->IsAvatarJumpsuit())
 		TryToResolveAppearanceData(weenie);
 
-	if (weenie->IsCreature()) 
+	if (weenie->IsCreature())
 		weenie->SetMaxVitals();
 
 	if (pos)
@@ -897,7 +1111,7 @@ CWeenieObject *CWeenieFactory::CloneWeenie(CWeenieObject *weenie)
 	return clone;
 }
 
-void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject *parent, DWORD destinationType, bool isRegenLocationType, const GeneratorProfile *profile)
+void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject *parent, uint32_t destinationType, bool isRegenLocationType, const GeneratorProfile *profile)
 {
 	if (!isRegenLocationType)
 	{
@@ -935,10 +1149,18 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 
 	Position pos = parent->GetPosition();
 
+	if (profile && profile->stackSize > 1 && !weenie->AsMonster()) { //Use stack size from generator profile so long as the weenie is NOT a creature.
+		if (profile->stackSize <= weenie->m_Qualities.GetInt(MAX_STACK_SIZE_INT, 0))
+			weenie->SetStackSize(profile->stackSize);
+		else
+			weenie->SetStackSize(weenie->m_Qualities.GetInt(MAX_STACK_SIZE_INT, 0));
+	}
+
 	switch ((RegenLocationType)destinationType)
 	{
 	case Contain_RegenLocationType:
 	case ContainTreasure_RegenLocationType:
+	case Treasure_RegenLocationType:
 		if (CContainerWeenie *container = parent->AsContainer())
 			container->SpawnInContainer(weenie);
 		break;
@@ -946,7 +1168,7 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 	case WieldTreasure_RegenLocationType:
 		if (CMonsterWeenie *creature = parent->AsMonster())
 			creature->SpawnWielded(weenie);
-		else if(CContainerWeenie *container = parent->AsContainer())
+		else if (CContainerWeenie *container = parent->AsContainer())
 			container->SpawnInContainer(weenie);
 		break;
 	case Specific_RegenLocationType:
@@ -959,63 +1181,52 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 		weenie->SetInitialPosition(pos);
 		if (!g_pWorld->CreateEntity(weenie))
 		{
-			LOG(Temp, Normal, TEXT("Failed creating generated spawn %s.\n"), GetWCIDName(profile->type));
+			SERVER_ERROR << "Failed creating generated spawn" << GetWCIDName(profile->type);
 			return;
 		}
 		break;
 	case Scatter_RegenLocationType:
 	case ScatterTreasure_RegenLocationType:
-		if ((pos.objcell_id & 0xFFFF) < 0x100)
-		{
-			// outdoors
-			double genRadius = parent->InqFloatQuality(GENERATOR_RADIUS_FLOAT, 0.0f);
-			double random_x = Random::GenFloat(-genRadius, genRadius);
-			double random_y = Random::GenFloat(-genRadius, genRadius);
+	{
+		float genRadius = (float)parent->InqFloatQuality(GENERATOR_RADIUS_FLOAT, 0.0f);
+		float random_x = Random::GenFloat(-genRadius, genRadius);
+		float random_y = Random::GenFloat(-genRadius, genRadius);
 
-			pos.frame.m_origin += Vector(random_x, random_y, 0.0f);
-			pos.frame.m_origin.z = CalcSurfaceZ(pos.objcell_id, pos.frame.m_origin.x, pos.frame.m_origin.y, false);
-
-			if (pos.frame.m_origin.x < 0.5f)
-				pos.frame.m_origin.x = 0.5f;
-			if (pos.frame.m_origin.y < 0.5f)
-				pos.frame.m_origin.y = 0.5f;
-		}
-		else
-		{
-			double genRadius = parent->InqFloatQuality(GENERATOR_RADIUS_FLOAT, 0.0f);
-			double random_x = Random::GenFloat(-genRadius, genRadius);
-			double random_y = Random::GenFloat(-genRadius, genRadius);
-			pos.frame.m_origin += Vector(random_x, random_y, 0.0f);
-		}
+		pos.frame.m_origin += Vector(random_x, random_y, 0.05f);
 
 		weenie->SetInitialPosition(pos);
 		if (!g_pWorld->CreateEntity(weenie))
 		{
-			LOG(Temp, Normal, TEXT("Failed creating generated spawn %s.\n"), GetWCIDName(profile->type));
+			SERVER_ERROR << "Failed creating generated spawn" << GetWCIDName(profile->type);
 			return;
 		}
-		break;
+
+	}
+	break;
 	case OnTop_RegenLocationType:
 	case OnTopTreasure_RegenLocationType:
+		//untested
 		if (!profile->pos_val.objcell_id)
 			pos.frame.m_origin = pos.localtoglobal(profile->pos_val.frame.m_origin);
 		else
 			pos = profile->pos_val;
 
 		if ((pos.objcell_id & 0xFFFF) < 0x100) //outdoors
-			pos.frame.m_origin.z = CalcSurfaceZ(pos.objcell_id, pos.frame.m_origin.x, pos.frame.m_origin.y, false);
+		{
+			// TODO: Get rid of calcsurfacez b/c it doesn't work properly
+			pos.frame.m_origin.z = CalcSurfaceZ(pos.objcell_id, pos.frame.m_origin.x, pos.frame.m_origin.y, true);
+			pos.frame.m_origin.z += 0.5f; // add a little fudge factor to ensure mobs don't spawn in ground.
+		}
 
 		weenie->SetInitialPosition(pos);
 		if (!g_pWorld->CreateEntity(weenie))
 		{
-			LOG(Temp, Normal, TEXT("Failed creating generated spawn %s.\n"), GetWCIDName(profile->type));
+			SERVER_ERROR << "Failed creating generated spawn" << GetWCIDName(profile->type);
 			return;
 		}
 		break;
 	case Shop_RegenLocationType:
 	case ShopTreasure_RegenLocationType:
-		break;
-	case Treasure_RegenLocationType:
 		break;
 	case Checkpoint_RegenLocationType:
 		break;
@@ -1031,21 +1242,26 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 			return;
 		}
 
-		GeneratorRegistryNode node;
-		node.m_wcidOrTtype = profile->type;
-		node.slot = profile->slot;
-		node.ts = Timer::cur_time;
-		node.amount = weenie->InqIntQuality(STACK_SIZE_INT, 1);
-		node.checkpointed = 0;
-		node.m_bTreasureType = profile->IsTreasureType();
-		node.shop = 0;
-		node.m_objectId = weenie->GetID();
+		parent->GeneratorAddToRegistry(weenie, *profile);
 
-		if (!parent->m_Qualities._generator_registry)
-			parent->m_Qualities._generator_registry = new GeneratorRegistry();
-		parent->m_Qualities._generator_registry->_registry.add(weenie->GetID(), &node);
+		//SERVER_INFO << "Created Object" << weenie->GetName() << "(" << weenie->m_Qualities.id << ") at " << weenie->m_Position;
 
-		weenie->ChanceExecuteEmoteSet(parent->GetID(), Generation_EmoteCategory);
+		//GeneratorRegistryNode node;
+		//node.m_wcidOrTtype = profile->type;
+		//node.slot = profile->slot;
+		//node.ts = Timer::cur_time;
+		//node.amount = weenie->InqIntQuality(STACK_SIZE_INT, 1);
+		//node.checkpointed = 0;
+		//node.m_bTreasureType = profile->IsTreasureType();
+		//node.shop = 0;
+		//node.m_objectId = weenie->GetID();
+
+		//if (!parent->m_Qualities._generator_registry)
+		//	parent->m_Qualities._generator_registry = new GeneratorRegistry();
+		//parent->m_Qualities._generator_registry->_registry.add(weenie->GetID(), &node);
+		//parent->m_GeneratorSpawns[weenie->GetID()] = weenie->m_Qualities.id;
+
+		//weenie->ChanceExecuteEmoteSet(parent->GetID(), Generation_EmoteCategory);
 	}
 }
 
@@ -1108,7 +1324,7 @@ int CWeenieFactory::AddFromCreateList(CWeenieObject *parent, PackableListWithJso
 						if (i->palette)
 							newItem->m_Qualities.SetInt(PALETTE_TEMPLATE_INT, i->palette);
 
-						if(!isTreasureDestination && i->shade > 0.0) // treasure destinations use the shade variable as a probability to spawn.
+						if (!isTreasureDestination && i->shade > 0.0) // treasure destinations use the shade variable as a probability to spawn.
 							newItem->m_Qualities.SetFloat(SHADE_FLOAT, i->shade);
 
 						int maxStackSize = newItem->InqIntQuality(MAX_STACK_SIZE_INT, 1);
@@ -1146,21 +1362,21 @@ int CWeenieFactory::AddFromCreateList(CWeenieObject *parent, PackableListWithJso
 
 int CWeenieFactory::AddFromGeneratorTable(CWeenieObject *parent, bool isInit)
 {
-	int numSpawned = 0;
+	int numSpawned = parent->m_GeneratorSpawns.size();
 
 	if (!parent->m_Qualities._generator_table)
-		return numSpawned;
+		return 0;
 
 	int maxSpawns = isInit ? parent->InqIntQuality(INIT_GENERATED_OBJECTS_INT, 0) : parent->InqIntQuality(MAX_GENERATED_OBJECTS_INT, 0);
 
-	if (!isInit)
-	{
-		if (parent->m_Qualities._generator_registry)
-			numSpawned += (int)parent->m_Qualities._generator_registry->_registry.size();
-	}
+	//if (!isInit)
+	//{
+	//	if (parent->m_Qualities._generator_registry)
+	//		numSpawned += (int)parent->m_Qualities._generator_registry->_registry.size();
+	//}
 
 	if (numSpawned >= maxSpawns)
-		return numSpawned;
+		return 0;
 
 	std::list<GeneratorProfile> genList = isInit ? parent->m_Qualities._generator_table->GetInitialGenerationList() : parent->m_Qualities._generator_table->GetGenerationList();
 
@@ -1236,22 +1452,25 @@ int CWeenieFactory::AddFromGeneratorTable(CWeenieObject *parent, bool isInit)
 			}
 
 			numSpawned += amountCreated;
-			if (numSpawned >= maxSpawns)
-				break;
+
+			//Found an item. Now we need a fresh roll, so stop iterating the list.
+			break;
 		}
 
 		if (fullLoopWithNoValidEntries)
 			break;
 	}
 
-	if (isInit)
-	{
-		int numSpawned = parent->m_Qualities._generator_registry ? (int)parent->m_Qualities._generator_registry->_registry.size() : 0;
-		if ((!parent->m_Qualities._generator_queue || parent->m_Qualities._generator_queue->_queue.empty()) && numSpawned >= parent->InqIntQuality(MAX_GENERATED_OBJECTS_INT, 0, TRUE))
-			parent->_nextRegen = -1.0;
-		else
-			parent->_nextRegen = Timer::cur_time + (parent->InqFloatQuality(REGENERATION_INTERVAL_FLOAT, -1.0, TRUE) * g_pConfig->RespawnTimeMultiplier());
-	}
+	//if (isInit)
+	//{
+	//	int numSpawned = parent->m_Qualities._generator_registry ? (int)parent->m_Qualities._generator_registry->_registry.size() : 0;
+	//	int maxSpawn = parent->InqIntQuality(MAX_GENERATED_OBJECTS_INT, 0, TRUE);
+	//	bool queueEmpty = (!parent->m_Qualities._generator_queue || parent->m_Qualities._generator_queue->_queue.empty());
+	//	if (numSpawned >= maxSpawn && (maxSpawn > 0 || queueEmpty))
+	//		parent->_nextRegen = -1.0;
+	//	else
+	//		parent->_nextRegen = Timer::cur_time + (parent->InqFloatQuality(REGENERATION_INTERVAL_FLOAT, -1.0, TRUE) * g_pConfig->RespawnTimeMultiplier());
+	//}
 
 	return numSpawned;
 }
@@ -1261,14 +1480,19 @@ int CWeenieFactory::GenerateFromTypeOrWcid(CWeenieObject *parent, const Generato
 	return g_pTreasureFactory->GenerateFromTypeOrWcid(parent, profile->whereCreate, true, profile->type, profile->ptid, profile->shade, profile);
 }
 
-int CWeenieFactory::GenerateFromTypeOrWcid(CWeenieObject *parent, RegenLocationType destinationType, DWORD treasureTypeOrWcid, unsigned int ptid, float shade)
+int CWeenieFactory::GenerateFromTypeOrWcid(CWeenieObject *parent, RegenLocationType destinationType, uint32_t treasureTypeOrWcid, unsigned int ptid, float shade)
 {
 	return g_pTreasureFactory->GenerateFromTypeOrWcid(parent, destinationType, true, treasureTypeOrWcid, ptid, shade);
 }
 
-int CWeenieFactory::GenerateFromTypeOrWcid(CWeenieObject *parent, DestinationType destinationType, DWORD treasureTypeOrWcid, unsigned int ptid, float shade)
+int CWeenieFactory::GenerateFromTypeOrWcid(CWeenieObject *parent, DestinationType destinationType, uint32_t treasureTypeOrWcid, unsigned int ptid, float shade)
 {
 	return g_pTreasureFactory->GenerateFromTypeOrWcid(parent, destinationType, false, treasureTypeOrWcid, ptid, shade);
+}
+
+int CWeenieFactory::GenerateRareItem(CWeenieObject *parent, CWeenieObject *killer)
+{
+	return g_pTreasureFactory->GenerateRareItem(parent, killer);
 }
 
 bool CWeenieFactory::TryToResolveAppearanceData(CWeenieObject *weenie)
@@ -1277,11 +1501,11 @@ bool CWeenieFactory::TryToResolveAppearanceData(CWeenieObject *weenie)
 
 	if (weenie->GetItemType() & (ITEM_TYPE::TYPE_ARMOR | ITEM_TYPE::TYPE_CLOTHING))
 	{
-		DWORD iconID = weenie->GetIcon();
+		uint32_t iconID = weenie->GetIcon();
 
 		if (iconID)
 		{
-			DWORD paletteKey;
+			uint32_t paletteKey;
 			ClothingTable *pCT = g_ClothingCache.GetTableByIndexOfIconID(iconID, 0, &paletteKey);
 
 			if (pCT)
@@ -1289,9 +1513,10 @@ bool CWeenieFactory::TryToResolveAppearanceData(CWeenieObject *weenie)
 				weenie->m_WornObjDesc.Clear();
 				weenie->m_WornObjDesc.paletteID = 0x0400007E; // pObject->m_miBaseModel.dwBasePalette;
 
-				double shade = 1.0;
-				pCT->BuildObjDesc(0x02000001, paletteKey, &ShadePackage(shade)/* &ShadePackage(Random::GenFloat(0.0, 1.0))*/, &weenie->m_WornObjDesc);
-				
+				//double shade = 1.0;
+				ShadePackage shade(1.0);
+				pCT->BuildObjDesc(0x02000001, paletteKey, &shade, &weenie->m_WornObjDesc);
+
 				// use the original palettes specified?		
 				weenie->m_WornObjDesc.ClearSubpalettes();
 				Subpalette *pSPC = weenie->m_ObjDescOverride.firstSubpal;

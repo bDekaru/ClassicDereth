@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "Packable.h"
@@ -6,7 +5,17 @@
 class Fellow : public PackObj
 {
 public:
+	Fellow() = default;
+	virtual ~Fellow() = default;
+
+	Fellow(uint32_t player_id);
+	Fellow(CWeenieObject* weenie);
+
+	Fellow& operator=(const Fellow &other);
+
 	DECLARE_PACKABLE()
+
+	bool updated(const Fellow &other) const;
 
 	std::string _name;
 	unsigned int _level = 0;
@@ -36,28 +45,41 @@ enum Fellow_UpdateType
 class Fellowship : public PackObj
 {
 public:
+	Fellowship() = default;
+	virtual ~Fellowship() = default;
+
 	DECLARE_PACKABLE()
 
 	bool IsEmpty();
 	bool IsFull();
 	bool IsLocked();
 	bool IsOpen();
-	void Disband(DWORD disbander_id);
-	void Dismiss(DWORD dismissee_id);
-	void Quit(DWORD player_id);
-	void Recruit(DWORD recruitee_id);
+	void Disband(uint32_t disbander_id);
+	void RemoveFellow(uint32_t dismissee_id);
+	void Quit(uint32_t player_id);
+	bool CanJoin(uint32_t recruitee_id);
+	void AddFellow(uint32_t recruitee_id);
 	void ChangeOpen(BOOL open);
-	void SetUpdates(DWORD fellow_id, BOOL on);
-	void AssignNewLeader(DWORD new_leader_id);
-	void SendUpdate(int updateType);
+	void SetUpdates(uint32_t fellow_id, BOOL on);
+	void AssignNewLeader(uint32_t new_leader_id);
+	bool ShouldUpdate(uint32_t fellow_id);
+	void FullUpdate();
 	void UpdateData();
-	void TickUpdate();
-	void GiveXP(CWeenieObject *source, long long amount, bool bShowText);
+	void VitalsUpdate(uint32_t player_id);
+	void StatsUpdate(uint32_t player_id);
+	void GiveXP(CWeenieObject *source, int64_t amount, ExperienceHandlingType flags, bool bShowText);
+	void GiveLum(CWeenieObject *source, int64_t amount, bool bShowText);
 	unsigned int CalculateExperienceProportionSum();
-	void Chat(DWORD sender_id, const char *text);
+	void Chat(uint32_t sender_id, const char *text);
 	double CalculateDegradeMod(CWeenieObject *source, CWeenieObject *target);
 
-	PackableHashTable<unsigned long, Fellow> _fellowship_table;
+	bool InqQuest(const char *questName) { return _quests.InqQuest(questName); }
+	bool UpdateQuest(const char *questName) { return _quests.UpdateQuest(questName); }
+	void StampQuest(const char *questName) { _quests.StampQuest(questName); }
+
+	using fellows_departed_table = PackableHashTable<uint32_t, uint32_t>;
+
+	PackableHashTable<uint32_t, Fellow> _fellowship_table;
 
 	std::string _name;
 	unsigned int _leader = 0;
@@ -66,36 +88,40 @@ public:
 	BOOL _open_fellow = 0;
 	BOOL _locked = 0;
 	BOOL _share_loot = 0;
-	PackableHashTable<unsigned long, long> _fellows_departed;
+	fellows_departed_table _fellows_departed;
+
+	QuestTable _quests;
+
+	double m_NextUpdate = 0.0;
 
 	// not sent to the client:
 	BOOL _desiredShareXP = false; // just because we want to share, doesn't mean we can (if levels don't match up anymore)
 };
 
+using fellowship_ptr_t = std::shared_ptr<Fellowship>;
+
 class FellowshipManager
 {
 public:
-	FellowshipManager();
-	virtual ~FellowshipManager();
+	FellowshipManager() = default;
+	virtual ~FellowshipManager() = default;
 
 	void Tick();
 
-	Fellowship *GetFellowship(const std::string &name);
+	int Create(const std::string &name, uint32_t creator_id, BOOL shareXP);
+	int Disband(const fellowship_ptr_t &fellowship, uint32_t disbander_id);
+	int Quit(const fellowship_ptr_t &fellowship, uint32_t quiter_id);
+	int Dismiss(const fellowship_ptr_t &fellowship, uint32_t dismisser, uint32_t dismissee);
+	int Recruit(const fellowship_ptr_t &fellowship, uint32_t recruitor_id, uint32_t recruitee_id);
 
-	int Create(const std::string &name, DWORD creator_id, BOOL shareXP);
-	int Disband(const std::string &name, DWORD disbander_id);
-	int Quit(const std::string &name, DWORD quiter_id);
-	int Dismiss(const std::string &name, DWORD dismisser, DWORD dismissee);
-	int Recruit(const std::string &name, DWORD recruitor_id, DWORD recruitee_id);
-	int ChangeOpen(const std::string &name, DWORD changer_id, BOOL open);
-	int AssignNewLeader(const std::string &name, DWORD changer_id, DWORD new_leader_id);
-	int RequestUpdates(const std::string &name, DWORD requester_id, BOOL on);
-	void Chat(const std::string &name, DWORD sender_id, const char *text);
+	int ChangeOpen(const fellowship_ptr_t &fellowship, uint32_t changer_id, BOOL open);
+	int AssignNewLeader(const fellowship_ptr_t &fellowship, uint32_t changer_id, uint32_t new_leader_id);
+	int RequestUpdates(const fellowship_ptr_t &fellowship, uint32_t requester_id, BOOL on);
+	void Chat(const fellowship_ptr_t &fellowship, uint32_t sender_id, const char *text);
 
 	static double GetEvenSplitXPPctg(unsigned int uiNumFellows);
-	static unsigned __int64 GetExperienceProportion(unsigned int level);
+	static uint64_t GetExperienceProportion(unsigned int level);
 
-	std::unordered_map<std::string, Fellowship *> m_Fellowships;
 	double m_fNextUpdates = 0.0;
 };
 

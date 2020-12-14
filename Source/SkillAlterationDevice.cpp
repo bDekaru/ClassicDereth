@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "SkillAlterationDevice.h"
 #include "UseManager.h"
 #include "Player.h"
@@ -62,10 +62,41 @@ int CSkillAlterationDeviceWeenie::Use(CPlayerWeenie *player)
 						numSkillCredits += pSkillBase->_trained_cost;
 						if (numSkillCredits < pSkillBase->_specialized_cost)
 						{
-							player->SendText(csprintf("You need %d credits to specialize this skill.", numSkillCredits), LTT_DEFAULT);							
+							player->SendText(csprintf("You need %d credits to specialize this skill.", pSkillBase->_specialized_cost - pSkillBase->_trained_cost), LTT_DEFAULT);
 						}
 						else
 						{
+
+							int speccCount = 0;
+							for (PackableHashTableWithJson<STypeSkill, Skill>::iterator i = player->m_Qualities._skillStatsTable->begin(); i != player->m_Qualities._skillStatsTable->end(); i++)
+							{
+								if (i->second._sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
+								{	
+									// Salvaging and tinkering skills all have > 999 spec cost.
+									if (pSkillTable->GetSkillBase(i->first)->_specialized_cost >= 999)
+										continue;
+
+									//Arcane technically costs 4 credits to train even though you can't unspec it. Should only count as 2 toward number of spec credits.
+									if (i->first != ARCANE_LORE_SKILL) 
+										speccCount += (pSkillTable->GetSkillBase(i->first)->_specialized_cost);
+									else
+										speccCount += (pSkillTable->GetSkillBase(i->first)->_specialized_cost - pSkillTable->GetSkillBase(i->first)->_trained_cost);
+								}
+							}
+							if (speccCount + pSkillBase->_specialized_cost > 70)
+							{
+								if (skillToAlter != ARCANE_LORE_SKILL)
+								{
+									player->SendText("Unable to specialize this skill.", LTT_DEFAULT);
+									break;
+								}
+								else if (speccCount + (pSkillBase->_specialized_cost - pSkillBase->_trained_cost) > 70)
+								{
+									player->SendText("Unable to specialize this skill.", LTT_DEFAULT);
+									break;
+								}
+							}
+
 							numSkillCredits -= pSkillBase->_specialized_cost;
 							player->m_Qualities.SetInt(AVAILABLE_SKILL_CREDITS_INT, numSkillCredits);
 							player->NotifyIntStatUpdated(AVAILABLE_SKILL_CREDITS_INT);
@@ -105,26 +136,40 @@ int CSkillAlterationDeviceWeenie::Use(CPlayerWeenie *player)
 					const SkillBase *pSkillBase = pSkillTable->GetSkillBase(skillToAlter);
 					if (pSkillBase != NULL)
 					{
-						numSkillCredits += pSkillBase->_specialized_cost;
-						player->m_Qualities.SetInt(AVAILABLE_SKILL_CREDITS_INT, numSkillCredits);
-						player->NotifyIntStatUpdated(AVAILABLE_SKILL_CREDITS_INT);
+						bool isTinker = (skillToAlter == SALVAGING_SKILL ||
+							skillToAlter == WEAPON_APPRAISAL_SKILL ||
+							skillToAlter == ARMOR_APPRAISAL_SKILL ||
+							skillToAlter == MAGIC_ITEM_APPRAISAL_SKILL ||
+							skillToAlter == ITEM_APPRAISAL_SKILL);
 
-						DWORD64 xpToAward = 0;
+						//Per Wiki, using gems of forgetfullness on specialized tinkering skills only returned XP and did not unspecialize the skill.
+						//Salvaging is NEVER unspec'd once spec'd (no credit skill - just xp).
 
-						if (pSkillBase->_trained_cost > 0)
+						if (!isTinker)
+						{   
+							numSkillCredits += (pSkillBase->_specialized_cost - pSkillBase->_trained_cost);
+							player->m_Qualities.SetInt(AVAILABLE_SKILL_CREDITS_INT, numSkillCredits);
+							player->NotifyIntStatUpdated(AVAILABLE_SKILL_CREDITS_INT);
+						}
+
+						uint64_t xpToAward = 0;
+
+						xpToAward = skill._pp;
+						if (isTinker) 
 						{
-							skill._sac = UNTRAINED_SKILL_ADVANCEMENT_CLASS;
-							xpToAward = skill._pp;
+							skill._init_level = 10;
 							skill._pp = 0;
-							skill._init_level = 0;
+							skill._level_from_pp = 5;
 						}
 						else
 						{
 							skill._sac = TRAINED_SKILL_ADVANCEMENT_CLASS;
-							skill._init_level = 5;
+							skill._pp = 0;
+							skill._init_level = 0;
+							skill._level_from_pp = 5;
 						}
 
-						skill._level_from_pp = ExperienceSystem::SkillLevelFromExperience(skill._sac, skill._pp);
+
 						player->m_Qualities.SetSkill(skillToAlter, skill);
 						player->NotifySkillStatUpdated(skillToAlter);
 
@@ -133,8 +178,11 @@ int CSkillAlterationDeviceWeenie::Use(CPlayerWeenie *player)
 							player->m_Qualities.SetInt64(AVAILABLE_EXPERIENCE_INT64, player->InqInt64Quality(AVAILABLE_EXPERIENCE_INT64, 0) + xpToAward);
 							player->NotifyInt64StatUpdated(AVAILABLE_EXPERIENCE_INT64);
 						}
+						if (isTinker)
+							player->SendText(csprintf("Cannot raise or lower %s. All the experience that you spent on this skill have been refunded to you.", pSkillBase->_name.c_str()), LTT_ADVANCEMENT);
+						else
+							player->SendText(csprintf("You are no longer specialized in %s!", pSkillBase->_name.c_str()), LTT_ADVANCEMENT);
 
-						player->SendText(csprintf("You are no longer specialized in %s!", pSkillBase->_name.c_str()), LTT_ADVANCEMENT);
 						player->EmitSound(Sound_RaiseTrait, 1.0, true);
 
 						DecrementStackOrStructureNum();
@@ -158,14 +206,14 @@ int CSkillAlterationDeviceWeenie::Use(CPlayerWeenie *player)
 						if (heritageGroup)
 						{
 							//first we check our heritage specific skills as we cannot untrain those.
-							for (DWORD i = 0; i < heritageGroup->mSkillList.num_used; i++)
+							for (uint32_t i = 0; i < heritageGroup->mSkillList.num_used; i++)
 							{
 								if (heritageGroup->mSkillList.array_data[i].skillNum == skillToAlter)
 								{
-									DWORD64 xpToAward = skill._pp;
+									uint64_t xpToAward = skill._pp;
 									skill._pp = 0;
-									skill._level_from_pp = ExperienceSystem::SkillLevelFromExperience(skill._sac, skill._pp);
-									skill._init_level = 5;
+									skill._level_from_pp = 5;
+									skill._init_level = 0;
 									player->m_Qualities.SetSkill(skillToAlter, skill);
 									player->NotifySkillStatUpdated(skillToAlter);
 
@@ -192,7 +240,7 @@ int CSkillAlterationDeviceWeenie::Use(CPlayerWeenie *player)
 							player->m_Qualities.SetInt(AVAILABLE_SKILL_CREDITS_INT, numSkillCredits);
 							player->NotifyIntStatUpdated(AVAILABLE_SKILL_CREDITS_INT);
 
-							DWORD64 xpToAward = skill._pp;
+							uint64_t xpToAward = skill._pp;
 							skill._pp = 0;
 
 							skill._sac = UNTRAINED_SKILL_ADVANCEMENT_CLASS;
@@ -214,10 +262,11 @@ int CSkillAlterationDeviceWeenie::Use(CPlayerWeenie *player)
 						}
 						else
 						{
-							DWORD64 xpToAward = skill._pp;
+							//player->SendText(csprintf("You cannot untrain %s!", pSkillBase->_name.c_str()), LTT_DEFAULT);
+							uint64_t xpToAward = skill._pp;
 							skill._pp = 0;
-							skill._level_from_pp = ExperienceSystem::SkillLevelFromExperience(skill._sac, skill._pp);
-							skill._init_level = 5;
+							skill._level_from_pp = 5;
+							skill._init_level = 0;
 							player->m_Qualities.SetSkill(skillToAlter, skill);
 							player->NotifySkillStatUpdated(skillToAlter);
 

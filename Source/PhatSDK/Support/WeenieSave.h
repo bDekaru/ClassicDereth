@@ -13,18 +13,18 @@ public:
 
 	void Destroy();
 
-	DWORD m_SaveVersion = 0;
-	DWORD m_SaveTimestamp = 0;
-	DWORD m_SaveInstanceTS = 0;
+	uint32_t m_SaveVersion = 0;
+	uint32_t m_SaveTimestamp = 0;
+	uint32_t m_SaveInstanceTS = 0;
 	CACQualities m_Qualities;
 	ObjDesc m_ObjDesc;
 	ObjDesc m_WornObjDesc; // not ideal, but we'll keep it around for now
 	PlayerModule *_playerModule = NULL;
 	QuestTable *_questTable = NULL;
 
-	PackableList<DWORD> _equipment;
-	PackableList<DWORD> _inventory;
-	PackableList<DWORD> _packs;
+	PackableList<uint32_t> _equipment;
+	PackableList<uint32_t> _inventory;
+	PackableList<uint32_t> _packs;
 };
 
 

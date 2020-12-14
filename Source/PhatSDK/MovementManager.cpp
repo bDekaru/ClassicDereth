@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "MovementManager.h"
 #include "PhysicsObj.h"
 
@@ -89,13 +89,13 @@ void MovementManager::HandleUpdateTarget(TargetInfo target_info)
 		moveto_manager->HandleUpdateTarget(&target_info);
 }
 
-void MovementManager::CancelMoveTo(DWORD err)
+void MovementManager::CancelMoveTo(uint32_t err)
 {
 	if (moveto_manager)
 		moveto_manager->CancelMoveTo(err);
 }
 
-DWORD MovementManager::PerformMovement(MovementStruct &mvs)
+uint32_t MovementManager::PerformMovement(MovementStruct &mvs)
 {
 	physics_obj->set_active(TRUE);
 
@@ -119,7 +119,7 @@ DWORD MovementManager::PerformMovement(MovementStruct &mvs)
 		return moveto_manager->PerformMovement(mvs);
 
 	default:
-		return 0x47;
+		return WERROR_GENERAL_MOVEMENT_FAILURE;
 	}
 }
 
@@ -210,10 +210,10 @@ BOOL MovementManager::unpack_movement(BinaryReader *pReader)
 	Position pos;
 	InterpretedMotionState state;
 
-	DWORD pack_word = pReader->Read<WORD>();
-	DWORD style = GetCommandID(pReader->Read<WORD>());
+	uint32_t pack_word = pReader->Read<WORD>();
+	uint32_t style = GetCommandID(pReader->Read<WORD>());
 
-	DWORD currentStyle = motion_interpreter->InqStyle();
+	uint32_t currentStyle = motion_interpreter->InqStyle();
 
 	if (style != currentStyle)
 	{
@@ -227,9 +227,9 @@ BOOL MovementManager::unpack_movement(BinaryReader *pReader)
 			InterpretedMotionState interpState;
 			interpState.UnPack(pReader);
 
-			DWORD target = 0;
+			uint32_t target = 0;
 			if (pack_word & 0x100)
-				target = pReader->Read<DWORD>();
+				target = pReader->Read<uint32_t>();
 			
 			move_to_interpreted_state(interpState);
 			if (target)
@@ -255,7 +255,7 @@ BOOL MovementManager::move_to_interpreted_state(const InterpretedMotionState &st
 	return get_minterp()->move_to_interpreted_state(state);
 }
 
-void MovementManager::MotionDone(DWORD motion, BOOL success)
+void MovementManager::MotionDone(uint32_t motion, BOOL success)
 {
 	if (motion_interpreter)
 		motion_interpreter->MotionDone(success);
@@ -304,7 +304,7 @@ void CMotionInterp::HandleExitWorld()
 	{
 		if (physics_obj)
 		{
-			if (i->motion & 0x10000000)
+			if (i->motion & CM_Action)
 			{
 				physics_obj->unstick_from_object();
 				interpreted_state.RemoveAction();
@@ -323,7 +323,7 @@ void CMotionInterp::MotionDone(BOOL success)
 	std::list<MotionNode>::iterator motionData = pending_motions.begin();
 	if (motionData != pending_motions.end())
 	{
-		if (motionData->motion & 0x10000000)
+		if (motionData->motion & CM_Action)
 		{
 			physics_obj->unstick_from_object();
 			interpreted_state.RemoveAction();
@@ -357,13 +357,13 @@ void CMotionInterp::SetHoldKey(HoldKey key, BOOL cancel_moveto)
 	}
 }
 
-DWORD CMotionInterp::DoMotion(DWORD MotionID, MovementParameters *Params)
+uint32_t CMotionInterp::DoMotion(uint32_t MotionID, MovementParameters *Params)
 {
 	if (!physics_obj)
-		return 8;
+		return WERROR_NO_PHYSICS_OBJECT;
 
 	MovementParameters CurrentParams(*Params);
-	DWORD CurrentMotion = MotionID;
+	uint32_t CurrentMotion = MotionID;
 
 	if (Params->cancel_moveto)
 		physics_obj->cancel_moveto();
@@ -373,29 +373,29 @@ DWORD CMotionInterp::DoMotion(DWORD MotionID, MovementParameters *Params)
 
 	adjust_motion(CurrentMotion, CurrentParams.speed, Params->hold_key_to_apply);
 
-	if (interpreted_state.current_style != 0x8000003D) //Motion_NonCombat
+	if (interpreted_state.current_style != Motion_NonCombat) //Motion_NonCombat
 	{
 		switch (MotionID)
 		{
-		case 0x41000012: //Motion_Crouch
-			return 0x3F;
-		case 0x41000013: //Motion_Sitting
-			return 0x40;
-		case 0x41000014: //Motion_Sleeping
-			return 0x41;
+		case Motion_Crouch: //Motion_Crouch
+			return WERROR_CANT_CROUCH_IN_COMBAT;
+		case Motion_Sitting: //Motion_Sitting
+			return WERROR_CANT_SIT_IN_COMBAT;
+		case Motion_Sleeping: //Motion_Sleeping
+			return WERROR_CANT_LIE_DOWN_IN_COMBAT;
 		}
 
-		if (MotionID & 0x2000000)
-			return 0x42;
+		if (MotionID & CM_ChatEmote)
+			return WERROR_CANT_CHAT_EMOTE_IN_COMBAT;
 	}
 
-	if (MotionID & 0x10000000)
+	if (MotionID & CM_Action)
 	{
 		if (interpreted_state.GetNumActions() >= 6)
-			return 0x45;
+			return WERROR_TOO_MANY_ACTIONS;
 	}
 
-	DWORD NewMotion = DoInterpretedMotion(CurrentMotion, &CurrentParams);
+	uint32_t NewMotion = DoInterpretedMotion(CurrentMotion, &CurrentParams);
 
 	if (!NewMotion && Params->modify_raw_state)
 		raw_state.ApplyMotion(MotionID, Params);
@@ -403,20 +403,20 @@ DWORD CMotionInterp::DoMotion(DWORD MotionID, MovementParameters *Params)
 	return NewMotion;
 }
 
-DWORD CMotionInterp::StopMotion(DWORD MotionID, MovementParameters *Params)
+uint32_t CMotionInterp::StopMotion(uint32_t MotionID, MovementParameters *Params)
 {
 	if (!physics_obj)
-		return 8;
+		return WERROR_NO_PHYSICS_OBJECT;
 
 	if (Params->cancel_moveto)
 		physics_obj->cancel_moveto();
 
-	DWORD                CurrentMotion = MotionID;
+	uint32_t                CurrentMotion = MotionID;
 	MovementParameters   CurrentParams(*Params);
 
 	adjust_motion(CurrentMotion, CurrentParams.speed, Params->hold_key_to_apply);
 
-	DWORD NewMotion = StopInterpretedMotion(CurrentMotion, &CurrentParams);
+	uint32_t NewMotion = StopInterpretedMotion(CurrentMotion, &CurrentParams);
 
 	if (!NewMotion && Params->modify_raw_state)
 		raw_state.RemoveMotion(MotionID);
@@ -424,25 +424,25 @@ DWORD CMotionInterp::StopMotion(DWORD MotionID, MovementParameters *Params)
 	return NewMotion;
 }
 
-DWORD CMotionInterp::motion_allows_jump(DWORD mid)
+uint32_t CMotionInterp::motion_allows_jump(uint32_t mid)
 {
 	if (((mid >= 0x40000016) && (mid <= 0x40000018)) ||
 		((mid >= 0x10000128) && (mid <= 0x10000131)) ||
 		((mid >= 0x1000006F) && (mid <= 0x10000078)) ||
 		((mid >= 0x41000012) && (mid <= 0x41000014)) ||
 		((mid >= 0x4000001E) && (mid <= 0x40000039)) ||
-		((mid == 0x40000008)))
-		return 0x48;
+		((mid == Motion_Fallen)))
+		return WERROR_CANT_JUMP_POSITION;
 
-	return 0;
+	return WERROR_NONE;
 }
 
-BOOL CMotionInterp::contact_allows_move(DWORD mid)
+BOOL CMotionInterp::contact_allows_move(uint32_t mid)
 {
 	if (!physics_obj)
 		return FALSE;
 
-	if (mid == 0x40000011 || mid == 0x40000015 || (mid >= 0x6500000D && mid <= 0x6500000E))
+	if (mid == Motion_Dead || mid == Motion_Falling || (mid >= Motion_TurnRight && mid <= Motion_TurnLeft))
 		return TRUE;
 
 	if (weenie_obj && !weenie_obj->IsCreature())
@@ -468,7 +468,7 @@ BOOL CMotionInterp::move_to_interpreted_state(const InterpretedMotionState &stat
 	raw_state.current_style = state.current_style;
 	physics_obj->cancel_moveto();
 
-	DWORD maj = ((motion_allows_jump(interpreted_state.forward_command)) ? TRUE : FALSE);
+	uint32_t maj = ((motion_allows_jump(interpreted_state.forward_command)) ? TRUE : FALSE);
 
 	interpreted_state.copy_movement_from(state);
 	apply_current_movement(1, maj);
@@ -481,7 +481,7 @@ BOOL CMotionInterp::move_to_interpreted_state(const InterpretedMotionState &stat
 		WORD stamp1 = i->stamp & 0x7FFF;
 		WORD stamp2 = server_action_stamp & 0x7FFF;
 
-		DWORD val;
+		uint32_t val;
 		if (stamp1 > stamp2)
 			val = stamp1 - stamp2;
 		else
@@ -508,21 +508,21 @@ BOOL CMotionInterp::move_to_interpreted_state(const InterpretedMotionState &stat
 	return TRUE;
 }
 
-DWORD CMotionInterp::StopInterpretedMotion(DWORD mid, MovementParameters *params)
+uint32_t CMotionInterp::StopInterpretedMotion(uint32_t mid, MovementParameters *params)
 {
 	if (!physics_obj)
-		return 8;
+		return WERROR_NO_PHYSICS_OBJECT;
 
-	DWORD var_ebp;
+	uint32_t var_ebp;
 
 	if (contact_allows_move(mid))
 	{
-		if (standing_longjump && ((mid == 0x45000005) || (mid == 0x44000007) || (mid == 0x6500000F)))
+		if (standing_longjump && ((mid == Motion_WalkForward) || (mid == Motion_RunForward) || (mid == Motion_SideStepRight)))
 		{
 			if (params->modify_interpreted_state)
 				interpreted_state.RemoveMotion(mid);
 
-			var_ebp = 0;
+			var_ebp = WERROR_NONE;
 		}
 		else
 		{
@@ -530,7 +530,7 @@ DWORD CMotionInterp::StopInterpretedMotion(DWORD mid, MovementParameters *params
 
 			if (!var_ebp)
 			{
-				add_to_queue(params->context_id, 0x41000003, 0);
+				add_to_queue(params->context_id, Motion_Ready, WERROR_NONE);
 
 				if (params->modify_interpreted_state)
 					interpreted_state.RemoveMotion(mid);
@@ -555,40 +555,40 @@ DWORD CMotionInterp::StopInterpretedMotion(DWORD mid, MovementParameters *params
 	return var_ebp;
 }
 
-DWORD CMotionInterp::DoInterpretedMotion(DWORD motion, MovementParameters *params)
+uint32_t CMotionInterp::DoInterpretedMotion(uint32_t motion, MovementParameters *params)
 {
 	if (!physics_obj)
-		return 8;
+		return WERROR_NO_PHYSICS_OBJECT;
 
-	DWORD var_ebp;
+	uint32_t var_ebp;
 
 	if (contact_allows_move(motion))
 	{
-		if (standing_longjump && ((motion == 0x45000005) || (motion == 0x44000007) || (motion == 0x6500000F)))
+		if (standing_longjump && ((motion == Motion_WalkForward) || (motion == Motion_RunForward) || (motion == Motion_SideStepRight)))
 		{
 			if (params->modify_interpreted_state)
 				interpreted_state.ApplyMotion(motion, params);
 
-			var_ebp = 0;
+			var_ebp = WERROR_NONE;
 		}
 		else
 		{
-			if (motion == 0x40000011)
+			if (motion == Motion_Dead)
 				physics_obj->RemoveLinkAnimations();
 
 			var_ebp = physics_obj->DoInterpretedMotion(motion, params);
 
 			if (!var_ebp)
 			{
-				DWORD jump_error_code;
+				uint32_t jump_error_code;
 
 				if (params->disable_jump_during_link)
-					jump_error_code = 0x48;
+					jump_error_code = WERROR_CANT_JUMP_POSITION;
 				else
 				{
 					jump_error_code = motion_allows_jump(motion);
 
-					if (!jump_error_code && !(motion & 0x10000000))
+					if (!jump_error_code && !(motion & CM_Action))
 						jump_error_code = motion_allows_jump(interpreted_state.forward_command);
 				}
 
@@ -601,14 +601,14 @@ DWORD CMotionInterp::DoInterpretedMotion(DWORD motion, MovementParameters *param
 	}
 	else
 	{
-		if (motion & 0x10000000)
-			var_ebp = 0x24;
+		if (motion & CM_Action)
+			var_ebp = WERROR_NO_CONTACT;
 		else
 		{
 			if (params->modify_interpreted_state)
 				interpreted_state.ApplyMotion(motion, params);
 
-			var_ebp = 0;
+			var_ebp = WERROR_NONE;
 		}
 	}
 
@@ -622,31 +622,31 @@ DWORD CMotionInterp::DoInterpretedMotion(DWORD motion, MovementParameters *param
 	return var_ebp;
 }
 
-void CMotionInterp::adjust_motion(DWORD &motion, float &speed, HoldKey key)
+void CMotionInterp::adjust_motion(uint32_t &motion, float &speed, HoldKey key)
 {
 	if (weenie_obj && !weenie_obj->IsCreature())
 		return;
 
 	switch (motion)
 	{
-	case 0x44000007:
+	case Motion_RunForward:
 		return;
 
-	case 0x45000006:
-		motion = 0x45000005;
+	case Motion_WalkBackwards:
+		motion = Motion_WalkForward;
 		speed *= -backwards_factor;
 		break;
 
-	case 0x6500000E:
-		motion = 0x6500000D;
+	case Motion_TurnLeft:
+		motion = Motion_TurnRight;
 		speed *= -1.0;
 		break;
 
-	case 0x65000010:
-		motion = 0x6500000F;
+	case Motion_SideStepLeft:
+		motion = Motion_SideStepRight;
 		speed *= -1.0;
 
-	case 0x6500000F:
+	case Motion_SideStepRight:
 		speed = speed * sidestep_factor * (walk_anim_speed / sidestep_anim_speed);
 		break;
 	}
@@ -660,7 +660,7 @@ void CMotionInterp::adjust_motion(DWORD &motion, float &speed, HoldKey key)
 		apply_run_to_command(motion, speed);
 }
 
-void CMotionInterp::apply_run_to_command(DWORD &motion, float &speed)
+void CMotionInterp::apply_run_to_command(uint32_t &motion, float &speed)
 {
 	float speedMod;
 
@@ -677,18 +677,18 @@ void CMotionInterp::apply_run_to_command(DWORD &motion, float &speed)
 
 	switch (motion)
 	{
-	case 0x45000005:
+	case Motion_WalkForward:
 		if (speed > 0)
-			motion = 0x44000007;
+			motion = Motion_RunForward;
 
 		speed *= speedMod;
 		break;
 
-	case 0x6500000D:
+	case Motion_TurnRight:
 		speed *= run_turn_factor;
 		break;
 
-	case 0x6500000F:
+	case Motion_SideStepRight:
 		speed *= speedMod;
 
 		if (max_sidestep_anim_rate < abs(speed))
@@ -752,7 +752,7 @@ void CMotionInterp::apply_interpreted_movement(BOOL cancel_moveto, BOOL disallow
 	if (disallow_jump)
 		params.disable_jump_during_link = 1;
 
-	if (interpreted_state.forward_command == 0x44000007)
+	if (interpreted_state.forward_command == Motion_RunForward)
 		my_run_rate = interpreted_state.forward_speed;
 
 	DoInterpretedMotion(interpreted_state.current_style, &params);
@@ -770,19 +770,19 @@ void CMotionInterp::apply_interpreted_movement(BOOL cancel_moveto, BOOL disallow
 				DoInterpretedMotion(interpreted_state.sidestep_command, &params);
 			}
 			else
-				StopInterpretedMotion(0x6500000F, &params);
+				StopInterpretedMotion(Motion_SideStepRight, &params);
 		}
 		else
 		{
 			params.speed = 1.0f;
-			DoInterpretedMotion(0x41000003, &params);
-			StopInterpretedMotion(0x6500000F, &params);
+			DoInterpretedMotion(Motion_Ready, &params);
+			StopInterpretedMotion(Motion_SideStepRight, &params);
 		}
 	}
 	else
 	{
 		params.speed = 1.0f;
-		DoInterpretedMotion(0x40000015, &params);
+		DoInterpretedMotion(Motion_Falling, &params);
 	}
 
 	if (interpreted_state.turn_command)
@@ -796,14 +796,14 @@ void CMotionInterp::apply_interpreted_movement(BOOL cancel_moveto, BOOL disallow
 		if (!physics_obj)
 			return;
 
-		DWORD x = physics_obj->StopInterpretedMotion(0x6500000D, &params);
+		uint32_t x = physics_obj->StopInterpretedMotion(Motion_TurnRight, &params);
 
 		if (!x)
 		{
-			add_to_queue(params.context_id, 0x41000003, 0 /*x*/);
+			add_to_queue(params.context_id, Motion_Ready, 0 /*x*/);
 
 			if (params.modify_interpreted_state)
-				interpreted_state.RemoveMotion(0x6500000D);
+				interpreted_state.RemoveMotion(Motion_TurnRight);
 		}
 
 		// Inlined from somewhere.
@@ -822,7 +822,7 @@ void CMotionInterp::enter_default_state()
 
 	physics_obj->InitializeMotionTables();
 
-	add_to_queue(0, 0x41000003, 0);
+	add_to_queue(0, Motion_Ready, WERROR_NONE);
 
 	initted = 1;
 
@@ -870,14 +870,14 @@ Vector CMotionInterp::get_state_velocity()
 {
 	Vector sv;
 
-	if (interpreted_state.sidestep_command == 0x6500000F)
+	if (interpreted_state.sidestep_command == Motion_SideStepRight)
 		sv.x = sidestep_anim_speed * interpreted_state.sidestep_speed;
 	else
 		sv.x = 0.0f;
 
-	if (interpreted_state.forward_command == 0x45000005)
+	if (interpreted_state.forward_command == Motion_WalkForward)
 		sv.y = walk_anim_speed * interpreted_state.forward_speed;
-	else if (interpreted_state.forward_command == 0x44000007)
+	else if (interpreted_state.forward_command == Motion_RunForward)
 		sv.y = run_anim_speed * interpreted_state.forward_speed;
 	else
 		sv.y = 0.0f;
@@ -966,14 +966,14 @@ float CMotionInterp::get_max_speed(void)
 	return (speed * run_anim_speed);
 }
 
-DWORD CMotionInterp::jump(float extent, long &stamina_adjustment)
+uint32_t CMotionInterp::jump(float extent, int32_t &stamina_adjustment)
 {
 	if (!physics_obj)
-		return 8;
+		return WERROR_NO_PHYSICS_OBJECT;
 
 	physics_obj->cancel_moveto();
 
-	DWORD allowed = jump_is_allowed(extent, stamina_adjustment);
+	uint32_t allowed = jump_is_allowed(extent, stamina_adjustment);
 
 	if (allowed)
 		standing_longjump = 0;
@@ -986,33 +986,33 @@ DWORD CMotionInterp::jump(float extent, long &stamina_adjustment)
 	return allowed;
 }
 
-DWORD CMotionInterp::jump_charge_is_allowed()
+uint32_t CMotionInterp::jump_charge_is_allowed()
 {
 	if (!weenie_obj || weenie_obj->CanJump(jump_extent))
 	{
-		DWORD fwd_command = interpreted_state.forward_command;
+		uint32_t fwd_command = interpreted_state.forward_command;
 
-		if (fwd_command == 0x40000008 || (fwd_command > 0x41000011 && fwd_command <= 0x41000014))
-			return 0x72;
+		if (fwd_command == Motion_Fallen || (fwd_command > 0x41000011 && fwd_command <= 0x41000014))
+			return WERROR_CANT_JUMP_POSITION;
 		
 		return 0;
 	}
 
-	return 0x49;
+	return WERROR_CANT_JUMP_LOAD;
 }
 
-DWORD CMotionInterp::jump_is_allowed(float extent, long &stamina_cost)
+uint32_t CMotionInterp::jump_is_allowed(float extent, int32_t &stamina_cost)
 {
 	if (physics_obj && ((weenie_obj && !weenie_obj->IsCreature()) || !physics_obj || !(physics_obj->m_PhysicsState & GRAVITY_PS) || ((physics_obj->transient_state & CONTACT_TS) && (physics_obj->transient_state & ON_WALKABLE_TS))))
 	{
 		if (physics_obj->IsFullyConstrained())
-			return 0x47;
+			return WERROR_GENERAL_MOVEMENT_FAILURE;
 
 		auto pendingMotionHead = pending_motions.begin();
 		if (pendingMotionHead != pending_motions.end() && pendingMotionHead->jump_error_code)
 			return pendingMotionHead->jump_error_code;
 
-		DWORD jumpError = jump_charge_is_allowed();
+		uint32_t jumpError = jump_charge_is_allowed();
 
 		if (!jumpError)
 		{
@@ -1021,37 +1021,37 @@ DWORD CMotionInterp::jump_is_allowed(float extent, long &stamina_cost)
 			if (!jumpError)
 			{
 				if (weenie_obj && !(weenie_obj->JumpStaminaCost(extent, stamina_cost)))
-					jumpError = 0x47;
+					jumpError = WERROR_GENERAL_MOVEMENT_FAILURE;
 			}
 		}
 
 		return jumpError;
 	}
 
-	return 0x24;
+	return WERROR_NO_CONTACT;
 }
 
-DWORD CMotionInterp::StopCompletely()
+uint32_t CMotionInterp::StopCompletely()
 {
 	if (physics_obj == NULL)
-		return 8;
+		return WERROR_NO_PHYSICS_OBJECT;
 
 	physics_obj->cancel_moveto();
 
-	DWORD maj = motion_allows_jump(interpreted_state.forward_command);
+	uint32_t maj = motion_allows_jump(interpreted_state.forward_command);
 
-	raw_state.forward_command = 0x41000003;
+	raw_state.forward_command = Motion_Ready;
 	raw_state.forward_speed = 1.0f;
 	raw_state.sidestep_command = 0;
 	raw_state.turn_command = 0;
-	interpreted_state.forward_command = 0x41000003;
+	interpreted_state.forward_command = Motion_Ready;
 	interpreted_state.forward_speed = 1.0f;
 	interpreted_state.sidestep_command = 0;
 	interpreted_state.turn_command = 0;
 
 	physics_obj->StopCompletely_Internal();
 
-	add_to_queue(0, 0x41000003, maj);
+	add_to_queue(0, Motion_Ready, maj);
 
 	if (physics_obj && !physics_obj->cell)
 		physics_obj->RemoveLinkAnimations();
@@ -1063,7 +1063,7 @@ void CMotionInterp::HandleEnterWorld()
 {
 }
 
-void CMotionInterp::add_to_queue(DWORD context_id, DWORD motion, DWORD jump_error_code)
+void CMotionInterp::add_to_queue(uint32_t context_id, uint32_t motion, uint32_t jump_error_code)
 {
 	pending_motions.push_back(MotionNode(context_id, motion, jump_error_code));
 }
@@ -1087,9 +1087,9 @@ void CMotionInterp::SetWeenieObject(CWeenieObject *pObject)
 	apply_current_movement(TRUE, 0);
 }
 
-DWORD CMotionInterp::PerformMovement(MovementStruct& cmd)
+uint32_t CMotionInterp::PerformMovement(MovementStruct& cmd)
 {
-	DWORD x;
+	uint32_t x;
 
 	switch (cmd.type)
 	{
@@ -1114,7 +1114,7 @@ DWORD CMotionInterp::PerformMovement(MovementStruct& cmd)
 		break;
 
 	default:
-		return 71; // 0x47;
+		return WERROR_GENERAL_MOVEMENT_FAILURE; // 0x47;
 	}
 
 	physics_obj->CheckForCompletedMotions();
@@ -1202,13 +1202,13 @@ void MoveToManager::SetWeenieObject(CWeenieObject *pWeenieObj)
 	weenie_obj = pWeenieObj;
 }
 
-DWORD MoveToManager::_StopMotion(DWORD motion, MovementParameters *Params)
+uint32_t MoveToManager::_StopMotion(uint32_t motion, MovementParameters *Params)
 {
 	if (!physics_obj)
-		return 8;
+		return WERROR_NO_PHYSICS_OBJECT;
 
 	if (!physics_obj->get_minterp())
-		return 11;
+		return WERROR_NO_MOTION_INTERPRETER;
 
 	physics_obj->get_minterp()->adjust_motion(motion, Params->speed, Params->hold_key_to_apply);
 	return physics_obj->get_minterp()->StopInterpretedMotion(motion, Params);
@@ -1263,14 +1263,14 @@ void MoveToManager::HandleUpdateTarget(TargetInfo *target_info)
 				}
 				else
 				{
-					CancelMoveTo(0x37);
+					CancelMoveTo(WERROR_OBJECT_GONE);
 				}
 			}
 			else if (top_level_object_id == physics_obj->id)
 			{
 				sought_position = physics_obj->m_Position;
 				current_target_position = physics_obj->m_Position;
-				CleanUpAndCallWeenie(0);
+				CleanUpAndCallWeenie(WERROR_NONE);
 			}
 			else if (target_info->status == Ok_TargetStatus)
 			{
@@ -1285,13 +1285,13 @@ void MoveToManager::HandleUpdateTarget(TargetInfo *target_info)
 			}
 			else
 			{
-				CancelMoveTo(0x38);
+				CancelMoveTo(WERROR_NO_OBJECT);
 			}
 		}
 	}
 	else
 	{
-		CancelMoveTo(8);
+		CancelMoveTo(WERROR_NO_PHYSICS_OBJECT);
 	}
 }
 
@@ -1337,7 +1337,7 @@ void MoveToManager::MoveToObject_Internal(Position *_target_position, Position *
 	}
 	else
 	{
-		CancelMoveTo(8);
+		CancelMoveTo(WERROR_NO_PHYSICS_OBJECT);
 	}
 }
 
@@ -1360,11 +1360,11 @@ void MoveToManager::TurnToObject_Internal(Position *_target_position)
 	}
 	else
 	{
-		MoveToManager::CancelMoveTo(8);
+		MoveToManager::CancelMoveTo(WERROR_NO_PHYSICS_OBJECT);
 	}
 }
 
-void MoveToManager::CancelMoveTo(DWORD retval)
+void MoveToManager::CancelMoveTo(uint32_t retval)
 {
 	if (!movement_type)
 		return;
@@ -1373,15 +1373,15 @@ void MoveToManager::CancelMoveTo(DWORD retval)
 	CleanUpAndCallWeenie(retval);
 }
 
-void MoveToManager::CleanUpAndCallWeenie(DWORD retval)
+void MoveToManager::CleanUpAndCallWeenie(uint32_t retval)
 {
 	CleanUp();
 
 	if (physics_obj)
-		physics_obj->StopCompletely(0);
+		physics_obj->StopCompletely(WERROR_NONE);
 
 	// custom
-	if (weenie_obj) 
+	if (weenie_obj)
 		weenie_obj->HandleMoveToDone(retval);
 	//
 }
@@ -1391,11 +1391,11 @@ BOOL MoveToManager::is_moving_to()
 	return (movement_type ? TRUE : FALSE);
 }
 
-void MoveToManager::MoveToObject(DWORD object_id, DWORD top_level_id, float object_radius, float object_height, MovementParameters *params)
+void MoveToManager::MoveToObject(uint32_t object_id, uint32_t top_level_id, float object_radius, float object_height, MovementParameters *params)
 {
 	if (physics_obj)
 	{
-		physics_obj->StopCompletely(0);
+		physics_obj->StopCompletely(WERROR_NONE);
 
 		starting_position = physics_obj->m_Position;
 		sought_object_id = object_id;
@@ -1426,12 +1426,12 @@ void MoveToManager::MoveToObject(DWORD object_id, DWORD top_level_id, float obje
 	}
 
 	if (physics_obj)
-		physics_obj->StopCompletely(0);
+		physics_obj->StopCompletely(WERROR_NONE);
 }
 
-DWORD MoveToManager::PerformMovement(MovementStruct &mvs)
+uint32_t MoveToManager::PerformMovement(MovementStruct &mvs)
 {
-	CancelMoveTo(0x36);
+	CancelMoveTo(WERROR_INTERRUPTED);
 	physics_obj->unstick_from_object();
 
 	switch (mvs.type)
@@ -1469,7 +1469,7 @@ void MoveToManager::MoveToPosition(Position *p, MovementParameters *params)
 {
 	if (physics_obj)
 	{
-		physics_obj->StopCompletely(0);
+		physics_obj->StopCompletely(WERROR_NONE);
 
 		current_target_position = *p;
 		sought_object_radius = 0;
@@ -1530,12 +1530,12 @@ void MoveToManager::AddMoveToPositionNode()
 	pending_actions.push_back(node);
 }
 
-void MoveToManager::TurnToObject(DWORD object_id, DWORD top_level_id, MovementParameters *params)
+void MoveToManager::TurnToObject(uint32_t object_id, uint32_t top_level_id, MovementParameters *params)
 {
 	if (physics_obj)
 	{
 		if (params->stop_completely)
-			physics_obj->StopCompletely(0);
+			physics_obj->StopCompletely(WERROR_NONE);
 
 		movement_type = MovementTypes::TurnToObject;
 		sought_object_id = object_id;
@@ -1569,7 +1569,7 @@ void MoveToManager::TurnToObject(DWORD object_id, DWORD top_level_id, MovementPa
 	}
 
 	if (physics_obj)
-		physics_obj->StopCompletely(0);
+		physics_obj->StopCompletely(WERROR_NONE);
 }
 
 void MoveToManager::TurnToHeading(MovementParameters *pparams)
@@ -1580,12 +1580,12 @@ void MoveToManager::TurnToHeading(MovementParameters *pparams)
 
 		// this must be inlined, can never happen..
 		if (physics_obj)
-			physics_obj->StopCompletely(0);
+			physics_obj->StopCompletely(WERROR_NONE);
 	}
 	else
 	{
 		if (pparams->stop_completely)
-			physics_obj->StopCompletely(0);
+			physics_obj->StopCompletely(WERROR_NONE);
 
 		movement_params = *pparams;
 		movement_params.sticky = 0;
@@ -1634,7 +1634,7 @@ void MoveToManager::BeginNextNode()
 		{
 			float old_object_radius = sought_object_radius;
 			float old_object_height = sought_object_height;
-			DWORD old_object_ID = top_level_object_id;
+			uint32_t old_object_ID = top_level_object_id;
 
 			/*
 			CleanUp();
@@ -1642,7 +1642,7 @@ void MoveToManager::BeginNextNode()
 			if (physics_obj) // obviously inlined
 				physics_obj->StopCompletely(0);
 				*/
-			CleanUpAndCallWeenie(0);
+			CleanUpAndCallWeenie(WERROR_NONE);
 			
 			physics_obj->get_position_manager()->StickTo(old_object_ID, old_object_radius, old_object_height);
 		}
@@ -1654,7 +1654,7 @@ void MoveToManager::BeginNextNode()
 			if (physics_obj)
 				physics_obj->StopCompletely(0);
 				*/
-			CleanUpAndCallWeenie(0);
+			CleanUpAndCallWeenie(WERROR_NONE);
 		}
 	}
 }
@@ -1690,7 +1690,7 @@ void MoveToManager::HandleMoveToPosition()
 {	
 	if (!physics_obj)
 	{
-		MoveToManager::CancelMoveTo(8);
+		MoveToManager::CancelMoveTo(WERROR_NO_PHYSICS_OBJECT);
 		return;
 	}
 
@@ -1733,9 +1733,9 @@ void MoveToManager::HandleMoveToPosition()
 		}
 		else
 		{
-			DWORD cmd = 0x6500000D;
+			uint32_t cmd = Motion_TurnRight;
 			if (headingDiff >= 180.0)
-				cmd = 0x6500000E;
+				cmd = Motion_TurnLeft;
 
 			if (cmd != aux_command)
 			{
@@ -1773,7 +1773,7 @@ void MoveToManager::HandleMoveToPosition()
 		else
 		{
 			if (starting_position.distance(physics_obj->m_Position) > movement_params.fail_distance)
-				CancelMoveTo(0x3D);
+				CancelMoveTo(WERROR_TOO_FAR);
 		}
 	}
 
@@ -1819,7 +1819,7 @@ int MoveToManager::CheckProgressMade(float curr_distance)
 	return TRUE;
 }
 
-float heading_diff(float heading1, float heading2, DWORD motionid)
+float heading_diff(float heading1, float heading2, uint32_t motionid)
 {
 	double diff = heading1 - heading2;
 
@@ -1829,13 +1829,13 @@ float heading_diff(float heading1, float heading2, DWORD motionid)
 	if (diff < -F_EPSILON)
 		diff += 360.0f;
 
-	if (diff > F_EPSILON && motionid != 0x6500000D)
+	if (diff > F_EPSILON && motionid != Motion_TurnRight)
 		diff = 360.0 - diff;
 
 	return (float) diff;
 }
 
-BOOL heading_greater(float x, float y, DWORD motionid)
+BOOL heading_greater(float x, float y, uint32_t motionid)
 {
 	double diff = abs(x - y);
 
@@ -1854,7 +1854,7 @@ BOOL heading_greater(float x, float y, DWORD motionid)
 
 	BOOL result = (value2 > value1) ? TRUE : FALSE;
 
-	if (motionid != 0x6500000D)
+	if (motionid != Motion_TurnRight)
 		result = !result;
 
 	return result;
@@ -1864,7 +1864,7 @@ void MoveToManager::BeginTurnToHeading()
 {
 	if (!pending_actions.size() || !physics_obj)
 	{
-		CancelMoveTo(8);
+		CancelMoveTo(WERROR_NO_PHYSICS_OBJECT);
 		return;
 	}
 
@@ -1873,14 +1873,14 @@ void MoveToManager::BeginTurnToHeading()
 
 	std::list<MovementNode>::iterator i = pending_actions.begin();
 
-	float diff = heading_diff(i->heading, physics_obj->get_heading(), 0x6500000D);
-	DWORD motionid;
+	float diff = heading_diff(i->heading, physics_obj->get_heading(), Motion_TurnRight);
+	uint32_t motionid;
 
 	if (diff <= 180.0f)
 	{
 		if (diff > F_EPSILON)
 		{
-			motionid = 0x6500000D;
+			motionid = Motion_TurnRight;
 		}
 		else
 		{
@@ -1894,7 +1894,7 @@ void MoveToManager::BeginTurnToHeading()
 	{
 		if ((diff + F_EPSILON) <= 360.0f)
 		{
-			motionid = 0x6500000E;
+			motionid = Motion_TurnLeft;
 		}
 		else
 		{
@@ -1911,7 +1911,7 @@ void MoveToManager::BeginTurnToHeading()
 	params.speed = movement_params.speed;
 	params.hold_key_to_apply = movement_params.hold_key_to_apply;
 
-	DWORD err = _DoMotion(motionid, &params);
+	uint32_t err = _DoMotion(motionid, &params);
 
 	if (err)
 	{
@@ -1948,7 +1948,7 @@ void MoveToManager::BeginMoveForward()
 {
 	if (!physics_obj)
 	{
-		CancelMoveTo(8);
+		CancelMoveTo(WERROR_NO_PHYSICS_OBJECT);
 		return;
 	}
 
@@ -1976,7 +1976,7 @@ void MoveToManager::BeginMoveForward()
 		params.cancel_moveto = 0;
 		params.speed = movement_params.speed;
 
-		DWORD motionResult = _DoMotion(motion, &params);
+		uint32_t motionResult = _DoMotion(motion, &params);
 		if (motionResult)
 		{
 			CancelMoveTo(motionResult);
@@ -2003,13 +2003,13 @@ void MoveToManager::BeginMoveForward()
 	}
 }
 
-DWORD MoveToManager::_DoMotion(DWORD motionid, MovementParameters *pparams)
+uint32_t MoveToManager::_DoMotion(uint32_t motionid, MovementParameters *pparams)
 {
 	if (!physics_obj)
-		return 8;
+		return WERROR_NO_PHYSICS_OBJECT;
 
 	if (!physics_obj->get_minterp())
-		return 11;
+		return WERROR_NO_MOTION_INTERPRETER;
 
 	physics_obj->get_minterp()->adjust_motion(motionid, pparams->speed, pparams->hold_key_to_apply);
 	return physics_obj->get_minterp()->DoInterpretedMotion(motionid, pparams);
@@ -2024,11 +2024,11 @@ void MoveToManager::HandleTurnToHeading()
 {
 	if (!physics_obj)
 	{
-		CancelMoveTo(8);
+		CancelMoveTo(WERROR_NO_PHYSICS_OBJECT);
 		return;
 	}
 
-	if (current_command != 0x6500000D && current_command != 0x6500000E)
+	if (current_command != Motion_TurnRight && current_command != Motion_TurnLeft)
 	{
 		BeginTurnToHeading();
 		return;

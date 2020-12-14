@@ -7,26 +7,26 @@ public:
 	void LoadAll();
 	void ReleaseAll();
 
-	DWORD GetNumTablesOfSetupID(DWORD setup_id);
-	class ClothingTable *GetTableByIndexOfSetupID(DWORD setup_id, DWORD index);
+	uint32_t GetNumTablesOfSetupID(uint32_t setup_id);
+	class ClothingTable *GetTableByIndexOfSetupID(uint32_t setup_id, uint32_t index);
 
-	DWORD GetNumTablesOfIconID(DWORD icon_id);
-	class ClothingTable *GetTableByIndexOfIconID(DWORD icon_id, DWORD index, DWORD *palette_key);
+	uint32_t GetNumTablesOfIconID(uint32_t icon_id);
+	class ClothingTable *GetTableByIndexOfIconID(uint32_t icon_id, uint32_t index, uint32_t *palette_key);
 
 	static const char *PaletteTemplateIDToString(unsigned int pt);
 
-	bool TryToMatchBySetupAndObjDesc(DWORD setup_id, ObjDesc &od, DWORD *table_id, DWORD *pt, double *shades);
-	bool TryToMatchBySetupAndObjDesc(DWORD setup_id, ClothingTable *ct, ObjDesc &od, DWORD *pt, double *shades);
+	bool TryToMatchBySetupAndObjDesc(uint32_t setup_id, ObjDesc &od, uint32_t *table_id, uint32_t *pt, double *shades);
+	bool TryToMatchBySetupAndObjDesc(uint32_t setup_id, ClothingTable *ct, ObjDesc &od, uint32_t *pt, double *shades);
 	bool TryToMatchByObjDescWithPaletteTemplateAndGetShades(CloPaletteTemplate *pt, ObjDesc &od, double *shades);
 
 private:
-	static void ParseClothingFileStatic(void *argument, DWORD id, BTEntry *entry);
-	void ParseClothing(DWORD id);
+	static void ParseClothingFileStatic(void *argument, uint32_t id, BTEntry *entry);
+	void ParseClothing(uint32_t id);
 
-	typedef std::map<DWORD, std::set<DWORD>> CLOTHINGBYSETUPIDMAP;
+	typedef std::map<uint32_t, std::set<uint32_t>> CLOTHINGBYSETUPIDMAP;
 	CLOTHINGBYSETUPIDMAP m_SetupIDToClothingTableID;
 
-	typedef std::map<DWORD, std::set<DWORD>> CLOTHINGBYICONIDMAP;
+	typedef std::map<uint32_t, std::set<uint32_t>> CLOTHINGBYICONIDMAP;
 	CLOTHINGBYICONIDMAP m_IconIDToClothingTableID;
 };
 

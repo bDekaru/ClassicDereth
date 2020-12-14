@@ -1,10 +1,10 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Particles.h"
 
-void Particle::Init(CPhysicsObj *pOwner, DWORD ParticleID,
+void Particle::Init(CPhysicsObj *pOwner, uint32_t ParticleID,
 	Frame *pFrame, CPhysicsPart *pPart, Vector *Offset,
-	DWORD Info2C, BOOL Persistant,
+	uint32_t Info2C, BOOL Persistant,
 	Vector *RandomA, Vector *RandomB, Vector *RandomC,
 	float StartScale, float FinalScale, float StartTrans, float FinalTrans,
 	double Lifespan)
@@ -18,7 +18,7 @@ void Particle::Init(CPhysicsObj *pOwner, DWORD ParticleID,
 	m_08 = Lifespan;
 	m_FrameTime = 0.0;
 
-	if (ParticleID == (DWORD)-1)
+	if (ParticleID == (uint32_t)-1)
 		m_Frame = pOwner->m_Position.frame;
 	else
 		m_Frame = pOwner->part_array->parts[ParticleID]->pos.frame;
@@ -103,7 +103,7 @@ void Particle::Init(CPhysicsObj *pOwner, DWORD ParticleID,
 	Update(Info2C, Persistant, pPart, &m_Frame);
 }
 
-void Particle::Update(DWORD Info2C, BOOL Persistant, CPhysicsPart *pPartObj, Frame *pFrame)
+void Particle::Update(uint32_t Info2C, BOOL Persistant, CPhysicsPart *pPartObj, Frame *pFrame)
 {
 	float TimeSinceUpdate = PhysicsTimer::curr_time - m_LastUpdate;
 
@@ -182,7 +182,7 @@ void Particle::Update(DWORD Info2C, BOOL Persistant, CPhysicsPart *pPartObj, Fra
 BOOL ParticleEmitter::always_use_software_particles = FALSE;
 
 ParticleEmitter::ParticleEmitter(CPhysicsObj *pOwner)
-	: m_Owner(pOwner), m_08(-1), m_EmitterID(0)
+	: m_Owner(pOwner), m_EmitterID(0), m_08(-1)
 {
 	m_EmitterObj = NULL;
 	m_EmitterInfo = NULL;
@@ -214,7 +214,7 @@ void ParticleEmitter::Destroy()
 
 	if (m_Parts58)
 	{
-		for (long i = 0; i < m_EmitterInfo->m_48; i++)
+		for (int32_t i = 0; i < m_EmitterInfo->m_48; i++)
 		{
 			CPhysicsPart *pPart = m_Parts58[i];
 
@@ -259,7 +259,7 @@ ParticleEmitter *ParticleEmitter::makeParticleEmitter(CPhysicsObj *pOwner)
 	return(new ParticleEmitter(pOwner));
 }
 
-BOOL ParticleEmitter::SetInfo(DWORD InfoID)
+BOOL ParticleEmitter::SetInfo(uint32_t InfoID)
 {
 	ParticleEmitterInfo *pInfo = ParticleEmitterInfo::Get(InfoID);
 
@@ -275,7 +275,7 @@ BOOL ParticleEmitter::SetInfo(ParticleEmitterInfo *pInfo)
 
 	m_EmitterInfo = pInfo;
 
-	DWORD GfxID;
+	uint32_t GfxID;
 
 	if (!always_use_software_particles)
 		GfxID = pInfo->m_38;
@@ -299,10 +299,10 @@ BOOL ParticleEmitter::SetInfo(ParticleEmitterInfo *pInfo)
 		return FALSE;
 	}
 
-	for (long i = 0; i < m_EmitterInfo->m_48; i++)
+	for (int32_t i = 0; i < m_EmitterInfo->m_48; i++)
 		m_Parts58[i] = NULL;
 
-	for (long i = 0; i < m_EmitterInfo->m_48; i++)
+	for (int32_t i = 0; i < m_EmitterInfo->m_48; i++)
 	{
 		m_Parts58[i] = CPhysicsPart::makePhysicsPart(GfxID);
 
@@ -331,7 +331,7 @@ BOOL ParticleEmitter::SetInfo(ParticleEmitterInfo *pInfo)
 	return TRUE;
 }
 
-BOOL ParticleEmitter::SetParenting(DWORD b, Frame *c)
+BOOL ParticleEmitter::SetParenting(uint32_t b, Frame *c)
 {
 	if (!m_EmitterObj)
 		return FALSE;
@@ -370,7 +370,7 @@ BOOL ParticleEmitter::StopEmitter()
 	return m_bStopEmitting;
 }
 
-BOOL ParticleEmitter::KillParticle(long Index)
+BOOL ParticleEmitter::KillParticle(int32_t Index)
 {
 	Particle *pParticle = m_Particles + Index;
 
@@ -411,14 +411,14 @@ BOOL ParticleEmitter::UpdateParticles()
 
 		if (m_EmitterInfo->IsPersistant())
 		{
-			for (long i = 0; i < m_EmitterInfo->m_48; i++)
+			for (int32_t i = 0; i < m_EmitterInfo->m_48; i++)
 				m_Particles[i].m_LastUpdate = PhysicsTimer::curr_time;
 
 			return TRUE;
 		}
 		else
 		{
-			for (long i = 0; i < m_EmitterInfo->m_48; i++)
+			for (int32_t i = 0; i < m_EmitterInfo->m_48; i++)
 			{
 				if (m_Parts5C[i])
 				{
@@ -449,7 +449,7 @@ BOOL ParticleEmitter::UpdateParticles()
 			m_EmitterObj->SetNoDraw(FALSE);
 		}
 
-		for (unsigned long i = 0; i < (unsigned)m_EmitterInfo->m_48; i++)
+		for (uint32_t i = 0; i < (unsigned)m_EmitterInfo->m_48; i++)
 		{
 			if (m_Parts5C[i])
 			{
@@ -457,7 +457,7 @@ BOOL ParticleEmitter::UpdateParticles()
 
 				if (m_EmitterInfo->m_30)
 				{
-					if (m_08 == (DWORD)-1)
+					if (m_08 == (uint32_t)-1)
 						pFrame = &m_Owner->m_Position.frame;
 					else
 						pFrame = &m_Owner->part_array->parts[m_08]->pos.frame;
@@ -499,8 +499,8 @@ ParticleManager::~ParticleManager()
 {
 }
 
-DWORD ParticleManager::CreateParticleEmitter
-(CPhysicsObj *pOwner, DWORD a, long b, Frame *c, DWORD EmitterID)
+uint32_t ParticleManager::CreateParticleEmitter
+(CPhysicsObj *pOwner, uint32_t a, int32_t b, Frame *c, uint32_t EmitterID)
 {
 
 	if (EmitterID)
@@ -540,13 +540,20 @@ void ParticleManager::UpdateParticles()
 
 	while (!it.EndReached())
 	{
-		ParticleEmitter *pEmitter = it.GetCurrentData();
-		it.Next();
-
-		if (!pEmitter->UpdateParticles())
+		try
 		{
-			m_Emitters.remove(pEmitter->m_EmitterID);
-			delete pEmitter;
+			ParticleEmitter *pEmitter = it.GetCurrentData();
+			it.Next();
+
+			if (!pEmitter->UpdateParticles())
+			{
+				m_Emitters.remove(pEmitter->m_EmitterID);
+				delete pEmitter;
+			}
+		}
+		catch (...)
+		{
+			SERVER_ERROR << "Error in Update Particles";
 		}
 	}
 }
@@ -555,7 +562,7 @@ BOOL ParticleEmitter::InitEnd()
 {
 	m_68 = Timer::cur_time; // Timer::m_timeCurrent
 
-	for (long i = 0; i < m_EmitterInfo->m_4C; i++)
+	for (int32_t i = 0; i < m_EmitterInfo->m_4C; i++)
 		EmitParticle();
 
 	return TRUE;
@@ -563,7 +570,7 @@ BOOL ParticleEmitter::InitEnd()
 
 void ParticleEmitter::EmitParticle()
 {
-	long i;
+	int32_t i;
 	for (i = 0; i < m_EmitterInfo->m_48; i++)
 	{
 		if (!m_Parts5C[i])
@@ -623,7 +630,7 @@ void ParticleEmitterInfo::Destroyer(DBObj *pEmitterInfo)
 	delete ((ParticleEmitterInfo *)pEmitterInfo);
 }
 
-ParticleEmitterInfo* ParticleEmitterInfo::Get(DWORD ID)
+ParticleEmitterInfo* ParticleEmitterInfo::Get(uint32_t ID)
 {
 	return (ParticleEmitterInfo *)ObjCaches::ParticleEmitterInfos->Get(ID);
 }
@@ -636,22 +643,22 @@ void ParticleEmitterInfo::Release(ParticleEmitterInfo *pEmitterInfo)
 
 BOOL ParticleEmitterInfo::UnPack(BYTE **ppData, ULONG iSize)
 {
-	UNPACK(DWORD, id);
+	UNPACK(uint32_t, id);
 
-	DWORD Reserved; // Skips 4 bytes.
-	UNPACK(DWORD, Reserved);
+	uint32_t Reserved; // Skips 4 bytes.
+	UNPACK(uint32_t, Reserved);
 
-	UNPACK(DWORD, m_28);
-	UNPACK(DWORD, m_2C);
+	UNPACK(uint32_t, m_28);
+	UNPACK(uint32_t, m_2C);
 
-	UNPACK(DWORD, m_34);
-	UNPACK(DWORD, m_38);
+	UNPACK(uint32_t, m_34);
+	UNPACK(uint32_t, m_38);
 
 	UNPACK(double, m_40);
 
-	UNPACK(long, m_48);
-	UNPACK(long, m_4C);
-	UNPACK(long, m_50);
+	UNPACK(int32_t, m_48);
+	UNPACK(int32_t, m_4C);
+	UNPACK(int32_t, m_50);
 
 	UNPACK(double, m_58);
 	UNPACK(double, m_68);
@@ -685,7 +692,7 @@ BOOL ParticleEmitterInfo::UnPack(BYTE **ppData, ULONG iSize)
 	UNPACK(float, m_E0);
 	UNPACK(float, m_E4);
 	UNPACK(float, m_DC);
-	UNPACK(DWORD, m_30);
+	UNPACK(uint32_t, m_30);
 
 	float maxVal = (m_BC * m_68);
 
@@ -804,7 +811,7 @@ BOOL ParticleEmitterInfo::IsPersistant()
 	return FALSE;
 }
 
-BOOL ParticleEmitterInfo::ShouldEmitParticle(long a, long b, Vector *c, double d)
+BOOL ParticleEmitterInfo::ShouldEmitParticle(int32_t a, int32_t b, Vector *c, double d)
 {
 	if ((m_50 > 0) && (b >= m_50))
 		return FALSE;

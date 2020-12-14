@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 
 #define WEENIE_SAVE_FILE_VERSION 7
@@ -23,15 +23,15 @@ void CWeenieSave::Destroy()
 
 DEFINE_PACK(CWeenieSave)
 {
-	pWriter->Write<DWORD>(WEENIE_SAVE_FILE_VERSION);
-	pWriter->Write<DWORD>(m_SaveTimestamp);
-	pWriter->Write<DWORD>(m_SaveInstanceTS);
+	pWriter->Write<uint32_t>(WEENIE_SAVE_FILE_VERSION);
+	pWriter->Write<uint32_t>(m_SaveTimestamp);
+	pWriter->Write<uint32_t>(m_SaveInstanceTS);
 	m_Qualities.Pack(pWriter);
 	m_ObjDesc.Pack(pWriter);
 
 	m_WornObjDesc.Pack(pWriter); // temporary
 
-	DWORD header = 0;
+	uint32_t header = 0;
 	if (_playerModule)
 		header |= 1;
 	if (_equipment.size() > 0 || _inventory.size() > 0 || _packs.size() > 0)
@@ -39,7 +39,7 @@ DEFINE_PACK(CWeenieSave)
 	if (_questTable)
 		header |= 4;
 
-	pWriter->Write<DWORD>(header);
+	pWriter->Write<uint32_t>(header);
 	if (header & 1)
 	{
 		_playerModule->Pack(pWriter);
@@ -60,17 +60,17 @@ DEFINE_UNPACK(CWeenieSave)
 {
 	Destroy();
 
-	m_SaveVersion = pReader->Read<DWORD>();
-	m_SaveTimestamp = pReader->Read<DWORD>();
-	m_SaveInstanceTS = pReader->Read<DWORD>();
+	m_SaveVersion = pReader->Read<uint32_t>();
+	m_SaveTimestamp = pReader->Read<uint32_t>();
+	m_SaveInstanceTS = pReader->Read<uint32_t>();
 	m_Qualities.UnPack(pReader);
 	m_ObjDesc.UnPack(pReader);
 
 	if (m_SaveVersion < 3)
 	{
-		pReader->Read<DWORD>();
-		pReader->Read<DWORD>();
-		pReader->Read<DWORD>();
+		pReader->Read<uint32_t>();
+		pReader->Read<uint32_t>();
+		pReader->Read<uint32_t>();
 	}
 
 	m_WornObjDesc.UnPack(pReader); // temporary
@@ -78,7 +78,7 @@ DEFINE_UNPACK(CWeenieSave)
 	if (m_SaveVersion < 2)
 		return true;
 	
-	DWORD fields = pReader->Read<DWORD>();
+	uint32_t fields = pReader->Read<uint32_t>();
 	if (fields & 1)
 	{
 		_playerModule = new PlayerModule;

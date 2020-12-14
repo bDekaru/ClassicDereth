@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 
 #if PHATSDK_IS_SERVER
@@ -69,18 +69,18 @@ DEFINE_UNPACK(PublicWeenieDesc)
 {
 	Reset();
 
-	DWORD header = pReader->Read<DWORD>();
-	DWORD header2 = 0;
+	uint32_t header = pReader->Read<uint32_t>();
+	uint32_t header2 = 0;
 
 	_name = pReader->ReadString();
 	_wcid = pReader->Unpack_AsWClassIDCompressed();
 	_iconID = pReader->Unpack_AsDataIDOfKnownType(0x06000000);
-	_type = (ITEM_TYPE)pReader->Read<DWORD>();
-	_bitfield = pReader->Read<DWORD>();
+	_type = (ITEM_TYPE)pReader->Read<uint32_t>();
+	_bitfield = pReader->Read<uint32_t>();
 	pReader->ReadAlign();
 	
 	if (_bitfield & BitfieldIndex::BF_INCLUDES_SECOND_HEADER)
-		header2 = pReader->Read<DWORD>();
+		header2 = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_PluralName)
 		_plural_name = pReader->ReadString();
@@ -95,19 +95,19 @@ DEFINE_UNPACK(PublicWeenieDesc)
 		_ammoType = (AMMO_TYPE)pReader->Read<WORD>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Value)
-		_value = pReader->Read<DWORD>();
+		_value = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Useability)
-		_useability = (ITEM_USEABLE)pReader->Read<DWORD>();
+		_useability = (ITEM_USEABLE)pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_UseRadius)
 		_useRadius = pReader->Read<float>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_TargetType)
-		_targetType = (ITEM_TYPE)pReader->Read<DWORD>();
+		_targetType = (ITEM_TYPE)pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_UIEffects)
-		_effects = pReader->Read<DWORD>();
+		_effects = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_CombatUse)
 		_combatUse = (COMBAT_USE)pReader->Read<BYTE>();
@@ -125,19 +125,19 @@ DEFINE_UNPACK(PublicWeenieDesc)
 		_maxStackSize = pReader->Read<WORD>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_ContainerID)
-		_containerID = pReader->Read<DWORD>();
+		_containerID = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_WielderID)
-		_wielderID = pReader->Read<DWORD>();
+		_wielderID = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_ValidLocations)
-		_valid_locations = pReader->Read<DWORD>();
+		_valid_locations = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Location)
-		_location = pReader->Read<DWORD>();
+		_location = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Priority)
-		_priority = pReader->Read<DWORD>();
+		_priority = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_BlipColor)
 		_blipColor = pReader->Read<BYTE>();
@@ -158,7 +158,7 @@ DEFINE_UNPACK(PublicWeenieDesc)
 		_spellID = pReader->Read<WORD>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_HouseOwner)
-		_house_owner_iid = pReader->Read<DWORD>();
+		_house_owner_iid = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_HouseRestrictions)
 	{
@@ -167,10 +167,10 @@ DEFINE_UNPACK(PublicWeenieDesc)
 	}
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_HookItemTypes)
-		_hook_item_types = (ITEM_TYPE)pReader->Read<DWORD>();
+		_hook_item_types = (ITEM_TYPE)pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Monarch)
-		_monarch = pReader->Read<DWORD>();
+		_monarch = pReader->Read<uint32_t>();
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_HookType)
 		_hook_type = (ITEM_TYPE)pReader->Read<WORD>();
@@ -182,16 +182,16 @@ DEFINE_UNPACK(PublicWeenieDesc)
 		_iconUnderlayID = pReader->Unpack_AsDataIDOfKnownType(0x6000000);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_MaterialType)
-		_material_type = (MaterialType)pReader->Read<DWORD>();
+		_material_type = (MaterialType)pReader->Read<uint32_t>();
 
 	if (header2 & PublicWeenieDescPackHeader2::PWD2_Packed_CooldownID)
-		_cooldown_id = pReader->Read<DWORD>();
+		_cooldown_id = pReader->Read<uint32_t>();
 
 	if (header2 & PublicWeenieDescPackHeader2::PWD2_Packed_CooldownDuration)
 		_cooldown_duration = pReader->Read<double>();
 
 	if (header2 & PublicWeenieDescPackHeader2::PWD2_Packed_PetOwner)
-		_pet_owner = pReader->Read<DWORD>();
+		_pet_owner = pReader->Read<uint32_t>();
 
 	pReader->ReadAlign();
 	return true;
@@ -199,7 +199,7 @@ DEFINE_UNPACK(PublicWeenieDesc)
 
 DEFINE_PACK(PublicWeenieDesc)
 {
-	DWORD header2 = 0;
+	uint32_t header2 = 0;
 	if (_iconUnderlayID != 0)
 		header2 = 1;
 	if (_cooldown_id)
@@ -214,19 +214,19 @@ DEFINE_PACK(PublicWeenieDesc)
 	else
 		_bitfield &= ~BF_INCLUDES_SECOND_HEADER;
 
-	DWORD header = 0;
+	uint32_t header = 0;
 	set_pack_header(&header);
 
-	pWriter->Write<DWORD>(header);
+	pWriter->Write<uint32_t>(header);
 	pWriter->WriteString(_name);
 	pWriter->Pack_AsWClassIDCompressed(_wcid);
 	pWriter->Pack_AsDataIDOfKnownType(0x06000000, _iconID);
-	pWriter->Write<DWORD>(_type);
-	pWriter->Write<DWORD>(_bitfield);
+	pWriter->Write<uint32_t>(_type);
+	pWriter->Write<uint32_t>(_bitfield);
 	pWriter->Align();
 
 	if (_bitfield & BitfieldIndex::BF_INCLUDES_SECOND_HEADER)
-		pWriter->Write<DWORD>(header2);
+		pWriter->Write<uint32_t>(header2);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_PluralName)
 		pWriter->WriteString(_plural_name.c_str());
@@ -241,19 +241,19 @@ DEFINE_PACK(PublicWeenieDesc)
 		pWriter->Write<WORD>((AMMO_TYPE)_ammoType);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Value)
-		pWriter->Write<DWORD>(_value);
+		pWriter->Write<uint32_t>(_value);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Useability)
-		pWriter->Write<DWORD>((ITEM_USEABLE)_useability);
+		pWriter->Write<uint32_t>((ITEM_USEABLE)_useability);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_UseRadius)
 		pWriter->Write<float>(_useRadius);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_TargetType)
-		pWriter->Write<DWORD>((ITEM_TYPE)_targetType);
+		pWriter->Write<uint32_t>((ITEM_TYPE)_targetType);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_UIEffects)
-		pWriter->Write<DWORD>(_effects);
+		pWriter->Write<uint32_t>(_effects);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_CombatUse)
 		pWriter->Write<BYTE>((COMBAT_USE)_combatUse);
@@ -271,19 +271,19 @@ DEFINE_PACK(PublicWeenieDesc)
 		pWriter->Write<WORD>(_maxStackSize);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_ContainerID)
-		pWriter->Write<DWORD>(_containerID);
+		pWriter->Write<uint32_t>(_containerID);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_WielderID)
-		pWriter->Write<DWORD>(_wielderID);
+		pWriter->Write<uint32_t>(_wielderID);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_ValidLocations)
-		pWriter->Write<DWORD>(_valid_locations);
+		pWriter->Write<uint32_t>(_valid_locations);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Location)
-		pWriter->Write<DWORD>(_location);
+		pWriter->Write<uint32_t>(_location);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Priority)
-		pWriter->Write<DWORD>(_priority);
+		pWriter->Write<uint32_t>(_priority);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_BlipColor)
 		pWriter->Write<BYTE>(_blipColor);
@@ -304,7 +304,7 @@ DEFINE_PACK(PublicWeenieDesc)
 		pWriter->Write<WORD>(_spellID);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_HouseOwner)
-		pWriter->Write<DWORD>(_house_owner_iid);
+		pWriter->Write<uint32_t>(_house_owner_iid);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_HouseRestrictions)
 	{
@@ -312,10 +312,10 @@ DEFINE_PACK(PublicWeenieDesc)
 	}
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_HookItemTypes)
-		pWriter->Write<DWORD>((ITEM_TYPE)_hook_item_types);
+		pWriter->Write<uint32_t>((ITEM_TYPE)_hook_item_types);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_Monarch)
-		pWriter->Write<DWORD>(_monarch);
+		pWriter->Write<uint32_t>(_monarch);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_HookType)
 		pWriter->Write<WORD>((ITEM_TYPE)_hook_type);
@@ -327,21 +327,21 @@ DEFINE_PACK(PublicWeenieDesc)
 		pWriter->Pack_AsDataIDOfKnownType(0x6000000, _iconUnderlayID);
 
 	if (header & PublicWeenieDescPackHeader::PWD_Packed_MaterialType)
-		pWriter->Write<DWORD>((MaterialType)_material_type);
+		pWriter->Write<uint32_t>((MaterialType)_material_type);
 
 	if (header2 & PublicWeenieDescPackHeader2::PWD2_Packed_CooldownID)
-		pWriter->Write<DWORD>(_cooldown_id);
+		pWriter->Write<uint32_t>(_cooldown_id);
 
 	if (header2 & PublicWeenieDescPackHeader2::PWD2_Packed_CooldownDuration)
 		pWriter->Write<double>(_cooldown_duration);
 
 	if (header2 & PublicWeenieDescPackHeader2::PWD2_Packed_PetOwner)
-		pWriter->Write<DWORD>(_pet_owner);
+		pWriter->Write<uint32_t>(_pet_owner);
 
 	pWriter->Align();
 }
 
-void PublicWeenieDesc::set_pack_header(DWORD *header)
+void PublicWeenieDesc::set_pack_header(uint32_t *header)
 {
 	if (_plural_name.size())
 		*header |= 1;
@@ -419,13 +419,13 @@ void PublicWeenieDesc::SetPlayerKillerStatus(unsigned int pk)
 	switch (pk)
 	{
 	case 4:
-		_bitfield = _bitfield & 0xFDDFFFFF | 0x20;
+		_bitfield = (_bitfield & 0xFDDFFFFF) | 0x20;
 		break;
 	case 0x40:
-		_bitfield = _bitfield & 0xFFDFFFDF | 0x2000000;
+		_bitfield = (_bitfield & 0xFFDFFFDF) | 0x2000000;
 		break;
 	case 0x20:
-		_bitfield = _bitfield & 0xFDFFFFDF | 0x200000;
+		_bitfield = (_bitfield & 0xFDFFFFDF) | 0x200000;
 		break;
 	default:
 		_bitfield &= 0xFDDFFFDF;
@@ -435,9 +435,9 @@ void PublicWeenieDesc::SetPlayerKillerStatus(unsigned int pk)
 
 #if !PHATSDK_USE_WEENIE_STUB
 
-DWORD PublicWeenieDesc::CalculateBitfieldFromWeenie(CWeenieObject *weenie)
+uint32_t PublicWeenieDesc::CalculateBitfieldFromWeenie(CWeenieObject *weenie)
 {
-	DWORD bitfield = CalculateBitfieldFromQualities(&weenie->m_Qualities);
+	uint32_t bitfield = CalculateBitfieldFromQualities(&weenie->m_Qualities);
 
 	if (weenie->AsPlayer())
 	{
@@ -466,9 +466,9 @@ DWORD PublicWeenieDesc::CalculateBitfieldFromWeenie(CWeenieObject *weenie)
 	return bitfield;
 }
 
-DWORD PublicWeenieDesc::CalculateBitfieldFromQualities(CACQualities *qualities)
+uint32_t PublicWeenieDesc::CalculateBitfieldFromQualities(CACQualities *qualities)
 {
-	DWORD bitfield = 0;
+	uint32_t bitfield = 0;
 
 	switch (qualities->m_WeenieType)
 	{
@@ -504,6 +504,9 @@ DWORD PublicWeenieDesc::CalculateBitfieldFromQualities(CACQualities *qualities)
 		break;
 	case Lockpick_WeenieType:
 		bitfield |= BF_LOCKPICK;
+		break;
+	case Food_WeenieType:
+		bitfield |= BF_FOOD;
 		break;
 	}
 
@@ -587,7 +590,15 @@ PublicWeenieDesc *PublicWeenieDesc::CreateFromQualities(CACQualities *qualities)
 	desc->_blipColor = qualities->GetInt(RADARBLIP_COLOR_INT, 0);
 	desc->_radar_enum = (RadarEnum)qualities->GetInt(SHOWABLE_ON_RADAR_INT, 0);
 	desc->_pscript = (PScriptType) qualities->GetDID(RESTRICTION_EFFECT_DID, 0);
-	desc->_workmanship = (float) qualities->GetInt(ITEM_WORKMANSHIP_INT, 0); // questionable, casts to float
+	//calculate here for Salvage Workmanship Bags
+	if (qualities->GetInt(ITEM_TYPE_INT, 0) == ITEM_TYPE::TYPE_TINKERING_MATERIAL)
+	{
+		desc->_workmanship = (float)qualities->GetInt(ITEM_WORKMANSHIP_INT, 0) / (float)qualities->GetInt(NUM_ITEMS_IN_MATERIAL_INT, 0);
+	}
+	else if (qualities->GetInt(ITEM_WORKMANSHIP_INT, 0) > 0)
+	{
+		desc->_workmanship = (float)qualities->GetInt(ITEM_WORKMANSHIP_INT, 0);
+	}
 	desc->_burden = qualities->GetInt(ENCUMB_VAL_INT, 0);
 	desc->_spellID = qualities->GetDID(SPELL_DID, 0); // questionable
 	desc->_house_owner_iid = qualities->GetIID(HOUSE_OWNER_IID, 0);
@@ -612,17 +623,17 @@ RestrictionDB::RestrictionDB()
 
 DEFINE_PACK(RestrictionDB)
 {
-	pWriter->Write<DWORD>(0x10000002); // version number
-	pWriter->Write<DWORD>(_bitmask);
-	pWriter->Write<DWORD>(_monarch_iid);
+	pWriter->Write<uint32_t>(0x10000002); // version number
+	pWriter->Write<uint32_t>(_bitmask);
+	pWriter->Write<uint32_t>(_monarch_iid);
 	_table.Pack(pWriter);
 }
 
 DEFINE_UNPACK(RestrictionDB)
 {
-	pReader->Read<DWORD>(); // 0x10000002
-	_bitmask = pReader->Read<DWORD>();
-	_monarch_iid = pReader->Read<DWORD>();
+	pReader->Read<uint32_t>(); // 0x10000002
+	_bitmask = pReader->Read<uint32_t>();
+	_monarch_iid = pReader->Read<uint32_t>();
 	_table.UnPack(pReader);
 
 	return true;

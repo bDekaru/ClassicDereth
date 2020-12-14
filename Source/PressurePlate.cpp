@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PressurePlate.h"
 #include "World.h"
 #include "SpellcastingManager.h"
@@ -28,22 +28,23 @@ void CPressurePlateWeenie::Tick()
 
 int CPressurePlateWeenie::DoCollision(const class ObjCollisionProfile &prof)
 {
-	if (prof._bitfield & Player_OCPB)
+	if (prof._bitfield & Player_OCPB && next_activation_time <= Timer::cur_time)
 	{
 		Activate(prof.id);
+		next_activation_time = Timer::cur_time + 1.0;
 	}
 
 	return 1;
 }
 
-int CPressurePlateWeenie::Activate(DWORD activator_id)
+int CPressurePlateWeenie::Activate(uint32_t activator_id)
 {
-	CWeenieObject::Activate(activator_id);
+	//CWeenieObject::Activate(activator_id);
 
 	CWeenieObject *activator_weenie = g_pWorld->FindObject(activator_id);
 	if (activator_weenie && activator_weenie->_IsPlayer())
 	{
-		if (DWORD use_sound_did = InqDIDQuality(USE_SOUND_DID, 0))
+		if (uint32_t use_sound_did = InqDIDQuality(USE_SOUND_DID, 0))
 		{
 			CWeenieObject *weenie = g_pWorld->FindObject(activator_id);
 
@@ -53,7 +54,7 @@ int CPressurePlateWeenie::Activate(DWORD activator_id)
 			}
 		}
 
-		if (DWORD activation_target_id = InqIIDQuality(ACTIVATION_TARGET_IID, 0))
+		if (uint32_t activation_target_id = InqIIDQuality(ACTIVATION_TARGET_IID, 0))
 		{
 			CWeenieObject *activation_target = g_pWorld->FindObject(activation_target_id);
 			if (activation_target)
@@ -62,7 +63,7 @@ int CPressurePlateWeenie::Activate(DWORD activator_id)
 
 		if (InqIntQuality(ACTIVATION_RESPONSE_INT, 0) & CastSpell_ActivationResponse)
 		{
-			if (DWORD spell_did = InqDIDQuality(SPELL_DID, 0))
+			if (uint32_t spell_did = InqDIDQuality(SPELL_DID, 0))
 			{
 				MakeSpellcastingManager()->CastSpellInstant(activator_id, spell_did);
 			}

@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Logging.h"
 
 CLogger g_Logger;
@@ -15,7 +15,7 @@ CLogFile::~CLogFile()
 
 bool CLogFile::Open(const char *filepath)
 {
-	CScopedLock lock(this);
+	SCOPE_LOCK
 
 	Close();
 	m_File = fopen(filepath, "wt");
@@ -25,7 +25,7 @@ bool CLogFile::Open(const char *filepath)
 
 void CLogFile::Close()
 {
-	CScopedLock lock(this);
+	SCOPE_LOCK
 
 	if (m_File)
 	{
@@ -36,7 +36,7 @@ void CLogFile::Close()
 
 void CLogFile::Write(const char *text)
 {
-	CScopedLock lock(this);
+	SCOPE_LOCK
 
 	if (m_File)
 	{
@@ -55,7 +55,7 @@ CLogger::~CLogger()
 
 bool CLogger::Open()
 {
-	return m_Log.Open(g_pGlobals->GetGameFile(csprintf("Logs\\console_%s.txt", timestampDateStringForFileName(time(NULL)))).c_str());
+	return m_Log.Open(g_pGlobals->GetGameData("Logs", csprintf("console_%s.txt", timestampDateStringForFileName(time(NULL)))).c_str());
 }
 
 void CLogger::Close()
@@ -71,11 +71,11 @@ void CLogger::Write(int category, int level, const char *format, ...)
 
 	int charcount = _vscprintf(format, args) + 1;
 	char *charbuffer = new char[charcount];
-	_vsnprintf(charbuffer, charcount, format, args);
+	vsnprintf(charbuffer, charcount, format, args);
 
 	va_end(args);
 
-#ifdef _DEBUG
+#if defined(_WINDOWS) && defined(_DEBUG)
 	OutputDebugStringA(charbuffer);
 #endif
 

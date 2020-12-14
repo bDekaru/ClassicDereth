@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "PositionManager.h"
 
@@ -53,7 +53,7 @@ BOOL PositionManager::IsInterpolating()
 	return (interpolation_manager ? interpolation_manager->IsInterpolating() : FALSE);
 }
 
-void PositionManager::StickTo(DWORD object_id, float radius, float height)
+void PositionManager::StickTo(uint32_t object_id, float radius, float height)
 {
 	if (!sticky_manager)
 		sticky_manager = StickyManager::Create(physics_obj);
@@ -73,7 +73,7 @@ void PositionManager::HandleUpdateTarget(TargetInfo target_info)
 		sticky_manager->HandleUpdateTarget(TargetInfo(target_info));
 }
 
-DWORD PositionManager::GetStickyObjectID()
+uint32_t PositionManager::GetStickyObjectID()
 {
 	if (sticky_manager)
 		return sticky_manager->target_id;
@@ -182,8 +182,8 @@ void InterpolationManager::UseTime()
 		if (node_fail_counter <= 0)
 			return;
 
-		DWORD v7 = 0;
-		DWORD v8 = 0;
+		uint32_t v7 = 0;
+		uint32_t v8 = 0;
 		Position pos;
 		Vector v;
 		Position v14;

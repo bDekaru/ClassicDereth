@@ -24,7 +24,7 @@ enum DetectionType
 class DetectionInfo
 {
 public:
-	DWORD object_id;
+	uint32_t object_id;
 	DetectionType object_status;
 };
 
@@ -45,7 +45,7 @@ public:
 	void set_physobj(CPhysicsObj *pObject);
 
 	CPhysicsObj *physobj; // 0x0C
-	DWORD m_CellID; // 0x10
+	uint32_t m_CellID; // 0x10
 	class CObjCell *cell; // 0x14
 };
 
@@ -65,7 +65,7 @@ public:
 
 	void release_objects();
 
-	CPhysicsObj *get_object(DWORD iid);
+	CPhysicsObj *get_object(uint32_t iid);
 
 	virtual TransitionState find_collisions(class CTransition *);
 	virtual TransitionState find_env_collisions(class CTransition *transition);
@@ -82,29 +82,29 @@ public:
 	static void find_cell_list(Position *p, class CSphere *sphere, CELLARRAY *cell_array, SPHEREPATH *path);
 	static void find_cell_list(CELLARRAY *cell_array, CObjCell **check_cell, SPHEREPATH *path);
 
-	static CObjCell *GetVisible(DWORD cell_id);
+	static CObjCell *GetVisible(uint32_t cell_id, bool bDoPostLoad = true);
 
 	int check_collisions(CPhysicsObj *object);
 	LandDefs::WaterType get_block_water_type();
 	double get_water_depth(Vector *point);
 
-	DWORD water_type = 0; // 0x50
+	uint32_t water_type = 0; // 0x50
 	Position pos; // 0x54
 
-	DWORD num_objects = 0; // 0x9C
+	uint32_t num_objects = 0; // 0x9C
 	DArray<CPhysicsObj *> object_list; // 0xA0
 
 	// Light Information
-	DWORD num_lights = 0; // 0xB0
+	uint32_t num_lights = 0; // 0xB0
 	DArray<const LIGHTOBJ *> light_list; // 0xB4
 
-	DWORD num_shadow_objects = 0;
+	uint32_t num_shadow_objects = 0;
 	DArray<CShadowObj *> shadow_object_list; 
 
-	DWORD restriction_obj = 0;
+	uint32_t restriction_obj = 0;
 	ClipPlaneList **clip_planes = 0;
-	DWORD num_stabs = 0;
-	DWORD *stab_list = 0;
+	uint32_t num_stabs = 0;
+	uint32_t *stab_list = 0;
 	BOOL seen_outside = 0;
 	LongNIValHash<GlobalVoyeurInfo> *voyeur_table; // 0xEC
 	CLandBlock *myLandBlock_ = 0; // 0xF0

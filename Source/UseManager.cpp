@@ -1,7 +1,8 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "UseManager.h"
 #include "WeenieObject.h"
+#include "Animate.h"
 #include "World.h"
 #include "Container.h"
 #include "Player.h"
@@ -15,12 +16,18 @@ CUseEventData::CUseEventData()
 void CUseEventData::Update()
 {
 	CheckTimeout();
+
+	if (_move_to && InUseRange())
+	{
+		_weenie->DoForcedMotion(Motion_Ready);
+		HandleMoveToDone(WERROR_NONE);
+	}
 }
 
 void CUseEventData::SetupUse()
 {	
 	CWeenieObject *target = GetTarget();
-	if (target)
+	if (target && _max_use_distance == FLT_MAX) //change max use distance only if still the initialized value. Otherwise this has already been defined.)
 	{
 		_max_use_distance = target->InqFloatQuality(USE_RADIUS_FLOAT, 0.0);
 	}
@@ -91,6 +98,15 @@ void CUseEventData::MoveToUse()
 	params.min_distance = _max_use_distance;
 	params.action_stamp = ++_weenie->m_wAnimSequence;
 	_weenie->last_move_was_autonomous = false;
+	//if (CWeenieObject *target = GetTarget())
+	//{
+	//	if (target->AsPortal())
+	//	{
+	//		params.use_spheres = 0; // if we're using a portal we want to get to the center of it, not collide with it's sphere
+	//	}
+	//}
+
+
 	_weenie->MoveToObject(_target_id, &params);
 }
 
@@ -100,12 +116,32 @@ void CUseEventData::CheckTimeout()
 	{
 		if (_move_to)
 			Cancel(WERROR_MOVED_TOO_FAR);
+		else if (_recall_event)
+		{
+			// If you're in the max use range during a recall event, then the recall should still trigger. Otherwise you've moved too far.
+			if (InMoveRange())
+				OnUseAnimSuccess(_active_use_anim);
+			else
+				Cancel(WERROR_MOVED_TOO_FAR);
+		}
 		else
 			Cancel(0);
 	}
 }
 
-void CUseEventData::Cancel(DWORD error)
+bool CUseEventData::InMoveRange()
+{
+	return _weenie->m_Position.distance(_initial_use_position) <= _max_use_distance ? true : false;
+}
+
+void CUseEventData::SetupRecall()
+{
+	_max_use_distance = 5.0f;
+	_initial_use_position = _weenie->m_Position;
+	_recall_event = true;
+}
+
+void CUseEventData::Cancel(uint32_t error)
 {
 	CancelMoveTo();
 
@@ -132,7 +168,13 @@ double CUseEventData::DistanceToTarget()
 	if (!target)
 		return FLT_MAX;
 
-	return _weenie->DistanceTo(target, true);
+	//if (target->AsPortal())
+	//{
+	//	return _weenie->DistanceTo(target, false);
+	//}
+
+
+	return _weenie->DistanceTo(target, _max_use_distance >= 0);
 }
 
 double CUseEventData::HeadingDifferenceToTarget()
@@ -169,7 +211,12 @@ CWeenieObject *CUseEventData::GetTool()
 	return g_pWorld->FindObject(_tool_id);
 }
 
-void CUseEventData::HandleMoveToDone(DWORD error)
+CWeenieObject *CUseEventData::GetSourceItem()
+{
+	return g_pWorld->FindObject(_source_item_id);
+}
+
+void CUseEventData::HandleMoveToDone(uint32_t error)
 {
 	_move_to = false;
 
@@ -188,7 +235,7 @@ void CUseEventData::HandleMoveToDone(DWORD error)
 	OnReadyToUse();
 }
 
-void CUseEventData::OnMotionDone(DWORD motion, BOOL success)
+void CUseEventData::OnMotionDone(uint32_t motion, BOOL success)
 {
 	if (_move_to || !_active_use_anim)
 		return;
@@ -203,22 +250,23 @@ void CUseEventData::OnMotionDone(DWORD motion, BOOL success)
 		}
 		else
 		{
-			Cancel();
+			if(!_recall_event) // Don't cancel recall events on motion interrupts, such as jumping.
+				Cancel();
 		}
 	}	
 }
 
-void CUseEventData::OnUseAnimSuccess(DWORD motion)
+void CUseEventData::OnUseAnimSuccess(uint32_t motion)
 {
 	Done();
 }
 
-void CUseEventData::Done(DWORD error)
+void CUseEventData::Done(uint32_t error)
 {
 	_manager->OnUseDone(error);
 }
 
-void CUseEventData::ExecuteUseAnimation(DWORD motion, MovementParameters *params)
+void CUseEventData::ExecuteUseAnimation(uint32_t motion, MovementParameters *params)
 {
 	assert (!_move_to);
 	assert (!_active_use_anim);
@@ -231,12 +279,53 @@ void CUseEventData::ExecuteUseAnimation(DWORD motion, MovementParameters *params
 
 	_active_use_anim = motion;
 
-	DWORD error = _weenie->DoForcedMotion(motion, params);
+	uint32_t error = _weenie->DoForcedMotion(motion, params);
 
 	if (error)
 	{
 		Cancel(error);
 	}
+}
+
+bool CUseEventData::QuestRestrictions(CWeenieObject *target)
+{
+	std::string restriction;
+	if (target->m_Qualities.InqString(QUEST_RESTRICTION_STRING, restriction) && !restriction.empty()) //Allows for restrition of pickup if you are NOT flagged. (IE must have flag for use)
+	{
+		if (CPlayerWeenie *player = _weenie->AsPlayer())
+		{
+			if (!player->InqQuest(restriction.c_str()))
+			{
+				_weenie->DoForcedStopCompletely();
+				Cancel(WERROR_QUEST_RESRICTION_UNSOLVED); // Sends -> This item requires you to complete a specific quest before you can pick it up!
+				return true;
+			}
+		}
+	}
+
+	std::string questString;
+	if (target->m_Qualities.InqString(QUEST_STRING, questString) && !questString.empty()) //Used for restriction of pickup if quest is already solved. Common use is for timer restrictions.
+	{
+		if (_weenie->InqQuest(questString.c_str()))
+		{
+			int timeTilOkay = _weenie->InqTimeUntilOkayToComplete(questString.c_str());
+
+			if (timeTilOkay > 0)
+			{
+				std::string cdTime = ("You cannot complete this quest for another " + TimeToString(timeTilOkay) + ".");
+				_weenie->SendText(cdTime.c_str(), LTT_DEFAULT);
+			}
+
+			_weenie->DoForcedStopCompletely();
+			Cancel(WERROR_QUEST_SOLVED_TOO_RECENTLY);
+			return true;
+		}
+
+		_weenie->StampQuest(questString.c_str());
+		target->m_Qualities.SetString(QUEST_STRING, "");
+		
+	}
+	return false;
 }
 
 void CGenericUseEvent::OnReadyToUse()
@@ -251,7 +340,7 @@ void CGenericUseEvent::OnReadyToUse()
 	}
 }
 
-void CGenericUseEvent::OnUseAnimSuccess(DWORD motion)
+void CGenericUseEvent::OnUseAnimSuccess(uint32_t motion)
 {
 	Finish();
 }
@@ -280,6 +369,28 @@ void CGenericUseEvent::Finish()
 		{
 			Cancel(WERROR_TOO_FAR);
 			return;
+		}
+
+		// Prevent items like Head of the Homunculus, Wallbound Niffis, Tursh Totem, etc. from being used in packs.
+		if (target->InqIntQuality(HOOK_GROUP_INT, 0))
+		{
+			Cancel(WERROR_HOOKER_NOT_USEABLE_OFF_HOOK);
+			return;
+		}
+
+		uint32_t createWcid;
+		if (target->m_Qualities.InqDataID(USE_CREATE_ITEM_DID, createWcid))
+		{
+			CPlayerWeenie *player = g_pWorld->FindPlayer(_weenie->GetID());
+			if (player)
+			{
+				if (!player->SpawnInContainer(createWcid, target->InqIntQuality(USE_CREATE_QUANTITY_INT, 1)))
+				{
+					player->SendText("Not enough pack space!", LTT_ERROR);
+					Done(error);
+					return;
+				}
+			}
 		}
 		
 		if (_do_use_response)
@@ -329,6 +440,7 @@ void CActivationUseEvent::OnReadyToUse()
 	if (target)
 	{
 		target->Activate(_weenie->GetID());
+		target->DoUseEmote(_weenie);
 	}
 
 	Done();
@@ -344,10 +456,30 @@ void CInventoryUseEvent::SetupUse()
 
 void CPickupInventoryUseEvent::OnReadyToUse()
 {
-	ExecuteUseAnimation(Motion_Pickup);
+	CWeenieObject *target = GetTarget();
+
+	if (target->HasOwner()) {
+		
+		if (this->_target_container_id == _weenie->GetID())
+			target = target->GetWorldTopLevelOwner();
+		else
+			target = g_pWorld->FindObject(this->_target_container_id);
+	}
+
+	float z1 = target->m_Position.frame.m_origin.z;
+	float z2 = _weenie->m_Position.frame.m_origin.z;
+
+	if (z1 - z2 >= 1.9)
+		ExecuteUseAnimation(Motion_Pickup20);
+	else if (z1 - z2 >= 1.4)
+		ExecuteUseAnimation(Motion_Pickup15);
+	else if (z1 - z2 >= 0.9)
+		ExecuteUseAnimation(Motion_Pickup10);
+	else
+		ExecuteUseAnimation(Motion_Pickup);
 }
 
-void CPickupInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
+void CPickupInventoryUseEvent::OnUseAnimSuccess(uint32_t motion)
 {
 	CWeenieObject *target = GetTarget();
 	if (!target && _target_id)
@@ -362,36 +494,9 @@ void CPickupInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
 		return;
 	}
 
-	std::string questString;
-	if (target->m_Qualities.InqString(QUEST_STRING, questString) && !questString.empty())
+	if (QuestRestrictions(target))
 	{
-		if (_weenie->InqQuest(questString.c_str()))
-		{
-			int timeTilOkay = _weenie->InqTimeUntilOkayToComplete(questString.c_str());
-
-			if (timeTilOkay > 0)
-			{
-				int secs = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int mins = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int hours = timeTilOkay % 24;
-				timeTilOkay /= 24;
-
-				int days= timeTilOkay;
-
-				_weenie->SendText(csprintf("You cannot complete this quest for another %dd %dh %dm %ds.", days, hours, mins, secs), LTT_DEFAULT);
-			}
-
-			_weenie->DoForcedStopCompletely();
-			Cancel(WERROR_QUEST_SOLVED_TOO_RECENTLY);
-			return;
-		}
-
-		_weenie->StampQuest(questString.c_str());
-		target->m_Qualities.SetString(QUEST_STRING, "");
+		return;
 	}
 
 	bool success = _weenie->AsPlayer()->MoveItemToContainer(_source_item_id, _target_container_id, _target_slot, true);
@@ -411,7 +516,7 @@ void CDropInventoryUseEvent::OnReadyToUse()
 	ExecuteUseAnimation(Motion_Pickup);
 }
 
-void CDropInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
+void CDropInventoryUseEvent::OnUseAnimSuccess(uint32_t motion)
 {
 	CWeenieObject *target = GetTarget();
 	if (!target && _target_id)
@@ -449,7 +554,7 @@ void CMoveToWieldInventoryUseEvent::OnReadyToUse()
 	ExecuteUseAnimation(Motion_Pickup);
 }
 
-void CMoveToWieldInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
+void CMoveToWieldInventoryUseEvent::OnUseAnimSuccess(uint32_t motion)
 {
 	CWeenieObject *target = GetTarget();
 	if (!target && _target_id)
@@ -464,36 +569,9 @@ void CMoveToWieldInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
 		return;
 	}
 
-	std::string questString;
-	if (target->m_Qualities.InqString(QUEST_STRING, questString) && !questString.empty())
+	if (QuestRestrictions(target))
 	{
-		if (_weenie->InqQuest(questString.c_str()))
-		{
-			int timeTilOkay = _weenie->InqTimeUntilOkayToComplete(questString.c_str());
-
-			if (timeTilOkay > 0)
-			{
-				int secs = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int mins = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int hours = timeTilOkay % 24;
-				timeTilOkay /= 24;
-
-				int days = timeTilOkay;
-
-				_weenie->SendText(csprintf("You cannot complete this quest for another %dd %dh %dm %ds.", days, hours, mins, secs), LTT_DEFAULT);
-			}
-
-			_weenie->DoForcedStopCompletely();
-			Cancel(WERROR_QUEST_SOLVED_TOO_RECENTLY);
-			return;
-		}
-
-		_weenie->StampQuest(questString.c_str());
-		target->m_Qualities.SetString(QUEST_STRING, "");
+		return;
 	}
 
 	bool success = _weenie->AsPlayer()->MoveItemToWield(_sourceItemId, _targetLoc, true);
@@ -513,7 +591,7 @@ void CStackMergeInventoryUseEvent::OnReadyToUse()
 	ExecuteUseAnimation(Motion_Pickup);
 }
 
-void CStackMergeInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
+void CStackMergeInventoryUseEvent::OnUseAnimSuccess(uint32_t motion)
 {
 	CWeenieObject *target = GetTarget();
 	if (!target && _target_id)
@@ -528,46 +606,30 @@ void CStackMergeInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
 		return;
 	}
 
-	std::string questString;
-	if (target->m_Qualities.InqString(QUEST_STRING, questString) && !questString.empty())
+	if (QuestRestrictions(target))
 	{
-		if (_weenie->InqQuest(questString.c_str()))
-		{
-			int timeTilOkay = _weenie->InqTimeUntilOkayToComplete(questString.c_str());
-
-			if (timeTilOkay > 0)
-			{
-				int secs = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int mins = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int hours = timeTilOkay % 24;
-				timeTilOkay /= 24;
-
-				int days = timeTilOkay;
-
-				_weenie->SendText(csprintf("You cannot complete this quest for another %dd %dh %dm %ds.", days, hours, mins, secs), LTT_DEFAULT);
-			}
-
-			_weenie->DoForcedStopCompletely();
-			Cancel(WERROR_QUEST_SOLVED_TOO_RECENTLY);
-			return;
-		}
-
-		_weenie->StampQuest(questString.c_str());
-		target->m_Qualities.SetString(QUEST_STRING, "");
+		return;
 	}
 
-	bool success = _weenie->AsPlayer()->MergeItem(_sourceItemId, _targetItemId, _amountToTransfer, true);
+	//disabled the following code as it bugs picking up stackable items(such as pyreals) while having some of them in your inventory.
+	//uint32_t owner = 0;
+	//if (target->m_Qualities.InqInstanceID(OWNER_IID, owner) && owner != _weenie->GetID())
+	//{
+	//	_weenie->NotifyInventoryFailedEvent(_sourceItemId, WERROR_OBJECT_GONE);
+	//	_weenie->DoForcedStopCompletely();
+	//	Cancel();
+	//}
+	//else
+	//{
+		bool success = _weenie->AsPlayer()->MergeItem(_sourceItemId, _targetItemId, _amountToTransfer, true);
 
-	_weenie->DoForcedStopCompletely();
+		_weenie->DoForcedStopCompletely();
 
-	if (!success)
-		Cancel();
-	else
-		Done();
+		if (!success)
+			Cancel();
+		else
+			Done();
+	//}
 }
 
 //-------------------------------------------------------------------------------------
@@ -577,7 +639,7 @@ void CStackSplitToContainerInventoryUseEvent::OnReadyToUse()
 	ExecuteUseAnimation(Motion_Pickup);
 }
 
-void CStackSplitToContainerInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
+void CStackSplitToContainerInventoryUseEvent::OnUseAnimSuccess(uint32_t motion)
 {
 	CWeenieObject *target = GetTarget();
 	if (!target && _target_id)
@@ -592,36 +654,9 @@ void CStackSplitToContainerInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
 		return;
 	}
 
-	std::string questString;
-	if (target->m_Qualities.InqString(QUEST_STRING, questString) && !questString.empty())
+	if (QuestRestrictions(target))
 	{
-		if (_weenie->InqQuest(questString.c_str()))
-		{
-			int timeTilOkay = _weenie->InqTimeUntilOkayToComplete(questString.c_str());
-
-			if (timeTilOkay > 0)
-			{
-				int secs = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int mins = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int hours = timeTilOkay % 24;
-				timeTilOkay /= 24;
-
-				int days = timeTilOkay;
-
-				_weenie->SendText(csprintf("You cannot complete this quest for another %dd %dh %dm %ds.", days, hours, mins, secs), LTT_DEFAULT);
-			}
-
-			_weenie->DoForcedStopCompletely();
-			Cancel(WERROR_QUEST_SOLVED_TOO_RECENTLY);
-			return;
-		}
-
-		_weenie->StampQuest(questString.c_str());
-		target->m_Qualities.SetString(QUEST_STRING, "");
+		return;
 	}
 
 	bool success = _weenie->AsPlayer()->SplitItemToContainer(_sourceItemId, _targetContainerId, _targetSlot, _amountToTransfer, true);
@@ -642,7 +677,7 @@ void CStackSplitTo3DInventoryUseEvent::OnReadyToUse()
 	ExecuteUseAnimation(Motion_Pickup);
 }
 
-void CStackSplitTo3DInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
+void CStackSplitTo3DInventoryUseEvent::OnUseAnimSuccess(uint32_t motion)
 {
 	CWeenieObject *target = GetTarget();
 	if (!target && _target_id)
@@ -657,36 +692,9 @@ void CStackSplitTo3DInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
 		return;
 	}
 
-	std::string questString;
-	if (target->m_Qualities.InqString(QUEST_STRING, questString) && !questString.empty())
+	if (QuestRestrictions(target))
 	{
-		if (_weenie->InqQuest(questString.c_str()))
-		{
-			int timeTilOkay = _weenie->InqTimeUntilOkayToComplete(questString.c_str());
-
-			if (timeTilOkay > 0)
-			{
-				int secs = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int mins = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int hours = timeTilOkay % 24;
-				timeTilOkay /= 24;
-
-				int days = timeTilOkay;
-
-				_weenie->SendText(csprintf("You cannot complete this quest for another %dd %dh %dm %ds.", days, hours, mins, secs), LTT_DEFAULT);
-			}
-
-			_weenie->DoForcedStopCompletely();
-			Cancel(WERROR_QUEST_SOLVED_TOO_RECENTLY);
-			return;
-		}
-
-		_weenie->StampQuest(questString.c_str());
-		target->m_Qualities.SetString(QUEST_STRING, "");
+		return;
 	}
 
 	bool success = _weenie->AsPlayer()->SplitItemto3D(_sourceItemId, _amountToTransfer, true);
@@ -706,7 +714,7 @@ void CStackSplitToWieldInventoryUseEvent::OnReadyToUse()
 	ExecuteUseAnimation(Motion_Pickup);
 }
 
-void CStackSplitToWieldInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
+void CStackSplitToWieldInventoryUseEvent::OnUseAnimSuccess(uint32_t motion)
 {
 	CWeenieObject *target = GetTarget();
 	if (!target && _target_id)
@@ -721,36 +729,9 @@ void CStackSplitToWieldInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
 		return;
 	}
 
-	std::string questString;
-	if (target->m_Qualities.InqString(QUEST_STRING, questString) && !questString.empty())
+	if (QuestRestrictions(target))
 	{
-		if (_weenie->InqQuest(questString.c_str()))
-		{
-			int timeTilOkay = _weenie->InqTimeUntilOkayToComplete(questString.c_str());
-
-			if (timeTilOkay > 0)
-			{
-				int secs = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int mins = timeTilOkay % 60;
-				timeTilOkay /= 60;
-
-				int hours = timeTilOkay % 24;
-				timeTilOkay /= 24;
-
-				int days = timeTilOkay;
-
-				_weenie->SendText(csprintf("You cannot complete this quest for another %dd %dh %dm %ds.", days, hours, mins, secs), LTT_DEFAULT);
-			}
-
-			_weenie->DoForcedStopCompletely();
-			Cancel(WERROR_QUEST_SOLVED_TOO_RECENTLY);
-			return;
-		}
-
-		_weenie->StampQuest(questString.c_str());
-		target->m_Qualities.SetString(QUEST_STRING, "");
+		return;
 	}
 
 	bool success = _weenie->AsPlayer()->SplitItemToWield(_sourceItemId, _targetLoc, _amountToTransfer, true);
@@ -761,6 +742,63 @@ void CStackSplitToWieldInventoryUseEvent::OnUseAnimSuccess(DWORD motion)
 		Cancel();
 	else
 		Done();
+}
+
+//-------------------------------------------------------------------------------------
+
+void CGiveEvent::OnReadyToUse()
+{
+	ExecuteUseAnimation(Motion_Ready);
+}
+
+void CGiveEvent::OnUseAnimSuccess(uint32_t motion)
+{
+	CWeenieObject *giveTarget = GetTarget();
+
+	if (giveTarget)
+	{
+		CContainerWeenie *target = giveTarget->AsContainer();
+		CWeenieObject *source = GetSourceItem();
+		if (!target || !source)
+		{
+			_weenie->NotifyInventoryFailedEvent(_source_item_id, WERROR_NONE);
+			return Done(WERROR_OBJECT_GONE);
+		}
+		_weenie->AsMonster()->FinishGiveItem(target, source, _transfer_amount);
+		Done();
+	}
+	else
+	{
+		_weenie->NotifyInventoryFailedEvent(_source_item_id, WERROR_NONE);
+		return Done(WERROR_OBJECT_GONE);
+	}
+}
+
+void CGiveEvent::Cancel(uint32_t error) //This override will capture all Use_Manger/Movement Errors and tack on an inventory failed event so we don't get stuck in a busy state if our give action is cancelled.
+{
+	CancelMoveTo();
+	_weenie->NotifyInventoryFailedEvent(_source_item_id, WERROR_NONE);
+	_manager->OnUseCancelled(error);
+}
+
+//-------------------------------------------------------------------------------------
+
+void CTradeUseEvent::OnReadyToUse()
+{
+	ExecuteUseAnimation(Motion_Ready);
+}
+
+void CTradeUseEvent::OnUseAnimSuccess(uint32_t motion)
+{
+	CPlayerWeenie *target = GetTarget()->AsPlayer();
+	if (!target)
+		return Done(WERROR_OBJECT_GONE);
+	
+	TradeManager *tm = TradeManager::RegisterTrade(_weenie->AsPlayer(), target);
+
+	_weenie->AsPlayer()->SetTradeManager(tm);
+	target->SetTradeManager(tm);
+	Done();
 }
 
 //-------------------------------------------------------------------------------------
@@ -794,7 +832,7 @@ void UseManager::Cancel()
 	}
 }
 
-void UseManager::OnUseCancelled(DWORD error)
+void UseManager::OnUseCancelled(uint32_t error)
 {
 	if (_useData)
 	{
@@ -812,7 +850,7 @@ void UseManager::OnUseCancelled(DWORD error)
 	}
 }
 
-void UseManager::OnUseDone(DWORD error)
+void UseManager::OnUseDone(uint32_t error)
 {
 	if (_useData)
 	{
@@ -839,12 +877,12 @@ void UseManager::Update()
 	SafeDelete(_cleanupData);
 }
 
-void UseManager::OnDeath(DWORD killer_id)
+void UseManager::OnDeath(uint32_t killer_id)
 {
 	Cancel();
 }
 
-void UseManager::HandleMoveToDone(DWORD error)
+void UseManager::HandleMoveToDone(uint32_t error)
 {
 	if (_useData)
 	{
@@ -852,7 +890,7 @@ void UseManager::HandleMoveToDone(DWORD error)
 	}
 }
 
-void UseManager::OnMotionDone(DWORD motion, BOOL success)
+void UseManager::OnMotionDone(uint32_t motion, BOOL success)
 {
 	if (_useData)
 	{
@@ -863,6 +901,11 @@ void UseManager::OnMotionDone(DWORD motion, BOOL success)
 bool UseManager::IsUsing()
 {
 	return _useData != NULL ? true : false;
+}
+
+bool UseManager::IsMoving()
+{
+	return IsUsing() && _useData->_move_to != 0 ? true : false;
 }
 
 void UseManager::BeginUse(CUseEventData *data)

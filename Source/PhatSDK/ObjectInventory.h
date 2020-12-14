@@ -10,8 +10,8 @@ public:
 
 	int operator==(const ContentProfile &other);
 
-	DWORD m_iid = 0;
-	DWORD m_uContainerProperties = 0;
+	uint32_t m_iid = 0;
+	uint32_t m_uContainerProperties = 0;
 };
 
 class InventoryPlacement : public PackObj
@@ -27,7 +27,7 @@ public:
 class CObjectInventory : public LongHashData
 {
 public:
-	PackableList<DWORD> _itemsList; // IDList
-	PackableList<DWORD> _containersList; // IDList
+	PackableList<uint32_t> _itemsList; // IDList
+	PackableList<uint32_t> _containersList; // IDList
 	PackableList<InventoryPlacement> _invPlacement;
 };

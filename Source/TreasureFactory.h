@@ -1,4 +1,3 @@
-
 #pragma once
 
 enum eElements
@@ -9,7 +8,8 @@ enum eElements
 	cold = 4,
 	fire = 5,
 	acid = 6,
-	lightning = 7
+	lightning = 7,
+	nether = 8
 };
 
 enum eWieldRequirements
@@ -49,7 +49,11 @@ enum eTreasureCategory
 	TreasureCategory_Consumable = 11, //unconfirmed
 	TreasureCategory_Healer = 12, //unconfirmed
 	TreasureCategory_Lockpick = 13, //unconfirmed
-	TreasureCategory_Pea = 14 //unconfirmed
+	TreasureCategory_Pea = 14, //unconfirmed
+	TreasureCategory_Gem = 15, //unconfirmed
+	TreasureCategory_PetDevices = 16,
+	TreasureCategory_Cloaks = 17,
+	TreasureCategory_Aetheria = 18
 };
 
 enum eAppraisalLongDescDecorations
@@ -101,18 +105,20 @@ class CPossibleSpells
 {
 public:
 	std::string spellName;
-	eSpellCategory spellCategory;
+	eSpellCategory spellCategory = eSpellCategory::noCategory;
 	std::vector<int> spells;
 	std::vector<int> cantrips;
 
-	int id;
+	int id = 0;
 };
 
 class CWieldTier
 {
 public:
 	int weaponSkillRequired;
+	float minAttackSkillBonus;
 	float maxAttackSkillBonus;
+	float minMeleeDefenseBonus;
 	float maxMeleeDefenseBonus;
 	float maxMissileDefenseBonus;
 	float maxMagicDefenseBonus;
@@ -154,10 +160,15 @@ public:
 	int maxElementalDamageBonus;
 
 	//casters
+	float minManaConversionBonus;
 	float maxManaConversionBonus;
 	float minElementalDamageMod;
 	float maxElementalDamageMod;
 	float manaConversionBonusChance;
+
+	//gems
+	int gemTier;
+	float spellChance;
 
 	//armor
 	int armorWieldTier;
@@ -195,11 +206,37 @@ public:
 	int tierId;
 	std::vector<std::string> miscItemsCategories;
 	std::vector<std::string> scrollCategories;
+	std::vector<std::string> petDeviceCategories;
+	
 
 	float lootChance;
 	float chestLootChance;
 	float miscLootChance;
 	float scrollLootChance;
+	float petdeviceLootChance;
+
+	// cloaks
+	std::vector<std::string> cloakCategories;
+	std::vector<std::string> cloakRatings;
+	float cloakLootChance;
+	int mincloakrating;
+	int maxcloakrating;
+	int mincloaklevel;
+	int maxcloaklevel;
+
+	// aetheria
+	std::vector<std::string> aetheriaCategories;
+	float aetheriaLootChance;
+	int aetheriaBluemin;
+	int aetheriaBluemax;
+	int aetheriaYellowmin;
+	int aetheriaYellowmax;
+	int aetheriaRedmin;
+	int aetheriaRedmax;
+
+	// armor set
+	std::vector<std::string> armorsetcategories;
+	float armorsetchance;
 
 	float lootAmountMultiplier;
 	float chestLootAmountMultiplier;
@@ -212,6 +249,8 @@ public:
 	int maxMissileWeaponWieldTier;
 	int minCasterWieldTier;
 	int maxCasterWieldTier;
+	int minGemTier;
+	int maxGemTier;
 
 	int minArmorWieldTier;
 	int maxArmorWieldTier;
@@ -228,6 +267,7 @@ public:
 	int armorLootProportion;
 	int clothingLootProportion;
 	int jewelryLootProportion;
+	int gemLootProportion;
 
 	std::vector<std::string> commonArmorCategoryNames;
 	std::vector<std::string> rareArmorCategoryNames;
@@ -283,6 +323,12 @@ public:
 	double qualityModifier = 0.0;
 };
 
+class CRareTier
+{
+public:
+	std::vector<int> rareTierWcids;
+};
+
 class CTreasureProfile : public PackableJson
 {
 public:
@@ -295,18 +341,31 @@ public:
 
 	std::vector<CTreasureProfileCategory> meleeWeapons;
 	std::vector<CTreasureProfileCategory> missileWeapons;
-	CTreasureProfileCategory casters;
+	std::vector<CTreasureProfileCategory> casters;
+	CTreasureProfileCategory gemstones;
 	CTreasureArmorProfile armor;
 	std::vector<CTreasureProfileCategory> clothing;
 	std::vector<CTreasureProfileCategory> jewelry;
 	std::vector<CTreasureProfileCategory> miscItems;
 	std::vector<CTreasureProfileCategory> scrolls;
+	std::vector<CTreasureProfileCategory> petdevices;
+
+	// cloaks
+	std::vector<CTreasureProfileCategory> cloaks;
+	std::vector<CTreasureProfileCategory> cloakratings;
+
+	// aetheria
+	std::vector<CTreasureProfileCategory> aetheria;
+
+	// armor sets
+	std::vector<CTreasureProfileCategory> armorSets;
 
 	CSpellProperties spellProperties;
 
 	std::vector<CPossibleSpells> meleeWeaponSpells;
 	std::vector<CPossibleSpells> missileWeaponSpells;
 	std::vector<CPossibleSpells> casterSpells;
+	std::vector<CPossibleSpells> gemSpells;
 	std::vector<CPossibleSpells> shieldSpells;
 	std::vector<CPossibleSpells> jewelrySpells;
 
@@ -327,13 +386,14 @@ public:
 
 	std::map<int, int> chestTreasureTypeReplacementTable;
 	std::map<int, CTreasureType> treasureTypeOverrides;
+	std::map<int, CRareTier> rareTiers;
 
 	bool isInitialized;
 	int nextSpellId;
 	std::map<std::string, int> spellNameToIdMap;
 	std::map<int, CPossibleSpells> spells;
 
-	void ComputeUniqueSpellIds(std::vector<CPossibleSpells> spellList);
+    std::vector<CPossibleSpells> ComputeUniqueSpellIds(std::vector<CPossibleSpells> spellList);
 	void Initialize();
 };
 
@@ -361,7 +421,7 @@ struct SItemListCreationData
 	CWeenieObject *parent;
 	int destinationType;
 	bool isRegenLocationType;
-	DWORD treasureTypeOrWcid;
+	uint32_t treasureTypeOrWcid;
 	unsigned int ptid;
 	float shade;
 	const GeneratorProfile *profile;
@@ -386,28 +446,38 @@ public:
 	MaterialType TranslateMaterialStringToEnumValue(std::string stringValue);
 	STypeSkill TranslateSkillStringToEnumValue(std::string stringValue);
 	CreatureType TranslateCreatureStringToEnumValue(std::string stringValue);
+	int RollPaletteTemplateIDFromMaterialAndColorCode(MaterialType material);
 
 	void Initialize();
 
-	int GenerateFromTypeOrWcid(CWeenieObject *parent, int destinationType, bool isRegenLocationType, DWORD treasureTypeOrWcid, unsigned int ptid = 0, float shade = 0.0f, const GeneratorProfile *profile = NULL);
-	int GenerateFromType(CTreasureType *type, CWeenieObject *parent, int destinationType, bool isRegenLocationType, DWORD treasureTypeOrWcid, unsigned int ptid = 0, float shade = 0.0f, const GeneratorProfile *profile = NULL);
+	int GenerateFromTypeOrWcid(CWeenieObject *parent, int destinationType, bool isRegenLocationType, uint32_t treasureTypeOrWcid, unsigned int ptid = 0, float shade = 0.0f, const GeneratorProfile *profile = NULL);
+	int GenerateFromType(CTreasureType *type, CWeenieObject *parent, int destinationType, bool isRegenLocationType, uint32_t treasureTypeOrWcid, unsigned int ptid = 0, float shade = 0.0f, const GeneratorProfile *profile = NULL);
+	int GenerateRareItem(CWeenieObject *parent, CWeenieObject *killer);
 
-	//bool AddTreasureToContainerInferred(CContainerWeenie *container, DWORD treasureType);
+	//bool AddTreasureToContainerInferred(CContainerWeenie *container, uint32_t treasureType);
 	//CWeenieObject *GenerateMundaneItemInferred(int tierId, eTreasureCategory treasureCategory);
 
 	CWeenieObject *GenerateTreasure(int tier, eTreasureCategory treasureCategory, double qualityModifier = 0.0);
 	CWeenieObject *GenerateJunk();
 	CWeenieObject *GenerateMundaneItem(CTreasureTier *tier);
+	CWeenieObject *GenerateRandomRareByTier(int rareTier);
 	CWeenieObject *GenerateScroll(CTreasureTier *tier);
+	CWeenieObject *GeneratePetDevice(CTreasureTier *tier);
+	CWeenieObject *GenerateCloak(CTreasureTier *tier);
+	CWeenieObject *GenerateAetheria(CTreasureTier *tier);
 
+	uint32_t GeneratePetDeviceRating(float tier);
 	bool MutateItem(CWeenieObject *newItem, sItemCreationInfo &creationInfo, CTreasureTier *tier, CTreasureProfileCategory *category, CItemTreasureProfileEntry *entry);
 
 	void MutateWeapon(CWeenieObject *newItem, CWieldTier *wieldTier, sItemCreationInfo &creationInfo, CTreasureTier *tier, CTreasureProfileCategory *category, CItemTreasureProfileEntry *entry);
 	void MutateMeleeWeapon(CWeenieObject *newItem, CWieldTier *wieldTier, sItemCreationInfo &creationInfo, CTreasureTier *tier, CTreasureProfileCategory *category, CItemTreasureProfileEntry *entry);
 	void MutateMissileWeapon(CWeenieObject *newItem, CWieldTier *wieldTier, sItemCreationInfo &creationInfo, CTreasureTier *tier, CTreasureProfileCategory *category, CItemTreasureProfileEntry *entry);
 	void MutateCaster(CWeenieObject *newItem, CWieldTier *wieldTier, sItemCreationInfo &creationInfo, CTreasureTier *tier, CTreasureProfileCategory *category, CItemTreasureProfileEntry *entry);
+	void MutateGem(CWeenieObject *newItem, CWieldTier *wieldTier, sItemCreationInfo &creationInfo, CTreasureTier *tier, CTreasureProfileCategory *category, CItemTreasureProfileEntry *entry);
 	void MutateArmor(CWeenieObject *newItem, CWieldTier *wieldTier, sItemCreationInfo &creationInfo, CTreasureTier *tier, CTreasureProfileCategory *category, CItemTreasureProfileEntry *entry);
+	CWeenieObject* MutateAetheria(CWeenieObject *newItem);
 	std::vector<CPossibleSpells> MergeSpellLists(std::vector<CPossibleSpells> list1, std::vector<CPossibleSpells> list2);
 	void AddSpells(CWeenieObject *newItem, sItemCreationInfo &creationInfo, CTreasureTier *tier, CTreasureProfileCategory *category, CItemTreasureProfileEntry *entry);
 	void AddSpell(CWeenieObject * newItem, std::vector<CPossibleSpells> possibleSpellsTemplate, sItemCreationInfo &creationInfo, CTreasureTier *tier, CTreasureProfileCategory *category, CItemTreasureProfileEntry *entry);
+	uint32_t GetIconOverlayByLevel(int level);
 };

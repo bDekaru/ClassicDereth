@@ -14,6 +14,23 @@ enum ExperienceType
 	Credit_ExperienceType
 };
 
+enum ExperienceHandlingType
+{
+	NoHandling				= 0x00,
+	ApplyLevelMod		= 0x01,
+	ShareWithFellows	= 0x02,
+	AddFellowshipBonus	= 0x04,
+	ShareWithAllegiance	= 0x08,
+	ApplyToVitae		= 0x10,
+	EarnsCP				= 0x20,
+	ReducedByDistance	= 0x40,
+
+	DefaultXp = ApplyLevelMod | ShareWithFellows | AddFellowshipBonus | ShareWithAllegiance | ApplyToVitae | ReducedByDistance,
+	QuestXp = ShareWithFellows | ShareWithAllegiance | ApplyToVitae | ReducedByDistance,
+	QuestXpNoShare = ApplyToVitae,
+	PossibleItemXp = ShareWithFellows | ShareWithAllegiance | ApplyToVitae
+};
+
 class ExperienceTable : public PackObj, public DBObj
 {
 public:
@@ -26,51 +43,60 @@ public:
 
 	void Clear();
 
-	DWORD GetAttributeLevelForExperience(DWORD exp);
-	DWORD GetAttribute2ndLevelForExperience(DWORD exp);
-	DWORD GetTrainedSkillLevelForExperience(DWORD exp);
-	DWORD GetSpecializedSkillLevelForExperience(DWORD exp);
-	DWORD GetLevelForExperience(ExperienceType type, DWORD exp);
-	DWORD GetExperienceForLevel(ExperienceType type, DWORD level);
+	uint32_t GetAttributeLevelForExperience(uint32_t exp);
+	uint32_t GetAttribute2ndLevelForExperience(uint32_t exp);
+	uint32_t GetTrainedSkillLevelForExperience(uint32_t exp);
+	uint32_t GetSpecializedSkillLevelForExperience(uint32_t exp);
+	uint32_t GetLevelForExperience(ExperienceType type, uint32_t exp);
+	uint32_t GetExperienceForLevel(ExperienceType type, uint32_t level);
 
-	DWORD GetExperienceForTrainedSkillLevel(DWORD level);
-	DWORD GetExperienceForSpecializedSkillLevel(DWORD level);
+	uint32_t GetExperienceForTrainedSkillLevel(uint32_t level);
+	uint32_t GetExperienceForSpecializedSkillLevel(uint32_t level);
 
-	DWORD GetCreditsForLevel(unsigned int level);
+	uint32_t GetCreditsForLevel(unsigned int level);
 	UINT64 GetExperienceForLevel(unsigned int level);
-	DWORD GetMaxLevel();
+	uint32_t GetMaxLevel();
 
-	unsigned long _max_attribute_level = 0;
-	unsigned long * _attribute_table = NULL;
-	unsigned long _max_attribute2nd_level = 0;
-	unsigned long * _attribute2nd_table = NULL;
-	unsigned long _max_trained_skill_level = 0;
-	unsigned long * _trained_skill_table = NULL;
-	unsigned long _max_specialized_skill_level = 0;
-	unsigned long * _specialized_skill_table = NULL;
-	unsigned long _max_level = 0;
-	unsigned __int64 * _level_table = NULL;
-	unsigned long * _credit_table = 0;
+	uint32_t _max_attribute_level = 0;
+	uint32_t * _attribute_table = NULL;
+	uint32_t _max_attribute2nd_level = 0;
+	uint32_t * _attribute2nd_table = NULL;
+	uint32_t _max_trained_skill_level = 0;
+	uint32_t * _trained_skill_table = NULL;
+	uint32_t _max_specialized_skill_level = 0;
+	uint32_t * _specialized_skill_table = NULL;
+	uint32_t _max_level = 0;
+	uint64_t * _level_table = NULL;
+	uint32_t * _credit_table = 0;
 };
 
 class ExperienceSystem
 {
 public:
-	static DWORD AttributeLevelFromExperience(DWORD exp);
-	static DWORD Attribute2ndLevelFromExperience(DWORD exp);
-	static DWORD SkillLevelFromExperience(SKILL_ADVANCEMENT_CLASS sac, DWORD exp);
-	static DWORD ExperienceToSkillLevel(SKILL_ADVANCEMENT_CLASS sac, DWORD level);
-	static DWORD GetMaxTrainedSkillLevel();
-	static DWORD GetMaxSpecializedSkillLevel();
+	static uint32_t AttributeLevelFromExperience(uint32_t exp);
+	static uint32_t Attribute2ndLevelFromExperience(uint32_t exp);
+	static uint32_t SkillLevelFromExperience(SKILL_ADVANCEMENT_CLASS sac, uint32_t exp);
+	static uint32_t ExperienceToSkillLevel(SKILL_ADVANCEMENT_CLASS sac, uint32_t level);
+	static uint32_t GetMaxTrainedSkillLevel();
+	static uint32_t GetMaxSpecializedSkillLevel();
 
-	static DWORD64 ExperienceToLevel(unsigned int level);
-	static DWORD GetMaxLevel();
+	static uint64_t ExperienceToLevel(unsigned int level);
+	static uint32_t ExperienceToAttributeLevel(uint32_t level);
+	static uint32_t ExperienceToAttribute2ndLevel(uint32_t level);
 
-	static DWORD64 GetExperienceForLevel(unsigned int level);
-	static DWORD64 ExperienceToRaiseLevel(unsigned int current_level, unsigned int new_level);
+	static uint32_t GetMaxLevel();
 
-	static DWORD GetCreditsForLevel(unsigned int level); // custom
+	static uint64_t GetExperienceForLevel(unsigned int level);
+	static uint32_t GetMaxAttributeLevel();
+	static uint32_t GetMaxAttribute2ndLevel();
+
+	static uint64_t ExperienceToRaiseLevel(unsigned int current_level, unsigned int new_level);
+
+	static uint32_t GetCreditsForLevel(unsigned int level); // custom
 
 	static ExperienceTable *GetExperienceTable();
+
+	static int32_t ItemTotalXpToLevel(uint64_t xp, uint64_t basexp, int32_t maxLevel, int32_t style);
+	static uint64_t ItemLevelToTotalXp(int32_t level, uint64_t basexp, int32_t maxLevel, int32_t style);
 };
 

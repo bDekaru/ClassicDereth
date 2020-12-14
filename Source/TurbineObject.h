@@ -7,13 +7,13 @@
 class TurbineObject
 {
 public:
-	TurbineObject(DWORD dwID);
+	TurbineObject(uint32_t dwID);
 	virtual ~TurbineObject();
 
-	DWORD GetID();
+	uint32_t GetID();
 
-	virtual void Initialize(BYTE *pbData, DWORD dwLength);
+	virtual void Initialize(BYTE *pbData, uint32_t dwLength);
 
 protected:
-	DWORD m_dwID;
+	uint32_t m_dwID;
 };

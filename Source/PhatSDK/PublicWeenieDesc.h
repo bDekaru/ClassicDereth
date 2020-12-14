@@ -11,9 +11,9 @@ public:
 
 	DECLARE_PACKABLE()
 
-	DWORD _bitmask = 0;
-	DWORD _monarch_iid = 0;
-	PackableHashTable<DWORD, DWORD> _table;
+	uint32_t _bitmask = 0;
+	uint32_t _monarch_iid = 0;
+	PackableHashTable<uint32_t, uint32_t> _table;
 };
 
 class PublicWeenieDesc : public WeenieDesc
@@ -60,15 +60,15 @@ public:
 	DECLARE_PACKABLE();
 	
 	void Reset();
-	void set_pack_header(DWORD *header);
+	void set_pack_header(uint32_t *header);
 
 	static BOOL IsTalkable(ITEM_TYPE _itemType);
 	void SetPlayerKillerStatus(unsigned int pk);
 
 #if !PHATSDK_USE_WEENIE_STUB
 	// custom
-	static DWORD CalculateBitfieldFromWeenie(CWeenieObject *weenie);
-	static DWORD CalculateBitfieldFromQualities(CACQualities *qualities);
+	static uint32_t CalculateBitfieldFromWeenie(CWeenieObject *weenie);
+	static uint32_t CalculateBitfieldFromQualities(CACQualities *qualities);
 	static PublicWeenieDesc *CreateFromWeenie(CWeenieObject *weenie);
 	static PublicWeenieDesc *CreateFromQualities(CACQualities *qualities);
 	// end of custom
@@ -76,10 +76,10 @@ public:
 
 	std::string _name;
 	std::string _plural_name;
-	DWORD _wcid;
-	DWORD _iconID;
-	DWORD _iconOverlayID;
-	DWORD _iconUnderlayID;
+	uint32_t _wcid;
+	uint32_t _iconID;
+	uint32_t _iconOverlayID;
+	uint32_t _iconUnderlayID;
 	unsigned int _containerID;
 	unsigned int _wielderID;
 	unsigned int _priority;
@@ -113,7 +113,7 @@ public:
 	int _material_type;
 	float _workmanship;
 	int _cooldown_id;
-	long double _cooldown_duration;
+	double _cooldown_duration;
 	unsigned int _pet_owner;
 };
 

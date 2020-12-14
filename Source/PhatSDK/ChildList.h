@@ -9,7 +9,7 @@ public:
 	CHILDLIST();
 	~CHILDLIST();
 
-	void add_child(CPhysicsObj *pObj, Frame *pFrame, DWORD part_number, DWORD location_id);
+	void add_child(CPhysicsObj *pObj, Frame *pFrame, uint32_t part_number, uint32_t location_id);
 	void remove_child(CPhysicsObj *pChild);
 
 	BOOL FindChildIndex(CPhysicsObj *pObj, WORD *Index);
@@ -17,7 +17,7 @@ public:
 	WORD num_objects;
 	SArray<CPhysicsObj *> objects;
 	SArray<Frame> frames;
-	SArray<DWORD> part_numbers;
-	SArray<DWORD> location_ids;
+	SArray<uint32_t> part_numbers;
+	SArray<uint32_t> location_ids;
 };
 

@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "WeenieObject.h"
 #include "Scroll.h"
 #include "Player.h"
@@ -20,7 +20,9 @@ void CScrollWeenie::ApplyQualityOverrides()
 
 const CSpellBase *CScrollWeenie::GetSpellBase()
 {
-	DWORD spell_id = 0;
+	uint32_t spell_id = 0;
+
+
 	if (m_Qualities.InqDataID(SPELL_DID, spell_id))
 	{
 		return MagicSystem::GetSpellTable()->GetSpellBase(spell_id);
@@ -53,10 +55,10 @@ int CScrollWeenie::Use(CPlayerWeenie *player)
 	if (spell->_power < 50 || spell->_power >= 300)
 		alwaysSucceed = true;
 
-	DWORD magicSkill = 0;
+	uint32_t magicSkill = 0;
 	if (!alwaysSucceed)
 	{
-		if (!player->InqSkill(spell->InqSkillForSpell(), magicSkill, TRUE) || !magicSkill)
+		if (!player->InqSkill(spell->InqSkillForSpell(), magicSkill, FALSE) || !magicSkill)
 		{
 			player->SendText(csprintf("You are not trained in %s!", CachedSkillTable->GetSkillName(spell->InqSkillForSpell()).c_str()), LTT_DEFAULT);
 			player->NotifyInventoryFailedEvent(GetID(), WERROR_SKILL_TOO_LOW);
@@ -90,7 +92,7 @@ void CScrollUseEvent::OnReadyToUse()
 	ExecuteUseAnimation(Motion_Reading);
 }
 
-void CScrollUseEvent::OnUseAnimSuccess(DWORD motion)
+void CScrollUseEvent::OnUseAnimSuccess(uint32_t motion)
 {
 	CWeenieObject *target = GetTarget();
 

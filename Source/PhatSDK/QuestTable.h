@@ -31,10 +31,10 @@ public:
 
 	void Stamp();
 	int InqTimeUntilOkayToComplete(const char *questName);
-	void IncrementNumCompletions();
-	void DecrementNumCompletions();
+	void IncrementNumCompletions(int amount = 1);
+	void DecrementNumCompletions(int amount = 1);
 
-	long double _last_update = 0;
+	double _last_update = 0;
 	int _real_time = 0;
 	unsigned int _num_completions = 0;
 };
@@ -52,12 +52,14 @@ public:
 	void PurgeQuests();
 	bool InqQuest(const char *questName);
 	unsigned int InqQuestSolves(const char *questName);
+	unsigned int InqQuestMax(const char *questName);
 	void SetQuestCompletions(const char *questName, int numCompletions);
-	void IncrementQuest(const char *questName);
-	void DecrementQuest(const char *questName);
+	void IncrementQuest(const char *questName, int amount);
+	void DecrementQuest(const char *questName, int amount);
 	bool UpdateQuest(const char *questName);
 	void StampQuest(const char *questName);
 	int InqTimeUntilOkayToComplete(const char *questName);
+	std::string Ktref(const char *questName);
 	QuestProfile *GetQuest(const char *questName);
 	PackableHashTable<std::string, QuestProfile, std::string> *GetQuestTable();
 

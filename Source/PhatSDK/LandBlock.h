@@ -20,7 +20,7 @@ public:
 
 	static DBObj *Allocator();
 	static void Destroyer(DBObj*);
-	static CLandBlock *Get(DWORD ID);
+	static CLandBlock *Get(uint32_t ID);
 	static void Release(CLandBlock *);
 
 	static void init(void);
@@ -36,8 +36,8 @@ public:
 	void notify_change_size();
 	void release_all();
 	void release_objs();
-	class CLandCell *get_landcell(DWORD cell_id);
-	void init_static_objs(LongNIValHash<unsigned long> *hash);
+	class CLandCell *get_landcell(uint32_t cell_id);
+	void init_static_objs(LongNIValHash<uint32_t> *hash);
 	void adjust_scene_obj_height();
 	void get_land_scenes();
 	void init_buildings();
@@ -46,20 +46,20 @@ public:
 	Frame block_frame; // 0x6C / 0x78
 	float max_zval; // 0xAC / 0xB8
 	float min_zval; // 0xB0 / 0xBC
-	DWORD dyn_objs_init_done; // 0xB4 / 0xC0
+	uint32_t dyn_objs_init_done; // 0xB4 / 0xC0
 	BOOL lbi_exists; // 0xB8 / 0xC4
 	LandDefs::Direction dir; // 0xBC / 0xC8
 	SqCoord closest; // 0xC0 / 0xCC
 	BoundingType in_view; // 0xC8 / 0xD4
 	class CLandBlockInfo *lbi; // 0xCC / 0xD8
-	DWORD num_static_objects; // 0xD0 / 0xDC
+	uint32_t num_static_objects; // 0xD0 / 0xDC
 	DArray<CPhysicsObj *> static_objects; // 0xD4 / 0xE0
-	DWORD num_buildings; // 0xE4 / 0xF0
+	uint32_t num_buildings; // 0xE4 / 0xF0
 	class CBuildingObj **buildings; // 0xE8 / 0xF4
-	DWORD stab_num; // 0xEC / 0xF8
-	DWORD *stablist; // 0xF0 / 0xFC
+	uint32_t stab_num; // 0xEC / 0xF8
+	uint32_t *stablist; // 0xF0 / 0xFC
 	class CLandCell **draw_array; // 0xFC / 0x108
-	DWORD draw_array_size; // 0x100 / 0x10C
+	uint32_t draw_array_size; // 0x100 / 0x10C
 
 #if PHATSDK_IS_SERVER
 	bool needs_post_load = true;

@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Container.h"
 #include "World.h"
 #include "ObjectMsgs.h"
@@ -8,16 +8,17 @@
 #include "WeenieFactory.h"
 #include "WorldLandBlock.h"
 #include "Config.h"
+#include "SpellcastingManager.h"
 
 CContainerWeenie::CContainerWeenie()
 {
-	for (DWORD i = 0; i < MAX_WIELDED_COMBAT; i++)
+	for (uint32_t i = 0; i < MAX_WIELDED_COMBAT; i++)
 		m_WieldedCombat[i] = NULL;
 }
 
 CContainerWeenie::~CContainerWeenie()
 {
-	for (DWORD i = 0; i < MAX_WIELDED_COMBAT; i++)
+	for (uint32_t i = 0; i < MAX_WIELDED_COMBAT; i++)
 		m_WieldedCombat[i] = NULL;
 
 	for (auto item : m_Wielded)
@@ -77,7 +78,7 @@ int CContainerWeenie::GetContainersCapacity()
 	return InqIntQuality(CONTAINERS_CAPACITY_INT, 0);
 }
 
-CContainerWeenie *CContainerWeenie::FindContainer(DWORD container_id)
+CContainerWeenie *CContainerWeenie::FindContainer(uint32_t container_id)
 {
 	if (GetID() == container_id)
 		return this;
@@ -112,8 +113,12 @@ CWeenieObject *CContainerWeenie::GetWieldedCombat(COMBAT_USE combatUse)
 	// The first entry is "Undef" so we omit that.
 	int index = combatUse - 1;
 
-	if (index < 0 || index >= MAX_WIELDED_COMBAT)
+	if (index < 0 || index > MAX_WIELDED_COMBAT)
 		return NULL;
+
+	// OFFHAND is the shield slot
+	if (combatUse == COMBAT_USE_OFFHAND)
+		index = COMBAT_USE_SHIELD - 1;
 
 	return m_WieldedCombat[index];
 }
@@ -123,10 +128,34 @@ void CContainerWeenie::SetWieldedCombat(CWeenieObject *wielded, COMBAT_USE comba
 	// The first entry is "Undef" so we omit that.
 	int index = combatUse - 1;
 
-	if (index < 0 || index >= MAX_WIELDED_COMBAT)
+	if (index < 0 || index > MAX_WIELDED_COMBAT)
 		return;
 
+	// OFFHAND is the shield slot
+	if (combatUse == COMBAT_USE_OFFHAND)
+		index = COMBAT_USE_SHIELD - 1;
+
 	m_WieldedCombat[index] = wielded;
+}
+
+bool CContainerWeenie::HasWielded()
+{
+	CWeenieObject* wielded = GetWieldedCaster();
+	if (wielded)
+		return true;
+	wielded = GetWieldedMelee();
+	if (wielded)
+		return true;
+	wielded = GetWieldedMissile();
+	if (wielded)
+		return true;
+	wielded = GetWieldedTwoHanded();
+	if (wielded)
+		return true;
+	wielded = GetWieldedShield();
+	if (wielded)
+		return true;
+	return false;
 }
 
 CWeenieObject *CContainerWeenie::GetWieldedMelee()
@@ -165,7 +194,7 @@ CWeenieObject *CContainerWeenie::GetWieldedCaster()
 	return NULL;
 }
 
-void CContainerWeenie::Container_GetWieldedByMask(std::list<CWeenieObject *> &wielded, DWORD inv_loc_mask)
+void CContainerWeenie::Container_GetWieldedByMask(std::list<CWeenieObject *> &wielded, uint32_t inv_loc_mask)
 {
 	for (auto item : m_Wielded)
 	{
@@ -190,7 +219,7 @@ void CContainerWeenie::ReleaseContainedItemRecursive(CWeenieObject *item)
 	if (!item)
 		return;
 
-	for (DWORD i = 0; i < MAX_WIELDED_COMBAT; i++)
+	for (uint32_t i = 0; i < MAX_WIELDED_COMBAT; i++)
 	{
 		if (item == m_WieldedCombat[i])
 			m_WieldedCombat[i] = NULL;
@@ -245,13 +274,23 @@ void CContainerWeenie::ReleaseContainedItemRecursive(CWeenieObject *item)
 	item->RecacheHasOwner();
 }
 
-BOOL CContainerWeenie::Container_CanEquip(CWeenieObject *item, DWORD location)
+BOOL CContainerWeenie::Container_CanEquip(CWeenieObject *item, uint32_t location)
 {
 	if (!item)
 		return FALSE;
 
-	if (!item->IsValidWieldLocation(location))
-		return FALSE;
+	int possible = item->InqIntQuality(LOCATIONS_INT, 0, TRUE);
+
+	// weapons (right-hand) can go in the shield (left-hand) slot, too
+	//if ((possible & location) == 0 && !(location == SHIELD_LOC && possible == MELEE_WEAPON_LOC))
+	//	return FALSE;
+
+	// Don't check Valid Wield Location for Dual Wield
+	//if (!(location == SHIELD_LOC && possible == MELEE_WEAPON_LOC))
+	//{
+	//	if (!item->IsValidWieldLocation(location))
+	//		return FALSE;
+	//}
 
 	for (auto wielded : m_Wielded)
 	{
@@ -265,10 +304,15 @@ BOOL CContainerWeenie::Container_CanEquip(CWeenieObject *item, DWORD location)
 	return TRUE;
 }
 
-void CContainerWeenie::Container_EquipItem(DWORD dwCell, CWeenieObject *item, DWORD inv_loc, DWORD child_location, DWORD placement)
+void CContainerWeenie::Container_EquipItem(uint32_t dwCell, CWeenieObject *item, uint32_t inv_loc, uint32_t child_location, uint32_t placement)
 {
-	if (int combatUse = item->InqIntQuality(COMBAT_USE_INT, 0, TRUE))
+	int combatUse = item->InqIntQuality(COMBAT_USE_INT, 0, TRUE);
+	if (combatUse)
+	{
+//		if (combatUse == COMBAT_USE_MELEE && placement == LeftWeapon)
+//			combatUse = COMBAT_USE_OFFHAND;
 		SetWieldedCombat(item, (COMBAT_USE)combatUse);
+	}
 
 	bool bAlreadyEquipped = false;
 	for (auto entry : m_Wielded)
@@ -307,14 +351,14 @@ void CContainerWeenie::Container_EquipItem(DWORD dwCell, CWeenieObject *item, DW
 			*/
 
 			BinaryWriter Blah;
-			Blah.Write<DWORD>(0xF749);
-			Blah.Write<DWORD>(GetID());
-			Blah.Write<DWORD>(item->GetID());
-			Blah.Write<DWORD>(child_location);
-			Blah.Write<DWORD>(placement);
+			Blah.Write<uint32_t>(0xF749);
+			Blah.Write<uint32_t>(GetID());
+			Blah.Write<uint32_t>(item->GetID());
+			Blah.Write<uint32_t>(child_location);
+			Blah.Write<uint32_t>(placement);
 			Blah.Write<WORD>(GetPhysicsObj()->_instance_timestamp);
 			Blah.Write<WORD>(++item->_position_timestamp);
-			g_pWorld->BroadcastPVS(dwCell, Blah.GetData(), Blah.GetSize());
+			g_pWorld->BroadcastPVS(dwCell, Blah.GetData(), Blah.GetSize(), OBJECT_MSG, false, false, true);
 		}
 	}
 	else
@@ -324,8 +368,8 @@ void CContainerWeenie::Container_EquipItem(DWORD dwCell, CWeenieObject *item, DW
 			item->_position_timestamp++;
 
 			BinaryWriter Blah;
-			Blah.Write<DWORD>(0xF74A);
-			Blah.Write<DWORD>(item->GetID());
+			Blah.Write<uint32_t>(0xF74A);
+			Blah.Write<uint32_t>(item->GetID());
 			Blah.Write<WORD>(item->_instance_timestamp);
 			Blah.Write<WORD>(item->_position_timestamp);
 			g_pWorld->BroadcastPVS(dwCell, Blah.GetData(), Blah.GetSize());
@@ -333,7 +377,7 @@ void CContainerWeenie::Container_EquipItem(DWORD dwCell, CWeenieObject *item, DW
 	}
 }
 
-CWeenieObject *CContainerWeenie::FindContainedItem(DWORD object_id)
+CWeenieObject *CContainerWeenie::FindContainedItem(uint32_t object_id)
 {
 	for (auto item : m_Wielded)
 	{
@@ -359,9 +403,9 @@ CWeenieObject *CContainerWeenie::FindContainedItem(DWORD object_id)
 	return NULL;
 }
 
-DWORD CContainerWeenie::Container_GetNumFreeMainPackSlots()
+uint32_t CContainerWeenie::Container_GetNumFreeMainPackSlots()
 {
-	return (DWORD) max(0, GetItemsCapacity() - (signed)m_Items.size());
+	return (uint32_t) max(0, GetItemsCapacity() - (signed)m_Items.size());
 }
 
 BOOL CContainerWeenie::Container_CanStore(CWeenieObject *pItem)
@@ -376,9 +420,9 @@ BOOL CContainerWeenie::IsItemsCapacityFull()
 	if (capacity >= 0)
 	{
 		if (m_Items.size() < capacity)
-			return TRUE;
+			return FALSE;
 
-		return FALSE;
+		return TRUE;
 	}
 
 	return TRUE;
@@ -391,9 +435,9 @@ BOOL CContainerWeenie::IsContainersCapacityFull()
 	if (capacity >= 0)
 	{
 		if (m_Packs.size() < capacity)
-			return TRUE;
+			return FALSE;
 
-		return FALSE;
+		return TRUE;
 	}
 
 	return TRUE;
@@ -419,19 +463,18 @@ BOOL CContainerWeenie::Container_CanStore(CWeenieObject *pItem, bool bPackSlot)
 			{
 				if (container == pItem)
 					return TRUE;
-			}
-
-			return FALSE;
+			}	
 		}
-		else
-		{
-			if (InqBoolQuality(AI_ACCEPT_EVERYTHING_BOOL, FALSE))
-				return TRUE;
+		return FALSE;
+		//else
+		//{
+		//	if (InqBoolQuality(AI_ACCEPT_EVERYTHING_BOOL, FALSE))
+		//		return TRUE;
 
-			// check emote item acceptance here
+		//	// check emote item acceptance here
 
-			return FALSE;
-		}
+		//	return FALSE;
+		//}
 	}
 	else
 	{
@@ -450,37 +493,26 @@ BOOL CContainerWeenie::Container_CanStore(CWeenieObject *pItem, bool bPackSlot)
 				if (container == pItem)
 					return TRUE;
 			}
-
-			return FALSE;
 		}
-		else
-		{
-			if (InqBoolQuality(AI_ACCEPT_EVERYTHING_BOOL, FALSE))
-				return TRUE;
+		return FALSE;
+		//else
+		//{
+		//	if (InqBoolQuality(AI_ACCEPT_EVERYTHING_BOOL, FALSE))
+		//		return TRUE;
 
-			// check emote item acceptance here
-			if (m_Qualities._emote_table)
-			{
-				PackableList<EmoteSet> *emoteCategory = m_Qualities._emote_table->_emote_table.lookup(Give_EmoteCategory);
+		//	// check Give and Refuse emote item acceptance here
+		//	if (m_Qualities._emote_table)
+		//	{
+		//		if (HasEmoteForID(Give_EmoteCategory, pItem->m_Qualities.id) || HasEmoteForID(Refuse_EmoteCategory, pItem->m_Qualities.id))
+		//			return TRUE;
+		//	}
 
-				if (emoteCategory)
-				{
-					for (auto &emoteSet : *emoteCategory)
-					{
-						if (emoteSet.classID == pItem->m_Qualities.id)
-						{
-							return TRUE;
-						}
-					}
-				}
-			}
-
-			return FALSE;
-		}
+		//	return FALSE;
+		//}
 	}
 }
 
-void CContainerWeenie::Container_DeleteItem(DWORD item_id)
+void CContainerWeenie::Container_DeleteItem(uint32_t item_id)
 {
 	CWeenieObject *item = FindContainedItem(item_id);
 	if (!item)
@@ -497,10 +529,11 @@ void CContainerWeenie::Container_DeleteItem(DWORD item_id)
 	
 	if (bWielded && item->AsClothing())
 	{
-		UpdateModel();
+		if (m_Qualities.GetInt(HERITAGE_GROUP_INT, 1) != Gearknight_HeritageGroup) // TODO: Update JUST cloak on gearknight unequip rather than whole model.
+			UpdateModel();
 	}
 
-	DWORD RemoveObject[3];
+	uint32_t RemoveObject[3];
 	RemoveObject[0] = 0xF747;
 	RemoveObject[1] = item->GetID();
 	RemoveObject[2] = item->_instance_timestamp;
@@ -509,20 +542,20 @@ void CContainerWeenie::Container_DeleteItem(DWORD item_id)
 	g_pWorld->RemoveEntity(item);
 }
 
-DWORD CContainerWeenie::Container_InsertInventoryItem(DWORD dwCell, CWeenieObject *item, DWORD slot)
+uint32_t CContainerWeenie::Container_InsertInventoryItem(uint32_t dwCell, CWeenieObject *item, uint32_t slot)
 {
 	// You should check if the inventory is full before calling this.
 	if (!item->RequiresPackSlot())
 	{
-		if (slot > (DWORD) m_Items.size())
-			slot = (DWORD) m_Items.size();
+		if (slot > (uint32_t) m_Items.size())
+			slot = (uint32_t) m_Items.size();
 
 		m_Items.insert(m_Items.begin() + slot, item);
 	}
 	else
 	{
-		if (slot > (DWORD) m_Packs.size())
-			slot = (DWORD) m_Packs.size();
+		if (slot > (uint32_t) m_Packs.size())
+			slot = (uint32_t) m_Packs.size();
 
 		m_Packs.insert(m_Packs.begin() + slot, item);
 	}
@@ -532,14 +565,15 @@ DWORD CContainerWeenie::Container_InsertInventoryItem(DWORD dwCell, CWeenieObjec
 		item->_position_timestamp++;
 
 		BinaryWriter Blah;
-		Blah.Write<DWORD>(0xF74A);
-		Blah.Write<DWORD>(item->GetID());
+		Blah.Write<uint32_t>(0xF74A);
+		Blah.Write<uint32_t>(item->GetID());
 		Blah.Write<WORD>(item->_instance_timestamp);
 		Blah.Write<WORD>(item->_position_timestamp);
 		g_pWorld->BroadcastPVS(dwCell, Blah.GetData(), Blah.GetSize());
 	}
 
 	item->m_Qualities.SetInt(PARENT_LOCATION_INT, 0);
+	item->NotifyIntStatUpdated(PARENT_LOCATION_INT, 0);
 	item->unset_parent();
 	item->leave_world();
 
@@ -566,7 +600,7 @@ bool CContainerWeenie::SpawnTreasureInContainer(eTreasureCategory category, int 
 	return SpawnInContainer(treasure);
 }
 
-bool CContainerWeenie::SpawnInContainer(DWORD wcid, int amount, int ptid, float shade, bool sendEnvent)
+bool CContainerWeenie::SpawnInContainer(uint32_t wcid, int amount, int ptid, float shade, bool sendEnvent)
 {
 	if (amount < 1)
 		return false;
@@ -622,7 +656,7 @@ bool CContainerWeenie::SpawnInContainer(DWORD wcid, int amount, int ptid, float 
 
 	//We're done stacking and we still have enough for a new item.
 
-	DWORD totalSlotsRequired = 0;
+	uint32_t totalSlotsRequired = 0;
 	if (maxStackSize < 1)
 		maxStackSize = 1;
 	totalSlotsRequired = amount / maxStackSize;
@@ -657,118 +691,120 @@ bool CContainerWeenie::SpawnInContainer(DWORD wcid, int amount, int ptid, float 
 
 bool CContainerWeenie::SpawnCloneInContainer(CWeenieObject *itemToClone, int amount, bool sendEnvent)
 {
-	CWeenieObject *item = g_pWeenieFactory->CloneWeenie(itemToClone);
-
-	if (!item)
+	if (!itemToClone)
 		return false;
 
-	DWORD totalSlotsRequired = 0;
-	int maxStackSize = item->InqIntQuality(MAX_STACK_SIZE_INT, 1);
-	if (maxStackSize < 1)
-		maxStackSize = 1;
-	totalSlotsRequired = amount / maxStackSize;
-
-	if (Container_GetNumFreeMainPackSlots() < totalSlotsRequired)
+	if (amount < 1)
 		return false;
 
-	if (amount > 1)
+	int maxStackSize = itemToClone->m_Qualities.GetInt(MAX_STACK_SIZE_INT, 1);
+	int amountOfStacks = 0;
+	int restStackSize = 0;
+	
+	if (amount <= maxStackSize)
 	{
-		int maxStackSize = item->m_Qualities.GetInt(MAX_STACK_SIZE_INT, 1);
-		if (amount <= maxStackSize)
-			item->SetStackSize(amount);
+		restStackSize = amount;
+	}
+	else
+	{
+		amountOfStacks = amount / maxStackSize;
+		restStackSize =  amount % maxStackSize;
+	}
+	int numStacks = amountOfStacks + (restStackSize > 0 ? 1 : 0);
+
+	for (int i = numStacks; i > 0 ; i--)
+	{
+		CWeenieObject *item = g_pWeenieFactory->CloneWeenie(itemToClone);
+		if (!item)
+			return false;
+	
+		if ((i == 1) && (restStackSize > 0))
+		{
+			item->SetStackSize(restStackSize);
+		}
 		else
 		{
-			int amountOfStacks = amount / maxStackSize;
-			int restStackSize = amount % maxStackSize;
-			for (int i = 0; i < amountOfStacks; i++)
-				SpawnCloneInContainer(itemToClone, maxStackSize, sendEnvent);
-			if (restStackSize > 0)
-				item->SetStackSize(restStackSize);
+			item->SetStackSize(maxStackSize);
+		}
+			
+		if (!SpawnInContainer(item, sendEnvent, false))
+		{
+			CWeenieObject *owner = this->GetWorldTopLevelOwner();
+			if (owner)
+			{
+				item->SetInitialPosition(owner->m_Position);
+
+				if (g_pWorld->CreateEntity(item))
+				{
+					item->_timeToRot = Timer::cur_time + 300.0;
+					item->_beganRot = false;
+					item->m_Qualities.SetFloat(TIME_TO_ROT_FLOAT, item->_timeToRot);
+				}
+								
+			}
 			else
 			{
 				delete item;
-				return true;
+				continue;
 			}
 		}
 	}
-	else if(item->InqIntQuality(STACK_SIZE_INT, 1) > 1)
-		item->SetStackSize(1);
-
-	if (!SpawnInContainer(item, sendEnvent, false))
-	{
-		CWeenieObject *owner = this->GetWorldTopLevelOwner();
-		if (owner)
-		{
-			item->SetInitialPosition(owner->m_Position);
-
-			if (!g_pWorld->CreateEntity(item))
-			{
-				delete item;
-				return true;
-			}
-
-			item->_timeToRot = Timer::cur_time + 300.0;
-			item->_beganRot = false;
-			item->m_Qualities.SetFloat(TIME_TO_ROT_FLOAT, item->_timeToRot);
-		}
-		else
-		{
-			delete item;
-			return true;
-		}
-	}
-
 	return true;
 }
 
 bool CContainerWeenie::SpawnInContainer(CWeenieObject *item, bool sendEnvent, bool deleteItemOnFailure)
 {
-	item->SetID(g_pWorld->GenerateGUID(eDynamicGUID));
-	if (!Container_CanStore(item))
+	if (item)
 	{
-		if(sendEnvent)
-			NotifyInventoryFailedEvent(item->GetID(), WERROR_GIVE_NOT_ALLOWED);
-
-		if(deleteItemOnFailure)
-			delete item;
-		return false;
-	}
-
-	if (!g_pWorld->CreateEntity(item))
-	{
-		if (sendEnvent)
-			NotifyInventoryFailedEvent(item->GetID(), WERROR_GIVE_NOT_ALLOWED);
-		if (deleteItemOnFailure)
-			delete item;
-		return false;
-	}
-
-	if (sendEnvent)
-	{
-		SendNetMessage(InventoryMove(item->GetID(), GetID(), 0, item->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
-		if (item->AsContainer())
-			item->AsContainer()->MakeAwareViewContent(this);
-		MakeAware(item, true);
-
-		if (_openedById != 0)
+		item->SetID(g_pWorld->GenerateGUID(eDynamicGUID));
+		if (!Container_CanStore(item))
 		{
-			CWeenieObject *openedBy = g_pWorld->FindObject(_openedById);
+			if (sendEnvent)
+				NotifyInventoryFailedEvent(item->GetID(), WERROR_GIVE_NOT_ALLOWED);
 
-			if (openedBy)
+			if (deleteItemOnFailure)
+				delete item;
+			return false;
+		}
+
+		if (!g_pWorld->CreateEntity(item))
+		{
+			if (sendEnvent)
+				NotifyInventoryFailedEvent(item->GetID(), WERROR_GIVE_NOT_ALLOWED);
+			if (deleteItemOnFailure)
+				delete item;
+			return false;
+		}
+
+		if (sendEnvent)
+		{
+			SendNetMessage(InventoryMove(item->GetID(), GetID(), 0, item->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
+			if (item->AsContainer())
+				item->AsContainer()->MakeAwareViewContent(this);
+			MakeAware(item, true);
+
+			if (_openedById != 0)
 			{
-				openedBy->SendNetMessage(InventoryMove(item->GetID(), GetID(), 0, item->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
-				if (item->AsContainer())
-					item->AsContainer()->MakeAwareViewContent(this);
-				openedBy->MakeAware(item, true);
+				CWeenieObject *openedBy = g_pWorld->FindObject(_openedById);
+
+				if (openedBy)
+				{
+					openedBy->SendNetMessage(InventoryMove(item->GetID(), GetID(), 0, item->RequiresPackSlot() ? 1 : 0), PRIVATE_MSG, TRUE);
+					if (item->AsContainer())
+						item->AsContainer()->MakeAwareViewContent(this);
+					openedBy->MakeAware(item, true);
+				}
 			}
 		}
-	}
 
-	OnReceiveInventoryItem(this, item, 0);
-	return true;
+		OnReceiveInventoryItem(this, item, 0);
+		return true;
+	}
+	else
+		return false;
 }
 
-DWORD CContainerWeenie::OnReceiveInventoryItem(CWeenieObject *source, CWeenieObject *item, DWORD desired_slot)
+uint32_t CContainerWeenie::OnReceiveInventoryItem(CWeenieObject *source, CWeenieObject *item, uint32_t desired_slot)
 {
 	if (source != this)
 	{
@@ -789,7 +825,7 @@ DWORD CContainerWeenie::OnReceiveInventoryItem(CWeenieObject *source, CWeenieObj
 	}
 }
 
-CWeenieObject *CContainerWeenie::FindContained(DWORD object_id)
+CWeenieObject *CContainerWeenie::FindContained(uint32_t object_id)
 {
 	return FindContainedItem(object_id);
 }
@@ -871,8 +907,8 @@ void CContainerWeenie::LoadEx(class CWeenieSave &save)
 				continue;
 			}
 
-			assert(weenie->IsWielded());
-			assert(!weenie->IsContained());
+			//assert(weenie->IsWielded());
+			//assert(!weenie->IsContained());
 
 			// make sure it has the right settings (shouldn't be necessary)
 			weenie->SetWielderID(GetID());
@@ -885,7 +921,12 @@ void CContainerWeenie::LoadEx(class CWeenieSave &save)
 				m_Wielded.push_back(weenie);
 
 				if (int combatUse = weenie->InqIntQuality(COMBAT_USE_INT, 0, TRUE))
+				{
+					int frame = weenie->InqIntQuality(PLACEMENT_POSITION_INT, 0, TRUE);
+					if (combatUse == COMBAT_USE_MELEE && frame == LeftWeapon)
+						combatUse = COMBAT_USE_OFFHAND;
 					SetWieldedCombat(weenie, (COMBAT_USE)combatUse);
+				}
 
 				assert(weenie->IsWielded());
 				assert(!weenie->IsContained());
@@ -895,7 +936,7 @@ void CContainerWeenie::LoadEx(class CWeenieSave &save)
 				// remove any enchantments associated with this item that we failed to wield...
 				if (m_Qualities._enchantment_reg)
 				{
-					PackableListWithJson<DWORD> spells_to_remove;
+					PackableListWithJson<uint32_t> spells_to_remove;
 
 					if (m_Qualities._enchantment_reg->_add_list)
 					{
@@ -945,7 +986,7 @@ void CContainerWeenie::LoadEx(class CWeenieSave &save)
 
 		if (weenie)
 		{
-			DWORD correct_container_iid = weenie->m_Qualities.GetIID(CONTAINER_IID, 0);
+			uint32_t correct_container_iid = weenie->m_Qualities.GetIID(CONTAINER_IID, 0);
 
 			if (weenie->RequiresPackSlot() || (correct_container_iid && correct_container_iid != GetID()))
 			{
@@ -980,7 +1021,7 @@ void CContainerWeenie::LoadEx(class CWeenieSave &save)
 
 		if (weenie)
 		{
-			DWORD correct_container_iid = weenie->m_Qualities.GetIID(CONTAINER_IID, 0);
+			uint32_t correct_container_iid = weenie->m_Qualities.GetIID(CONTAINER_IID, 0);
 
 			if (!weenie->RequiresPackSlot() || (correct_container_iid && correct_container_iid != GetID()))
 			{
@@ -1042,8 +1083,8 @@ void CContainerWeenie::MakeAwareViewContent(CWeenieObject *other)
 	}
 
 	BinaryWriter viewContent;
-	viewContent.Write<DWORD>(0x196);
-	viewContent.Write<DWORD>(GetID());
+	viewContent.Write<uint32_t>(0x196);
+	viewContent.Write<uint32_t>(GetID());
 	inventoryList.Pack(&viewContent);
 	other->SendNetMessage(&viewContent, PRIVATE_MSG, TRUE, FALSE);
 }
@@ -1053,7 +1094,7 @@ bool CContainerWeenie::IsGroundContainer()
 	if (HasOwner())
 		return false;
 
-	if (!InValidCell())
+	if (!m_Qualities.m_PositionStats || m_Qualities.m_PositionStats->empty())
 		return false;
 
 	return true;
@@ -1088,6 +1129,10 @@ void CContainerWeenie::OnContainerOpened(CWeenieObject *other)
 	_openedById = other->GetID();
 	other->_lastOpenedRemoteContainerId = GetID();
 	_failedPreviousCheckToClose = false;
+
+	uint32_t spell = 0;
+	if (m_Qualities.InqDataID(SPELL_DID, spell))
+		MakeSpellcastingManager()->CastSpellInstant(_openedById, spell);
 }
 
 void CContainerWeenie::OnContainerClosed(CWeenieObject *requestedBy)
@@ -1095,8 +1140,8 @@ void CContainerWeenie::OnContainerClosed(CWeenieObject *requestedBy)
 	if (requestedBy)
 	{
 		BinaryWriter closeContent;
-		closeContent.Write<DWORD>(0x52);
-		closeContent.Write<DWORD>(GetID());
+		closeContent.Write<uint32_t>(0x52);
+		closeContent.Write<uint32_t>(GetID());
 		requestedBy->SendNetMessage(&closeContent, PRIVATE_MSG, TRUE, FALSE);
 	}
 
@@ -1104,12 +1149,16 @@ void CContainerWeenie::OnContainerClosed(CWeenieObject *requestedBy)
 
 	if (InqStringQuality(QUEST_STRING, "") != "")
 		ResetToInitialState(); //quest chests reset instantly
-	else if (_nextReset < 0)
+	else if (_nextReset < 0 || InqIIDQuality(LAST_UNLOCKER_IID, 0))
 	{
+		// Use the chest's built in regen or reset interval after it's been closed.
 		if (double resetInterval = InqFloatQuality(RESET_INTERVAL_FLOAT, 0))
 			_nextReset = Timer::cur_time + (resetInterval * g_pConfig->RespawnTimeMultiplier());
 		else if (double regenInterval = InqFloatQuality(REGENERATION_INTERVAL_FLOAT, 0)) //if we don't have a reset interval, fall back to regen interval
 			_nextReset = Timer::cur_time + (regenInterval * g_pConfig->RespawnTimeMultiplier());
+
+		// Open the chest for everyone.
+		m_Qualities.RemoveInstanceID(LAST_UNLOCKER_IID);
 	}
 }
 
@@ -1121,10 +1170,11 @@ void CContainerWeenie::NotifyGeneratedPickedUp(CWeenieObject *weenie)
 
 void CContainerWeenie::ResetToInitialState()
 {
-	if (_openedById)
-		OnContainerClosed();
-
 	m_Qualities.RemoveInstanceID(OWNER_IID);
+	m_Qualities.RemoveInstanceID(LAST_UNLOCKER_IID);
+
+	if (_openedById)
+		OnContainerClosed(g_pWorld->FindObject(_openedById));
 
 	SetLocked(m_bInitiallyLocked ? TRUE : FALSE);
 
@@ -1146,7 +1196,7 @@ void CContainerWeenie::ResetToInitialState()
 				{
 					if (m_Qualities._generator_registry)
 					{
-						for (PackableHashTable<unsigned long, GeneratorRegistryNode>::iterator i = m_Qualities._generator_registry->_registry.begin(); i != m_Qualities._generator_registry->_registry.end();)
+						for (PackableHashTable<uint32_t, GeneratorRegistryNode>::iterator i = m_Qualities._generator_registry->_registry.begin(); i != m_Qualities._generator_registry->_registry.end();)
 						{
 							if (entry.slot == i->second.slot)
 								i = m_Qualities._generator_registry->_registry.erase(i);
@@ -1165,6 +1215,9 @@ void CContainerWeenie::ResetToInitialState()
 								i++;
 						}
 					}
+
+					if (m_GeneratorSpawns.size() > 0)
+						m_GeneratorSpawns.clear();
 				}
 			}
 		}
@@ -1174,6 +1227,8 @@ void CContainerWeenie::ResetToInitialState()
 				m_Qualities._generator_registry->_registry.clear();
 			if (m_Qualities._generator_queue)
 				m_Qualities._generator_queue->_queue.clear();
+			if (m_GeneratorSpawns.size() > 0)
+				m_GeneratorSpawns.clear();
 		}
 	}
 
@@ -1217,10 +1272,20 @@ int CContainerWeenie::DoUseResponse(CWeenieObject *other)
 			return WERROR_CHEST_ALREADY_OPEN;
 	}
 
+	if (uint32_t unlocker = InqIIDQuality(LAST_UNLOCKER_IID, 0))
+	{
+		// Unopened and unlocked chests are open to everyone after 30 seconds.
+		if (unlocker != other->GetID() && _nextReset - 570 >= Timer::cur_time)
+		{
+			other->SendText(csprintf("This chest is claimed by the person who unlocked it."), LTT_DEFAULT);
+			return WERROR_NONE;
+		}
+	}
+
 	std::string questString;
 	if (m_Qualities.InqString(QUEST_STRING, questString) && !questString.empty())
 	{
-		if (DWORD owner = InqIIDQuality(OWNER_IID, 0))
+		if (uint32_t owner = InqIIDQuality(OWNER_IID, 0))
 		{
 			if (owner != other->GetID())
 			{
@@ -1259,7 +1324,7 @@ int CContainerWeenie::DoUseResponse(CWeenieObject *other)
 
 	OnContainerOpened(other);
 
-	return WERROR_NONE;
+	return CWeenieObject::DoUseResponse(other);
 }
 
 void CContainerWeenie::InventoryTick()
@@ -1270,27 +1335,27 @@ void CContainerWeenie::InventoryTick()
 	{
 		wielded->WieldedTick();
 
-#ifdef _DEBUG
-		wielded->DebugValidate();
-#endif
+//#ifdef _DEBUG
+//		wielded->DebugValidate();
+//#endif
 	}
 
 	for (auto item : m_Items)
 	{
 		item->InventoryTick();
 
-#ifdef _DEBUG
-		item->DebugValidate();
-#endif
+//#ifdef _DEBUG
+//		item->DebugValidate();
+//#endif
 	}
 
 	for (auto pack : m_Packs)
 	{
 		pack->InventoryTick();
 
-#ifdef _DEBUG
-		pack->DebugValidate();
-#endif
+//#ifdef _DEBUG
+//		pack->DebugValidate();
+//#endif
 	}
 }
 
@@ -1312,27 +1377,28 @@ void CContainerWeenie::Tick()
 	{
 		wielded->WieldedTick();
 
-#ifdef _DEBUG
-		wielded->DebugValidate();
-#endif
+//#ifdef _DEBUG
+//		wielded->DebugValidate();
+//#endif
 	}
 
 	for (auto item : m_Items)
 	{
-		item->InventoryTick();
+		if (item)
+			item->InventoryTick();
 
-#ifdef _DEBUG
-		item->DebugValidate();
-#endif
+//#ifdef _DEBUG
+//		item->DebugValidate();
+//#endif
 	}
 
 	for (auto pack : m_Packs)
 	{
 		pack->InventoryTick();
 
-#ifdef _DEBUG
-		pack->DebugValidate();
-#endif
+//#ifdef _DEBUG
+//		pack->DebugValidate();
+//#endif
 	}
 
 	_nextInventoryTick = Timer::cur_time + Random::GenFloat(0.4, 0.6);
@@ -1406,6 +1472,7 @@ void CContainerWeenie::DebugValidate()
 
 	for (auto item : m_Items)
 	{
+		if (item->GetContainerID() != GetID())
 		assert(item->GetContainerID() == GetID());
 		item->DebugValidate();
 	}
@@ -1418,41 +1485,43 @@ void CContainerWeenie::DebugValidate()
 #endif
 }
 
-DWORD CContainerWeenie::RecalculateCoinAmount()
+uint32_t CContainerWeenie::RecalculateCoinAmount(int currencyid)
 {
 	int coinAmount = 0;
 	for (auto item : m_Items)
 	{
-		if (item->m_Qualities.id == W_COINSTACK_CLASS)
+		if (item->m_Qualities.id == currencyid)
 			coinAmount += item->InqIntQuality(STACK_SIZE_INT, 1, true);
 	}
 
 	for (auto pack : m_Packs)
-		coinAmount += pack->RecalculateCoinAmount();
+		coinAmount += pack->RecalculateCoinAmount(currencyid);
 
-	m_Qualities.SetInt(COIN_VALUE_INT, coinAmount);
-	NotifyIntStatUpdated(COIN_VALUE_INT);
-
+	if (AsPlayer() && currencyid == W_COINSTACK_CLASS) {
+		m_Qualities.SetInt(COIN_VALUE_INT, coinAmount);
+		NotifyIntStatUpdated(COIN_VALUE_INT);
+	}
 	return coinAmount;
 }
 
-DWORD CContainerWeenie::ConsumeCoin(int amountToConsume)
+
+uint32_t CContainerWeenie::ConsumeCoin(int amountToConsume, int currencyid)
 {
 	if (amountToConsume < 1)
 		return 0;
 
 	if (AsPlayer()) //we don't need to recalculate this if we're a subcontainer
 	{
-		if (RecalculateCoinAmount() < amountToConsume) //force recalculate our coin amount and check so we don't even try to consume if we don't have enough.
+		if (RecalculateCoinAmount(currencyid) < amountToConsume) //force recalculate our coin amount and check so we don't even try to consume if we don't have enough.
 			return 0;
 	}
 
 	std::list<CWeenieObject *> removeList;
 
-	DWORD amountConsumed = 0;
+	uint32_t amountConsumed = 0;
 	for (auto item : m_Items)
 	{
-		if (item->m_Qualities.id == W_COINSTACK_CLASS)
+		if (item->m_Qualities.id == currencyid)
 		{
 			int stackSize = item->InqIntQuality(STACK_SIZE_INT, 1, true);
 			if (stackSize <= amountToConsume)
@@ -1465,6 +1534,7 @@ DWORD CContainerWeenie::ConsumeCoin(int amountToConsume)
 			{
 				item->SetStackSize(stackSize - amountToConsume);
 				amountConsumed += amountToConsume;
+				amountToConsume = 0;
 				break;
 			}
 		}
@@ -1477,7 +1547,7 @@ DWORD CContainerWeenie::ConsumeCoin(int amountToConsume)
 	{
 		for (auto pack : m_Packs)
 		{
-			DWORD amountFromPack = pack->ConsumeCoin(amountToConsume);
+			uint32_t amountFromPack = pack->ConsumeCoin(amountToConsume, currencyid);
 			amountToConsume -= amountFromPack;
 			amountConsumed += amountFromPack;
 
@@ -1486,8 +1556,8 @@ DWORD CContainerWeenie::ConsumeCoin(int amountToConsume)
 		}
 	}
 
-	if(AsPlayer())
-		RecalculateCoinAmount();
+	if (AsPlayer() && currencyid == W_COINSTACK_CLASS)
+		RecalculateCoinAmount(W_COINSTACK_CLASS);
 	return amountConsumed;
 }
 
@@ -1514,6 +1584,14 @@ void CContainerWeenie::RecalculateEncumbrance()
 
 	if (oldValue != newValue)
 	{
+		if (m_Qualities.m_WeenieType == Corpse_WeenieType || m_Qualities.m_WeenieType == Chest_WeenieType)
+		{
+			CWeenieDefaults *defaults = g_pWeenieFactory->GetWeenieDefaults(m_Qualities.id);
+
+			if (defaults)
+				newValue += defaults->m_Qualities.GetInt(ENCUMB_VAL_INT, 0);
+		}
+
 		m_Qualities.SetInt(ENCUMB_VAL_INT, newValue);
 		NotifyIntStatUpdated(ENCUMB_VAL_INT, true);
 	}
@@ -1568,4 +1646,73 @@ void CContainerWeenie::AdjustToNewCombatMode()
 		newCombatMode = COMBAT_MODE::MELEE_COMBAT_MODE;
 
 	ChangeCombatMode(newCombatMode, false);
+}
+
+uint32_t CContainerWeenie::GetItemCount(int itemid)
+{
+	int itemAmount = 0;
+	for (auto item : m_Items)
+	{
+		if (item->m_Qualities.id == itemid)
+			itemAmount += item->InqIntQuality(STACK_SIZE_INT, 1, true);
+	}
+
+	for (auto pack : m_Packs)
+		itemAmount += pack->GetItemCount(itemid);
+
+	return itemAmount;
+}
+
+uint32_t CContainerWeenie::ConsumeItem(int amountToConsume, int itemid)
+{
+	if (amountToConsume < 1)
+		return 0;
+
+	if (AsPlayer()) //we don't need to recalculate this if we're a subcontainer
+	{
+		if (GetItemCount(itemid) < amountToConsume) //force recalculate our coin amount and check so we don't even try to consume if we don't have enough.
+			return 0;
+	}
+
+	std::list<CWeenieObject *> removeList;
+
+	uint32_t amountConsumed = 0;
+	for (auto item : m_Items)
+	{
+		if (item->m_Qualities.id == itemid)
+		{
+			int stackSize = item->InqIntQuality(STACK_SIZE_INT, 1, true);
+			if (stackSize <= amountToConsume)
+			{
+				removeList.push_back(item);
+				amountToConsume -= stackSize;
+				amountConsumed += stackSize;
+			}
+			else
+			{
+				item->SetStackSize(stackSize - amountToConsume);
+				//amountToConsume -= stackSize;
+				amountConsumed += amountToConsume;
+				break;
+			}
+		}
+	}
+
+	for (auto item : removeList)
+		item->Remove();
+
+	if (amountToConsume > 0)
+	{
+		for (auto pack : m_Packs)
+		{
+			uint32_t amountFromPack = pack->ConsumeItem(amountToConsume, itemid);
+			amountToConsume -= amountFromPack;
+			amountConsumed += amountFromPack;
+
+			if (amountToConsume <= 0)
+				break;
+		}
+	}
+
+	return amountConsumed;
 }

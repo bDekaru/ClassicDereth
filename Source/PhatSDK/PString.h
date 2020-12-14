@@ -16,9 +16,9 @@ public:
         return m_str.c_str();
     }
 
-	static DWORD compute_hash(const char *str);
+	static uint32_t compute_hash(const char *str);
 
     // char *m_szString;
-    // DWORD m_Length;
+    // uint32_t m_Length;
 	std::string m_str;
 };

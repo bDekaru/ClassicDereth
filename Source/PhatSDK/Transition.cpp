@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Transition.h"
 #include "PhysicsObj.h"
 #include "LandDefs.h"
@@ -72,7 +72,7 @@ void COLLISIONINFO::init()
 
 void COLLISIONINFO::add_object(CPhysicsObj *object, TransitionState ts)
 {
-	for (DWORD i = 0; i < num_collide_object; i++)
+	for (uint32_t i = 0; i < num_collide_object; i++)
 	{
 		if (object == collide_object.data[i])
 			return;
@@ -96,7 +96,7 @@ void CELLARRAY::remove_cell(int index)
 
 void CELLARRAY::add_cell(const unsigned int cell_id, CObjCell *cell)
 {
-	for (DWORD i = 0; i < num_cells; i++)
+	for (uint32_t i = 0; i < num_cells; i++)
 	{
 		if (cells.data[i].cell_id == cell_id)
 			return;
@@ -194,7 +194,7 @@ void OBJECTINFO::init(CPhysicsObj *_object, int object_state)
 	step_up_height = _object->GetStepUpHeight();
 	step_down_height = _object->GetStepDownHeight();
 	ethereal = object->m_PhysicsState & ETHEREAL_PS;
-	step_down = ~(unsigned __int8)(object->m_PhysicsState >> 6) & 1; // if not a missile MISSILE_PS
+	step_down = ~(uint8_t)(object->m_PhysicsState >> 6) & 1; // if not a missile MISSILE_PS
 	CWeenieObject *pWeenie = object->weenie_obj;
 	if (pWeenie)
 	{
@@ -206,9 +206,9 @@ void OBJECTINFO::init(CPhysicsObj *_object, int object_state)
 			state |= IS_PK;
 		if (pWeenie->IsPKLite()) // 24 IsPKLite
 			state |= IS_PKLITE;
-	}
 
-	targetID = pWeenie->GetPhysicsTargetID();
+		targetID = pWeenie->GetPhysicsTargetID();
+	}
 }
 
 void CTransition::init_object(CPhysicsObj *object, int object_state)
@@ -228,7 +228,7 @@ void SPHEREPATH::init_sphere(unsigned int _num_sphere, CSphere *_sphere, const f
 	else
 		num_sphere = 2;
 
-	DWORD index = 0;
+	uint32_t index = 0;
 	while (index < num_sphere)
 	{
 		local_sphere[index].center = _sphere[index].center * _scale;
@@ -248,7 +248,7 @@ void CTransition::init_sphere(unsigned int num_sphere, CSphere *sphere, const fl
 
 void SPHEREPATH::cache_global_curr_center()
 {
-	for (DWORD i = 0; i < num_sphere; i++)
+	for (uint32_t i = 0; i < num_sphere; i++)
 	{
 		global_curr_center[i] = curr_pos.localtoglobal(local_sphere[i].center);
 	}
@@ -258,7 +258,7 @@ void SPHEREPATH::cache_global_sphere(Vector *offset)
 {
 	if (offset)
 	{
-		for (DWORD i = 0; i < num_sphere; i++)
+		for (uint32_t i = 0; i < num_sphere; i++)
 		{
 			global_sphere[i].center += *offset;
 		}
@@ -267,7 +267,7 @@ void SPHEREPATH::cache_global_sphere(Vector *offset)
 	}
 	else
 	{
-		for (DWORD i = 0; i < num_sphere; i++)
+		for (uint32_t i = 0; i < num_sphere; i++)
 		{
 			global_sphere[i].radius = local_sphere[i].radius;
 			global_sphere[i].center = check_pos.localtoglobal(local_sphere[i].center);
@@ -1055,7 +1055,7 @@ int CTransition::find_transitional_position()
 		return 1;
 	}
 	
-	for (DWORD i = 0; i < num_steps; i++)
+	for (uint32_t i = 0; i < num_steps; i++)
 	{
 		if (object_info.state & OBJECTINFO::IS_VIEWER_OI)
 		{
@@ -1203,7 +1203,7 @@ int CTransition::find_placement_position()
 		sphere_path.walkable = NULL;
 	}
 
-	return validate_placement(OK_TS, 1) == 1;
+	return validate_placement(ts, 1) == OK_TS;
 }
 
 TransitionState CTransition::validate_placement(TransitionState ts, int adjust)
@@ -1283,7 +1283,7 @@ TransitionState CTransition::insert_into_cell(CObjCell *cell, int num_insertion_
 	return ts;
 }
 
-void SPHEREPATH::adjust_check_pos(DWORD cell_id)
+void SPHEREPATH::adjust_check_pos(uint32_t cell_id)
 {
 	if ((WORD)cell_id < 0x100u)
 	{
@@ -1304,7 +1304,7 @@ TransitionState CTransition::check_other_cells(CObjCell *curr_cell)
 	CObjCell *new_cell2 = NULL;
 	CObjCell::find_cell_list(&cell_array, &new_cell2, &sphere_path);
 
-	for (DWORD i = 0; i < cell_array.num_cells; i++)
+	for (uint32_t i = 0; i < cell_array.num_cells; i++)
 	{
 		CObjCell *other = cell_array.cells.data[i].cell;
 
@@ -1361,7 +1361,7 @@ void SPHEREPATH::cache_localspace_sphere(Position *p, const float scale)
 {		
 	double invScale = 1.0 / scale;
 
-	for (DWORD i = 0; i < num_sphere; i++)
+	for (uint32_t i = 0; i < num_sphere; i++)
 	{
 		localspace_sphere[i].radius = invScale * local_sphere[i].radius;
 		localspace_sphere[i].center = p->localtolocal(check_pos, local_sphere[i].center) * invScale;
@@ -1526,7 +1526,7 @@ int CTransition::find_placement_pos()
 	movementDelta *= TRANSITIONAL_PERCENT_OF_RADIUS;
 
 	float dist_per_step;
-	DWORD num_steps;
+	uint32_t num_steps;
 
 	double numStepsF = 4.0 / movementDelta;
 
@@ -1538,7 +1538,7 @@ int CTransition::find_placement_pos()
 
 	numStepsF = ceil(numStepsF);
 	dist_per_step = adjustRad / numStepsF;
-	num_steps = (DWORD) numStepsF;
+	num_steps = (uint32_t) numStepsF;
 
 	float distance = 0;
 	float numRadial = 0;
@@ -1546,17 +1546,17 @@ int CTransition::find_placement_pos()
 
 	// LOG(Temp, Normal, "Checking...\n");
 
-	for (DWORD i = 0; i < num_steps; ++i)
+	for (uint32_t i = 0; i < num_steps; ++i)
 	{
 		distance += dist_per_step;
 		numRadial += dNumRadial;
-		DWORD numRad = (DWORD) ceil(numRadial);
+		uint32_t numRad = (uint32_t) ceil(numRadial);
 		numRad += numRad;
 		float angleOffset = 360.0f / (float)numRad;
 
 		Frame offsetFrame;
 
-		for (DWORD j = 0; j < numRad; ++j)
+		for (uint32_t j = 0; j < numRad; ++j)
 		{
 			sphere_path.set_check_pos(&sphere_path.curr_pos, sphere_path.curr_cell);
 

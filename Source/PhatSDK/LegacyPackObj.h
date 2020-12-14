@@ -47,7 +47,7 @@ public:
 	}
 };
 
-inline bool UnPackCompressed32(DWORD *output, BYTE **ppData, ULONG *piSize)
+inline bool UnPackCompressed32(uint32_t *output, BYTE **ppData, ULONG *piSize)
 {
 	BinaryReader reader(*ppData, *piSize);
 	*output = reader.ReadCompressedUInt32();
@@ -55,7 +55,7 @@ inline bool UnPackCompressed32(DWORD *output, BYTE **ppData, ULONG *piSize)
 	if (reader.GetLastError())
 		return false;
 
-	DWORD numRead = reader.GetOffset();
+	uint32_t numRead = reader.GetOffset();
 	if (numRead > *piSize)
 		numRead = *piSize;
 
@@ -74,7 +74,7 @@ inline bool UnPackCompressed32(DWORD *output, BYTE **ppData, ULONG *piSize)
 #define PACK_OBJ(obj) obj.Pack(ppData, iSize)
 #define PACK_ALIGN() LegacyPackObj::ALIGN_PTR(ppData, &iSize)
 
-#define FBitSet(flags, bit) ((((DWORD)flags) >> (bit)) & 1)
+#define FBitSet(flags, bit) ((((uint32_t)flags) >> (bit)) & 1)
 
 template<typename T>
 inline BOOL UnpackObjWithReader(T &obj, BYTE** ppData, ULONG iSize)
@@ -82,7 +82,7 @@ inline BOOL UnpackObjWithReader(T &obj, BYTE** ppData, ULONG iSize)
 	BinaryReader reader(*ppData, iSize);
 	BOOL success = obj.UnPack(&reader) ? TRUE : FALSE;
 
-	DWORD numRead = reader.GetOffset();
+	uint32_t numRead = reader.GetOffset();
 	if (numRead > iSize)
 		numRead = iSize;
 

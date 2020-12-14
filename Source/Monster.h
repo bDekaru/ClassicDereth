@@ -18,10 +18,10 @@ struct MotionUseData
 	}
 
 	int m_MotionUseType = MUT_UNDEF;
-	DWORD m_MotionUseMotionID = 0;
-	DWORD m_MotionUseTarget = 0;
-	DWORD m_MotionUseChildID = 0;
-	DWORD m_MotionUseChildLocation = 0;
+	uint32_t m_MotionUseMotionID = 0;
+	uint32_t m_MotionUseTarget = 0;
+	uint32_t m_MotionUseChildID = 0;
+	uint32_t m_MotionUseChildLocation = 0;
 };
 
 class CMonsterWeenie : public CContainerWeenie
@@ -30,9 +30,9 @@ public:
 	CMonsterWeenie();
 	virtual ~CMonsterWeenie() override;
 
-	virtual class CMonsterWeenie *AsMonster() { return this; }
+	virtual class CMonsterWeenie *AsMonster() override { return this; }
 
-	virtual void Tick();
+	virtual void Tick() override;
 
 	static bool ClothingPrioritySorter(const CWeenieObject *first, const CWeenieObject *second);
 	virtual void GetObjDesc(ObjDesc &objDesc) override;
@@ -40,22 +40,30 @@ public:
 	virtual void ApplyQualityOverrides() override;
 
 	virtual void OnDeathAnimComplete();
-	virtual void OnMotionDone(DWORD motion, BOOL success) override;
-	virtual void OnDeath(DWORD killer_id) override;
+	virtual void OnMotionDone(uint32_t motion, BOOL success) override;
+	virtual void OnDeath(uint32_t killer_id) override;
 	virtual void OnDealtDamage(DamageEventData &damageData) override;
+
+	std::map<uint32_t, int> m_aDamageSources;
 	virtual void OnTookDamage(DamageEventData &damageData) override;
+	void UpdateDamageList(DamageEventData &damageData);
+	virtual void OnRegen(STypeAttribute2nd currentAttrib, int newAmount) override;
+
+	virtual void GivePerksForKill(CWeenieObject *pKilled) override;
+	virtual void GiveXP(int64_t amount, ExperienceHandlingType flags, bool showText = false) override;
+
 	virtual void OnIdentifyAttempted(CWeenieObject *other) override;
 	virtual void OnResistSpell(CWeenieObject *attacker) override;
 	virtual void OnEvadeAttack(CWeenieObject *attacker) override;
-	virtual DWORD OnReceiveInventoryItem(CWeenieObject *source, CWeenieObject *item, DWORD desired_slot) override;
+	virtual uint32_t OnReceiveInventoryItem(CWeenieObject *source, CWeenieObject *item, uint32_t desired_slot) override;
 
-	DWORD DoForcedUseMotion(MotionUseType useType, DWORD motion, DWORD target = 0, DWORD childID = 0, DWORD childLoc = 0, MovementParameters *params = NULL);
+	uint32_t DoForcedUseMotion(MotionUseType useType, uint32_t motion, uint32_t target = 0, uint32_t childID = 0, uint32_t childLoc = 0, MovementParameters *params = NULL);
 
 	virtual void PreSpawnCreate() override;
 	virtual void PostSpawn() override;
 
-	virtual void TryMeleeAttack(DWORD target_id, ATTACK_HEIGHT height, float power, DWORD motion = 0) override;
-	virtual void TryMissileAttack(DWORD target_id, ATTACK_HEIGHT height, float power, DWORD motion = 0) override;
+	virtual bool TryMeleeAttack(uint32_t target_id, ATTACK_HEIGHT height, float power, uint32_t motion = 0) override;
+	virtual void TryMissileAttack(uint32_t target_id, ATTACK_HEIGHT height, float power, uint32_t motion = 0) override;
 
 	virtual bool IsDead() override;
 
@@ -65,7 +73,7 @@ public:
 
 	virtual int GetAttackTime() override;
 	virtual int GetAttackTimeUsingWielded() override;
-	virtual int GetAttackDamage() override;
+	virtual int GetAttackDamage(bool isAssess = false) override;
 	virtual float GetEffectiveArmorLevel(DamageEventData &damageData, bool bIgnoreMagicArmor) override;
 
 	virtual void HandleAggro(CWeenieObject *attacker) override;
@@ -73,25 +81,32 @@ public:
 	void DropAllLoot(CCorpseWeenie *pCorpse);
 	virtual void GenerateDeathLoot(CCorpseWeenie *pCorpse);
 
-	virtual BOOL DoCollision(const class ObjCollisionProfile &prof);
+	virtual BOOL DoCollision(const class ObjCollisionProfile &prof) override;
+	virtual int AdjustHealth(int amount, bool useRatings = true) override;
 
 	CCorpseWeenie *CreateCorpse(bool visible = true);
 
-	bool IsAttackMotion(DWORD motion);
+	bool IsAttackMotion(uint32_t motion);
 
-	DWORD m_LastAttackTarget = 0;
-	DWORD m_LastAttackHeight = 1;
+	bool CheckRareEligible(CWeenieObject *highestDamageDealer);
+
+	uint32_t m_highestDamageSource = 0;
+	int m_totalDamageTaken = 0;
+
+	uint32_t m_LastAttackTarget = 0;
+	uint32_t m_LastAttackHeight = 1;
 	float m_LastAttackPower = 0.0f;
 
-	DWORD m_AttackAnimTarget = 0;
-	DWORD m_AttackAnimHeight = 1;
+	uint32_t m_AttackAnimTarget = 0;
+	uint32_t m_AttackAnimHeight = 1;
 	float m_AttackAnimPower = 0.0f;
 
 	bool m_bChargingAttack = false;
-	DWORD m_ChargingAttackTarget = 0;
-	DWORD m_ChargingAttackHeight = false;
+	uint32_t m_ChargingAttackTarget = 0;
+	uint32_t m_ChargingAttackHeight = false;
 	float m_ChargingAttackPower = 0.0f;
 	float m_fChargeAttackStartTime = (float) INVALID_TIME;
+	bool m_bIsRareEligible = false;
 
 	unsigned int m_MeleeDamageBonus = 0;
 	
@@ -100,32 +115,40 @@ public:
 	class MonsterAIManager *m_MonsterAI = NULL;
 
 	CWeenieObject *SpawnWielded(CWeenieObject *item, bool deleteItemOnFailure = true);
-	CWeenieObject *SpawnWielded(DWORD wcid, int ptid, float shade);
-	CWeenieObject *SpawnWielded(DWORD index, SmartArray<Style_CG> possibleStyles, DWORD color, SmartArray<DWORD> validColors, long double shade);
+	CWeenieObject *SpawnWielded(uint32_t wcid, int ptid, float shade);
+	CWeenieObject *SpawnWielded(uint32_t index, SmartArray<Style_CG> possibleStyles, uint32_t color, SmartArray<uint32_t> validColors, double shade);
 
 	// Inventory
-	CWeenieObject *FindValidNearbyItem(DWORD itemId, float maxDistance = 2.0);
-	CContainerWeenie *FindValidNearbyContainer(DWORD itemId, float maxDistance = 2.0);
-	bool GetEquipPlacementAndHoldLocation(CWeenieObject *item, DWORD location, DWORD *pPlacementFrame, DWORD *pHoldLocation);
+	CWeenieObject *FindValidNearbyItem(uint32_t itemId, float maxDistance = 2.0);
+	CContainerWeenie *FindValidNearbyContainer(uint32_t itemId, float maxDistance = 2.0);
+	bool GetEquipPlacementAndHoldLocation(CWeenieObject *item, uint32_t location, uint32_t *pPlacementFrame, uint32_t *pHoldLocation);
 	BYTE GetEnchantmentSerialByteForMask(int priority);
 	int CheckWieldRequirements(CWeenieObject *item, CWeenieObject *wielder, STypeInt requirementStat, STypeInt skillStat, STypeInt difficultyStat);
 
-	bool MoveItemToContainer(DWORD sourceItemId, DWORD targetContainerId, DWORD targetSlot, bool animationDone = false);
-	void FinishMoveItemToContainer(CWeenieObject *sourceItem, CContainerWeenie *targetContainer, DWORD targetSlot, bool bSendEvent = true, bool silent = false);
+	bool MoveItemToContainer(uint32_t sourceItemId, uint32_t targetContainerId, uint32_t targetSlot, bool animationDone = false);
+	void FinishMoveItemToContainer(CWeenieObject *sourceItem, CContainerWeenie *targetContainer, uint32_t targetSlot, bool bSendEvent = true, bool silent = false);
 
-	bool MoveItemTo3D(DWORD sourceItemId, bool animationDone = false);
+	bool MoveItemTo3D(uint32_t sourceItemId, bool animationDone = false);
 	void FinishMoveItemTo3D(CWeenieObject *sourceItem);
 
-	bool MoveItemToWield(DWORD sourceItemId, DWORD targetLoc, bool animationDone = false);
-	bool FinishMoveItemToWield(CWeenieObject *sourceItem, DWORD targetLoc);
+	bool MoveItemToWield(uint32_t sourceItemId, uint32_t targetLoc, bool animationDone = false);
+	bool FinishMoveItemToWield(CWeenieObject *sourceItem, uint32_t targetLoc);
 
-	bool MergeItem(DWORD sourceItemId, DWORD targetItemId, DWORD amountToTransfer, bool animationDone = false);
-	bool SplitItemToContainer(DWORD sourceItemId, DWORD targetContainerId, DWORD targetSlot, DWORD amountToMove, bool animationDone = false);
-	bool SplitItemto3D(DWORD sourceItemId, DWORD amountToTransfer, bool animationDone = false);
-	bool SplitItemToWield(DWORD sourceItemId, DWORD targetLoc, DWORD amountToTransfer, bool animationDone = false);
+	int GetAetheriaSetCount(int setid);
 
-	void GiveItem(DWORD targetContainerId, DWORD sourceItemId, DWORD amountToTransfer);
-	void FinishGiveItem(CContainerWeenie *targetContainer, CWeenieObject *sourceItem, DWORD amountToTransfer);
+	void UpdateRatingFromGear(STypeInt rating, int gearRating);
+
+	bool MergeItem(uint32_t sourceItemId, uint32_t targetItemId, uint32_t amountToTransfer, bool animationDone = false);
+	bool SplitItemToContainer(uint32_t sourceItemId, uint32_t targetContainerId, uint32_t targetSlot, uint32_t amountToMove, bool animationDone = false);
+	bool SplitItemto3D(uint32_t sourceItemId, uint32_t amountToTransfer, bool animationDone = false);
+	bool SplitItemToWield(uint32_t sourceItemId, uint32_t targetLoc, uint32_t amountToTransfer, bool animationDone = false);
+
+	void GiveItem(uint32_t targetContainerId, uint32_t sourceItemId, uint32_t amountToTransfer);
+	void FinishGiveItem(CContainerWeenie *targetContainer, CWeenieObject *sourceItem, uint32_t amountToTransfer);
+
+	void SetDisplayCombatDamage(bool show);
+	bool ShowCombatDamage();
+	bool CanAcceptGive(CWeenieObject* item);
 
 private:
 	void CheckRegeneration(bool &bRegenerateNext, double &lastRegen, float regenRate, STypeAttribute2nd currentAttrib, STypeAttribute2nd maxAttrib);
@@ -141,9 +164,12 @@ private:
 
 	bool m_bWaitingForDeathToFinish = false;
 	std::string m_DeathKillerNameForCorpse;
-	DWORD m_DeathKillerIDForCorpse;
+	uint32_t m_DeathKillerIDForCorpse;
 
 	MotionUseData m_MotionUseData;
+
+	
+	bool m_bGiveCombatData = false;
 };
 
 /*

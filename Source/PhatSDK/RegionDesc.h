@@ -51,7 +51,7 @@ class PalShiftTerrainPal
 {
 public:
 	LandDefs::TerrainType terrain_index;
-	DWORD pal_id;
+	uint32_t pal_id;
 };
 
 class PalShiftTex : public PackObj
@@ -63,7 +63,7 @@ public:
 	void Destroy();
 	DECLARE_PACKABLE();
 
-	DWORD tex_gid = 0; // 0
+	uint32_t tex_gid = 0; // 0
 	SmartArray<class PalShiftSubPal *> sub_pal; // 4
 	SmartArray<class PalShiftRoadCode *> road_code; // 0x10
 	SmartArray<class PalShiftTerrainPal *> terrain_pal; // 0x1C
@@ -91,7 +91,7 @@ public:
 
 	unsigned int NumSceneType(unsigned int terrain_id);
 	unsigned int SceneCount(unsigned int terrain_id, unsigned int scene_type_id);
-	DWORD GetScene(unsigned int terrain_id, unsigned int scene_type_id, unsigned int scene_index);
+	uint32_t GetScene(unsigned int terrain_id, unsigned int scene_type_id, unsigned int scene_index);
 
 	class LandSurf *land_surfaces = NULL;
 	SmartArray<class CTerrainType *> terrain_types;
@@ -111,7 +111,7 @@ public:
 	DECLARE_PACKABLE();
 
 	std::string scene_name;
-	SmartArray<DWORD> scenes;
+	SmartArray<uint32_t> scenes;
 	AmbientSTBDesc *sound_table_desc = NULL;
 };
 
@@ -132,11 +132,11 @@ public:
 	DECLARE_PACKABLE();
 
 	unsigned int version = 0;
-	DWORD game_map = 0x600127D;
-	DWORD autotest_map = 0x6000261;
+	uint32_t game_map = 0x600127D;
+	uint32_t autotest_map = 0x6000261;
 	unsigned int autotest_map_size = 4;
-	DWORD clear_cell = 0;
-	DWORD clear_monster = 0;
+	uint32_t clear_cell = 0;
+	uint32_t clear_monster = 0;
 };
 
 class TerrainAlphaMap : public PackObj
@@ -148,7 +148,7 @@ public:
 	void Destroy();
 
 	unsigned int tcode = 0;
-	DWORD tex_gid = 0;
+	uint32_t tex_gid = 0;
 	ImgTex *texture = NULL;
 };
 
@@ -161,7 +161,7 @@ public:
 	void Destroy();
 
 	unsigned int rcode = 0;
-	DWORD road_tex_gid = 0;
+	uint32_t road_tex_gid = 0;
 	ImgTex *texture = NULL;
 };
 
@@ -174,7 +174,7 @@ public:
 	void Destroy();
 	DECLARE_PACKABLE();
 
-	DWORD tex_gid = 0;
+	uint32_t tex_gid = 0;
 	ImgTex *base_texture = NULL;
 	float min_slope = 0.0f;
 	unsigned int tex_tiling = 0;
@@ -185,7 +185,7 @@ public:
 	unsigned int max_vert_hue = 0;
 	unsigned int min_vert_hue = 0;
 	unsigned int detail_tex_tiling = 0;
-	DWORD detail_tex_gid = 0;
+	uint32_t detail_tex_gid = 0;
 };
 
 class TMTerrainDesc : public PackObj
@@ -226,7 +226,7 @@ public:
 
 	static DBObj* Allocator();
 	static void Destroyer(DBObj*);
-	static CRegionDesc* Get(DWORD ID);
+	static CRegionDesc* Get(uint32_t ID);
 	static void Release(CRegionDesc *);
 
 	void Destroy(void);
@@ -235,13 +235,13 @@ public:
 
 	unsigned int NumSceneType(unsigned int terrain_id);
 	unsigned int SceneCount(unsigned int terrain_id, unsigned int scene_type_id);
-	DWORD GetScene(unsigned int terrain_id, unsigned int scene_type_id, unsigned int scene_index);
+	uint32_t GetScene(unsigned int terrain_id, unsigned int scene_type_id, unsigned int scene_index);
 
-	DWORD region_number;
+	uint32_t region_number;
 	PString region_name;
-	DWORD version;
-	DWORD minimize_pal;
-	DWORD parts_mask;
+	uint32_t version;
+	uint32_t minimize_pal;
+	uint32_t parts_mask;
 	FileNameDesc *file_info;
 	SkyDesc *sky_info;
 	CSoundDesc *sound_info;
@@ -252,7 +252,7 @@ public:
 
 	static void CalcDayGroup();
 	static int GetSky(float time_of_day, SmartArray<CelestialPosition> *sky_pos);
-	static BOOL SetRegion(DWORD Instance, BOOL Hardware);
+	static BOOL SetRegion(uint32_t Instance, BOOL Hardware);
 	static CRegionDesc *current_region;
 };
 

@@ -1,17 +1,17 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "crc.h"
 
-DWORD GetMagicNumber(BYTE *pbBuf, WORD wSize, BOOL fIncludeSize)
+uint32_t GetMagicNumber(BYTE *pbBuf, WORD wSize, BOOL fIncludeSize)
 {
-	DWORD dwCS = 0;
+	uint32_t dwCS = 0;
 	int i;
 
 	//if ( fIncludeSize ) // PRE_TOD only
 	dwCS += wSize << 16;
 
 	for (i = 0; i < (wSize >> 2); ++i)
-		dwCS += ((DWORD *)pbBuf)[i];
+		dwCS += ((uint32_t *)pbBuf)[i];
 
 	int iShift = 3;
 	for (i = (i << 2); i < wSize; ++i)
@@ -23,10 +23,10 @@ DWORD GetMagicNumber(BYTE *pbBuf, WORD wSize, BOOL fIncludeSize)
 	return dwCS;
 }
 
-DWORD CalcTransportCRC(DWORD *pdwWoot)
+uint32_t CalcTransportCRC(uint32_t *pdwWoot)
 {
-	DWORD dwOrg = pdwWoot[2];
-	DWORD dwCrc = 0;
+	uint32_t dwOrg = pdwWoot[2];
+	uint32_t dwCrc = 0;
 
 	pdwWoot[2] = 0xBADD70DD;
 	dwCrc += GetMagicNumber((BYTE *)pdwWoot, 20, TRUE);
@@ -35,51 +35,69 @@ DWORD CalcTransportCRC(DWORD *pdwWoot)
 	return dwCrc;
 }
 
-DWORD GenericCRC(BlobPacket_s *p)
+uint32_t GenericCRC(BlobPacket_s *p)
 {
-	DWORD dwCrc1, dwCrc2, *pdwCrc;
+	uint32_t dwCrc1, dwCrc2, *pdwCrc;
 
 	pdwCrc = &p->header.dwCRC;
 	*pdwCrc = 0xBADD70DD;
-	dwCrc1 = CalcTransportCRC((DWORD *)p);
+	dwCrc1 = CalcTransportCRC((uint32_t *)p);
 	dwCrc2 = GetMagicNumber(p->data, p->header.wSize, FALSE);
 	*pdwCrc = dwCrc1 + dwCrc2;
 
 	return (dwCrc1 + dwCrc2);
 }
 
-DWORD BlobCRC(BlobPacket_s *p, DWORD dwXOR)
+uint32_t BlobCRC(BlobPacket_s *p, uint32_t dwXOR)
 {
 	BYTE *pbPayload = p->data;
 	BYTE *pbPayloadEnd = p->data + p->header.wSize;
 
-	DWORD dwFlags = p->header.dwFlags;
+	uint32_t dwFlags = p->header.dwFlags;
 
-	DWORD dwHeaderCRC = CalcTransportCRC((DWORD *)p);
-	DWORD dwPayloadCRC = 0;
+	uint32_t dwHeaderCRC = CalcTransportCRC((uint32_t *)p);
+	uint32_t dwPayloadCRC = 0;
+
+	uint16_t optionSize = 0;
+
+	if (dwFlags & BT_ACKSEQUENCE)
+	{
+		optionSize += sizeof(uint32_t);
+		//dwPayloadCRC += GetMagicNumber(pbPayload, sizeof(uint32_t), TRUE);
+		//pbPayload +=
+	}
 
 	if (dwFlags & BT_TIMEUPDATE)
 	{
-		dwPayloadCRC += GetMagicNumber(pbPayload, sizeof(double), TRUE);
-		pbPayload += sizeof(double);
+		optionSize += sizeof(double);
+		//dwPayloadCRC += GetMagicNumber(pbPayload, sizeof(double), TRUE);
+		//pbPayload += sizeof(double);
 	}
 
 	if (dwFlags & BT_ECHOREQUEST)
 	{
-		dwPayloadCRC += GetMagicNumber(pbPayload, 4, TRUE);
-		pbPayload += 4;
+		optionSize += sizeof(uint32_t);
+		//dwPayloadCRC += GetMagicNumber(pbPayload, 4, TRUE);
+		//pbPayload += 4;
 	}
 
 	if (dwFlags & BT_ECHORESPONSE)
 	{
-		dwPayloadCRC += GetMagicNumber(pbPayload, 8, TRUE);
-		pbPayload += 8;
+		optionSize += 8;
+		//dwPayloadCRC += GetMagicNumber(pbPayload, 8, TRUE);
+		//pbPayload += 8;
 	}
 
 	if (dwFlags & BT_FLOW)
 	{
-		dwPayloadCRC += GetMagicNumber(pbPayload, 6, TRUE);
-		pbPayload += 6;
+		optionSize += 6;
+		//dwPayloadCRC += GetMagicNumber(pbPayload, 6, TRUE);
+		//pbPayload += 6;
+	}
+	if (optionSize > 0)
+	{
+		dwPayloadCRC += GetMagicNumber(pbPayload, optionSize, TRUE);
+		pbPayload += optionSize;
 	}
 
 	if (dwFlags & BT_FRAGMENTS)
@@ -93,7 +111,7 @@ DWORD BlobCRC(BlobPacket_s *p, DWORD dwXOR)
 		}
 	}
 
-	DWORD dwFinalCRC = dwHeaderCRC + (dwPayloadCRC ^ dwXOR);
+	uint32_t dwFinalCRC = dwHeaderCRC + (dwPayloadCRC ^ dwXOR);
 	return dwFinalCRC;
 }
 

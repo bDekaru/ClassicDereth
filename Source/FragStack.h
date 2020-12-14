@@ -15,7 +15,7 @@ public:
 	bool IsComplete();
 
 	// Used for forming groups together
-    DWORD64 _id;
+    uint64_t _id;
 
 private:
 	BYTE *m_pbData;

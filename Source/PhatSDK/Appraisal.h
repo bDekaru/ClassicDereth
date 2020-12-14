@@ -29,11 +29,11 @@ public:
 	unsigned int weapon_skill = 0;
 	int weapon_time = 0;
 	int weapon_damage = 0;
-	long double damage_variance = 0.25;
-	long double damage_mod = 1.0;
-	long double weapon_length = 0;
-	long double max_velocity = 0;
-	long double weapon_offense = 1.0;
+	double damage_variance = 0.25;
+	double damage_mod = 1.0;
+	double weapon_length = 0;
+	double max_velocity = 0;
+	double weapon_offense = 1.0;
 	int max_velocity_estimated = 0;
 };
 
@@ -78,19 +78,19 @@ public:
 		FORCE_Enchantment_BFIndex_32_BIT = 0x7FFFFFFF,
 	};
 
-	DWORD strength = 0;
-	DWORD endurance = 0;
-	DWORD quickness = 0;
-	DWORD coordination = 0;
-	DWORD focus = 0;
-	DWORD self = 0;
-	DWORD health = 0;
-	DWORD stamina = 0;
-	DWORD mana = 0;
-	DWORD max_health = 0;
-	DWORD max_stamina = 0;
-	DWORD max_mana = 0;
-	DWORD enchantment_bitfield = 0;
+	uint32_t strength = 0;
+	uint32_t endurance = 0;
+	uint32_t quickness = 0;
+	uint32_t coordination = 0;
+	uint32_t focus = 0;
+	uint32_t self = 0;
+	uint32_t health = 0;
+	uint32_t stamina = 0;
+	uint32_t mana = 0;
+	uint32_t max_health = 0;
+	uint32_t max_stamina = 0;
+	uint32_t max_mana = 0;
+	uint32_t enchantment_bitfield = 0;
 };
 
 class AppraisalProfile : public PackObj
@@ -107,25 +107,25 @@ public:
 	class WeaponProfile * weapon_profile = NULL; // 0x10
 	class ArmorProfile * armor_profile = NULL; // 0x14
 	class PackableHashTableWithJson<STypeInt, int> * _intStatsTable = NULL; // 0x18
-	class PackableHashTableWithJson<STypeInt64, __int64> * _int64StatsTable = NULL; // 0x1C
+	class PackableHashTableWithJson<STypeInt64, int64_t> * _int64StatsTable = NULL; // 0x1C
 	class PackableHashTableWithJson<STypeBool, int> * _boolStatsTable = NULL; // 0x20
 	class PackableHashTableWithJson<STypeFloat, double> * _floatStatsTable = NULL; // 0x24
 	class PackableHashTableWithJson<STypeString, std::string> * _strStatsTable = NULL; // 0x28
-	class PackableHashTableWithJson<STypeDID, DWORD> * _didStatsTable = NULL; // 0x2C
-	class SmartArray<DWORD> *_spellBook = NULL; // 0x30 actually a PSmartArray
+	class PackableHashTableWithJson<STypeDID, uint32_t> * _didStatsTable = NULL; // 0x2C
+	class SmartArray<uint32_t> *_spellBook = NULL; // 0x30 actually a PSmartArray
 
-	unsigned long armor_ench_bitfield = 0;
-	unsigned long weapon_ench_bitfield = 0;
-	unsigned long resist_ench_bitfield = 0;
+	uint32_t armor_ench_bitfield = 0;
+	uint32_t weapon_ench_bitfield = 0;
+	uint32_t resist_ench_bitfield = 0;
 
-	long base_armor_head = 0;
-	long base_armor_chest = 0;
-	long base_armor_groin = 0;
-	long base_armor_bicep = 0;
-	long base_armor_wrist = 0;
-	long base_armor_hand = 0;
-	long base_armor_thigh = 0;
-	long base_armor_shin = 0;
-	long base_armor_foot = 0;
+	int32_t base_armor_head = 0;
+	int32_t base_armor_chest = 0;
+	int32_t base_armor_groin = 0;
+	int32_t base_armor_bicep = 0;
+	int32_t base_armor_wrist = 0;
+	int32_t base_armor_hand = 0;
+	int32_t base_armor_thigh = 0;
+	int32_t base_armor_shin = 0;
+	int32_t base_armor_foot = 0;
 };
 

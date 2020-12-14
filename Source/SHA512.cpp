@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "SHA512.h"
 
 #if defined(_MSC_VER) || defined(__WATCOMC__)

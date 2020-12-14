@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "ACCharGenData.h"
 
@@ -21,9 +21,9 @@ DEFINE_PACK(Skill_CG)
 
 DEFINE_UNPACK(Skill_CG)
 {
-	skillNum = pReader->Read<DWORD>();
-	normalCost = pReader->Read<DWORD>();
-	primaryCost = pReader->Read<DWORD>();
+	skillNum = pReader->Read<uint32_t>();
+	normalCost = pReader->Read<uint32_t>();
+	primaryCost = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -35,8 +35,8 @@ DEFINE_UNPACK(Template_CG)
 {
 	name = pReader->ReadSerializedString();
 
-	iconImage = pReader->Read<DWORD>();
-	titleID = pReader->Read<DWORD>();
+	iconImage = pReader->Read<uint32_t>();
+	titleID = pReader->Read<uint32_t>();
 	strength = pReader->Read<int>();
 	endurance = pReader->Read<int>();
 	coordination = pReader->Read<int>();
@@ -54,10 +54,10 @@ DEFINE_PACK(HairStyle_CG)
 
 DEFINE_UNPACK(HairStyle_CG)
 {
-	iconImage = pReader->Read<DWORD>();
+	iconImage = pReader->Read<uint32_t>();
 	bald = pReader->Read<BYTE>() ? true : false;
 
-	alternateSetup = pReader->Read<DWORD>();
+	alternateSetup = pReader->Read<uint32_t>();
 
 	pReader->ReadAlign();
 	objDesc.UnPack(pReader);
@@ -70,8 +70,8 @@ DEFINE_PACK(EyesStrip_CG)
 
 DEFINE_UNPACK(EyesStrip_CG)
 {
-	iconImage = pReader->Read<DWORD>();
-	iconImage_Bald = pReader->Read<DWORD>();
+	iconImage = pReader->Read<uint32_t>();
+	iconImage_Bald = pReader->Read<uint32_t>();
 	
 	pReader->ReadAlign();
 	objDesc.UnPack(pReader);
@@ -88,7 +88,7 @@ DEFINE_PACK(FaceStrip_CG)
 
 DEFINE_UNPACK(FaceStrip_CG)
 {
-	iconImage = pReader->Read<DWORD>();	
+	iconImage = pReader->Read<uint32_t>();	
 	pReader->ReadAlign();
 	objDesc.UnPack(pReader);
 
@@ -102,8 +102,8 @@ DEFINE_PACK(Style_CG)
 DEFINE_UNPACK(Style_CG)
 {
 	name = pReader->ReadSerializedString();
-	clothingTable = pReader->Read<DWORD>();
-	weenieDefault = pReader->Read<DWORD>();
+	clothingTable = pReader->Read<uint32_t>();
+	weenieDefault = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -116,14 +116,14 @@ DEFINE_UNPACK(Sex_CG)
 	name = pReader->ReadSerializedString();
 
 	scaling = pReader->Read<int>();
-	setup = pReader->Read<DWORD>();
-	soundTable = pReader->Read<DWORD>();
-	iconImage = pReader->Read<DWORD>();
-	basePalette = pReader->Read<DWORD>();
-	skinPalSet = pReader->Read<DWORD>();
-	physicsTable = pReader->Read<DWORD>();
-	motionTable = pReader->Read<DWORD>();
-	combatTable = pReader->Read<DWORD>();
+	setup = pReader->Read<uint32_t>();
+	soundTable = pReader->Read<uint32_t>();
+	iconImage = pReader->Read<uint32_t>();
+	basePalette = pReader->Read<uint32_t>();
+	skinPalSet = pReader->Read<uint32_t>();
+	physicsTable = pReader->Read<uint32_t>();
+	motionTable = pReader->Read<uint32_t>();
+	combatTable = pReader->Read<uint32_t>();
 
 	pReader->ReadAlign();
 	objDesc.UnPack(pReader);
@@ -150,11 +150,11 @@ DEFINE_PACK(HeritageGroup_CG)
 DEFINE_UNPACK(HeritageGroup_CG)
 {
 	name = pReader->ReadSerializedString();
-	iconImage = pReader->Read<DWORD>();
-	setupID = pReader->Read<DWORD>();
-	environmentSetupID = pReader->Read<DWORD>();
-	numAttributeCredits = pReader->Read<DWORD>();
-	numSkillCredits = pReader->Read<DWORD>();
+	iconImage = pReader->Read<uint32_t>();
+	setupID = pReader->Read<uint32_t>();
+	environmentSetupID = pReader->Read<uint32_t>();
+	numAttributeCredits = pReader->Read<uint32_t>();
+	numSkillCredits = pReader->Read<uint32_t>();
 	
 	mPrimaryStartAreaList.UnSerialize(pReader);
 	mSecondaryStartAreaList.UnSerialize(pReader);
@@ -174,8 +174,8 @@ DEFINE_PACK(ACCharGenData)
 
 DEFINE_UNPACK(ACCharGenData)
 {
-	pReader->Read<DWORD>(); // ID
-	pReader->Read<DWORD>(); // ID again..
+	pReader->Read<uint32_t>(); // ID
+	pReader->Read<uint32_t>(); // ID again..
 
 	mStartAreaList.UnSerializePackObj(pReader);
 	mHeritageGroupList.UnPack(pReader);

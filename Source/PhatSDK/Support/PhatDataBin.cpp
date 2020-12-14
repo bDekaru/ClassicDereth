@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatDataBin.h"
 
 #if PHATSDK_INCLUDE_PHATDATABIN
@@ -17,26 +17,28 @@ void CleanupPhatDataBin()
 	SafeDelete(g_pPhatDataBin);
 }
 
-bool LoadDataFromCompressed(BYTE *input_data, DWORD input_length, BYTE **data, DWORD *length, DWORD magic1, DWORD magic2)
+bool LoadDataFromCompressed(BYTE *input_data, uint32_t input_length, BYTE **data, uint32_t *length, uint32_t magic1, uint32_t magic2)
 {
 	*data = NULL;
 	*length = 0;
 
-	DWORD packing = magic1;
-	for (DWORD i = 0; i < (input_length >> 2); i++) {
-		((DWORD *)input_data)[i] += ((i + 1) * packing);
+	uint32_t packing = magic1;
+	for (uint32_t i = 0; i < (input_length >> 2); i++) {
+		((uint32_t *)input_data)[i] += ((i + 1) * packing);
 		packing ^= magic2;
 	}
 
-	DWORD decompressed_size = *((DWORD *)input_data);
-	BYTE *compressed_buffer = input_data + sizeof(DWORD);
-	DWORD compressed_size = input_length - sizeof(DWORD);
+	uint32_t decompressed_size = *((uint32_t *)input_data);
+	BYTE *compressed_buffer = input_data + sizeof(uint32_t);
+	uint32_t compressed_size = input_length - sizeof(uint32_t);
 
 	*data = new BYTE[decompressed_size];
 	*length = decompressed_size;
 	bool success = true;
 
-	if (Z_OK != uncompress(*data, length, compressed_buffer, compressed_size))
+	uLongf ulf = decompressed_size;
+
+	if (Z_OK != uncompress(*data, &ulf, compressed_buffer, compressed_size))
 	{
 		delete[](*data);
 		*data = NULL;
@@ -44,17 +46,18 @@ bool LoadDataFromCompressed(BYTE *input_data, DWORD input_length, BYTE **data, D
 
 		success = false;
 	}
+	*length = (uint32_t)ulf;
 
 	return success;
 }
 
-bool LoadDataFromPhatDataBin(DWORD data_id, BYTE **data, DWORD *length, DWORD magic1, DWORD magic2)
+bool LoadDataFromPhatDataBin(uint32_t data_id, BYTE **data, uint32_t *length, uint32_t magic1, uint32_t magic2)
 {
 	if (!g_pPhatDataBin)
 		return false;
 
 	BYTE *input_data;
-	DWORD input_length;
+	uint32_t input_length;
 	if (g_pPhatDataBin->Get(data_id, &input_data, &input_length))
 	{
 		bool success = LoadDataFromCompressed(input_data, input_length, data, length, magic1, magic2);
@@ -79,7 +82,7 @@ void CPhatDataBinCompressedData::Destroy()
 	_uncompressedLength = 0;
 }
 
-bool CPhatDataBinCompressedData::RetrieveData(BYTE **data, DWORD *length)
+bool CPhatDataBinCompressedData::RetrieveData(BYTE **data, uint32_t *length)
 {
 	*data = NULL;
 	*length = 0;
@@ -93,19 +96,22 @@ bool CPhatDataBinCompressedData::RetrieveData(BYTE **data, DWORD *length)
 	*length = _uncompressedLength;
 	bool success = true;
 
-	if (Z_OK != uncompress(*data, length, _compressedData, _compressedLength))
+	uLongf ulf = _uncompressedLength;
+
+	if (Z_OK != uncompress(*data, &ulf, _compressedData, _compressedLength))
 	{
 		delete[] (*data);
 		*data = NULL;
 		*length = 0;
 
 		return false;
+		*length = (uint32_t)ulf;
 	}
 
 	return true;
 }
 
-bool CPhatDataBinCompressedData::StoreData(BYTE *data, DWORD length)
+bool CPhatDataBinCompressedData::StoreData(BYTE *data, uint32_t length)
 {
 	Destroy();
 
@@ -115,33 +121,36 @@ bool CPhatDataBinCompressedData::StoreData(BYTE *data, DWORD length)
 	}
 
 	_uncompressedLength = length;
-	_compressedLength = (DWORD)((length * 1.02f) + 12 + 1);
+	_compressedLength = (uint32_t)((length * 1.02f) + 12 + 1);
 	_compressedData = new BYTE[_compressedLength];
 
-	if (Z_OK != compress2(_compressedData, &_compressedLength, data, length, Z_BEST_COMPRESSION))
+	uLongf ulf = _compressedLength;
+
+	if (Z_OK != compress2(_compressedData, &ulf, data, length, Z_BEST_COMPRESSION))
 	{
 		Destroy();
 		return false;
 	}
+	_compressedLength = (uint32_t)ulf;
 
 	return true;
 }
 
 DEFINE_PACK(CPhatDataBinCompressedData)
 {
-	pWriter->Write<DWORD>(_compressedLength);
+	pWriter->Write<uint32_t>(_compressedLength);
 	pWriter->Write(_compressedData, _compressedLength);
-	pWriter->Write<DWORD>(_uncompressedLength);
+	pWriter->Write<uint32_t>(_uncompressedLength);
 }
 
 DEFINE_UNPACK(CPhatDataBinCompressedData)
 {
 	Destroy();
 
-	_compressedLength = pReader->Read<DWORD>();
+	_compressedLength = pReader->Read<uint32_t>();
 	_compressedData = new BYTE[_compressedLength];
 	memcpy(_compressedData, pReader->ReadArray(_compressedLength), _compressedLength);
-	_uncompressedLength = pReader->Read<DWORD>();
+	_uncompressedLength = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -159,22 +168,22 @@ void CPhatDataBinEntry::Destroy()
 	SafeDelete(_data);
 }
 
-bool CPhatDataBinEntry::RetrieveData(BYTE **data, DWORD *length)
+bool CPhatDataBinEntry::RetrieveData(BYTE **data, uint32_t *length)
 {
 	if (!_data || !_data->RetrieveData(data, length))
 		return NULL;
 
-	DWORD packing = _magic1;
-	for (DWORD i = 0; i < (*length >> 2); i++) {
+	uint32_t packing = _magic1;
+	for (uint32_t i = 0; i < (*length >> 2); i++) {
 		packing ^= _magic2;
 		packing += _magic3;
-		((DWORD *)*data)[i] += ((i + 1) * packing);
+		((uint32_t *)*data)[i] += ((i + 1) * packing);
 	}
 
 	return true;
 }
 
-bool CPhatDataBinEntry::StoreData(BYTE *data, DWORD length)
+bool CPhatDataBinEntry::StoreData(BYTE *data, uint32_t length)
 {
 	if (_data)
 	{
@@ -186,11 +195,11 @@ bool CPhatDataBinEntry::StoreData(BYTE *data, DWORD length)
 	BYTE *dataCopy = new BYTE[length];
 	memcpy(dataCopy, data, length);
 
-	DWORD packing = _magic1;
-	for (DWORD i = 0; i < (length >> 2); i++) {
+	uint32_t packing = _magic1;
+	for (uint32_t i = 0; i < (length >> 2); i++) {
 		packing ^= _magic2;
 		packing += _magic3;
-		((DWORD *)dataCopy)[i] -= ((i + 1) * packing);
+		((uint32_t *)dataCopy)[i] -= ((i + 1) * packing);
 	}
 
 	bool success = _data->StoreData(dataCopy, length);
@@ -201,10 +210,10 @@ bool CPhatDataBinEntry::StoreData(BYTE *data, DWORD length)
 
 DEFINE_PACK(CPhatDataBinEntry)
 {
-	pWriter->Write<DWORD>(_fileID);
-	pWriter->Write<DWORD>(_magic1);
-	pWriter->Write<DWORD>(_magic2);
-	pWriter->Write<DWORD>(_magic3);
+	pWriter->Write<uint32_t>(_fileID);
+	pWriter->Write<uint32_t>(_magic1);
+	pWriter->Write<uint32_t>(_magic2);
+	pWriter->Write<uint32_t>(_magic3);
 
 	if (_data)
 	{
@@ -221,10 +230,10 @@ DEFINE_UNPACK(CPhatDataBinEntry)
 {
 	Destroy();
 
-	_fileID = pReader->Read<DWORD>();
-	_magic1 = pReader->Read<DWORD>();
-	_magic2 = pReader->Read<DWORD>();
-	_magic3 = pReader->Read<DWORD>();
+	_fileID = pReader->Read<uint32_t>();
+	_magic1 = pReader->Read<uint32_t>();
+	_magic2 = pReader->Read<uint32_t>();
+	_magic3 = pReader->Read<uint32_t>();
 
 	BYTE dataType = pReader->Read<BYTE>();
 	if (dataType == 1)
@@ -255,7 +264,7 @@ void CPhatDataBin::Destroy()
 	_entries.clear();
 }
 
-bool CPhatDataBin::Add(DWORD data_id, CPhatDataBinEntry *entry)
+bool CPhatDataBin::Add(uint32_t data_id, CPhatDataBinEntry *entry)
 {
 	auto mapEntry = _entries.find(data_id);
 
@@ -268,7 +277,7 @@ bool CPhatDataBin::Add(DWORD data_id, CPhatDataBinEntry *entry)
 	return true;
 }
 
-bool CPhatDataBin::Add(DWORD data_id, BYTE *data_, DWORD length)
+bool CPhatDataBin::Add(uint32_t data_id, BYTE *data_, uint32_t length)
 {
 	CPhatDataBinEntry *entry = new CPhatDataBinEntry;
 
@@ -290,7 +299,7 @@ bool CPhatDataBin::Add(DWORD data_id, BYTE *data_, DWORD length)
 	return true;
 }
 
-bool CPhatDataBin::Add(DWORD data_id, const char *filepath)
+bool CPhatDataBin::Add(uint32_t data_id, const char *filepath)
 {
 	if (FILE *fp = fopen(filepath, "rb"))
 	{
@@ -301,7 +310,7 @@ bool CPhatDataBin::Add(DWORD data_id, const char *filepath)
 		if (fileSize_ < 0)
 			fileSize_ = 0;
 
-		DWORD fileSize = (DWORD)fileSize_;
+		uint32_t fileSize = (uint32_t)fileSize_;
 
 		BYTE *fileData = new BYTE[fileSize];
 		fread(fileData, fileSize, 1, fp);
@@ -314,7 +323,7 @@ bool CPhatDataBin::Add(DWORD data_id, const char *filepath)
 }
 
 
-bool CPhatDataBin::Remove(DWORD data_id)
+bool CPhatDataBin::Remove(uint32_t data_id)
 {
 	auto mapEntry = _entries.find(data_id);
 
@@ -329,7 +338,7 @@ bool CPhatDataBin::Remove(DWORD data_id)
 }
 
 
-bool CPhatDataBin::Get(DWORD data_id, BYTE **data, DWORD *length)
+bool CPhatDataBin::Get(uint32_t data_id, BYTE **data, uint32_t *length)
 {
 	auto mapEntry = _entries.find(data_id);
 
@@ -354,30 +363,30 @@ bool CPhatDataBin::Load(const char *filepath)
 		if (fileSize_ < 0)
 			fileSize_ = 0;
 
-		DWORD fileSize = (DWORD)fileSize_;
+		uint32_t fileSize = (uint32_t)fileSize_;
 
 		BYTE *fileData = new BYTE[fileSize];
 		fread(fileData, fileSize, 1, fp);
 		fclose(fp);
 
-		DWORD xor_val = fileSize + (fileSize << 15);
-		for (DWORD i = 0; i < (fileSize >> 2); i++)
+		uint32_t xor_val = fileSize + (fileSize << 15);
+		for (uint32_t i = 0; i < (fileSize >> 2); i++)
 		{
-			((DWORD *)fileData)[i] ^= xor_val;
+			((uint32_t *)fileData)[i] ^= xor_val;
 			xor_val <<= 3;
 			xor_val += fileSize;
 		}
 
 		BinaryReader reader(fileData, fileSize);
 
-		DWORD version = reader.Read<DWORD>();
-		DWORD numEntries = reader.Read<DWORD>();
+		uint32_t version = reader.Read<uint32_t>();
+		uint32_t numEntries = reader.Read<uint32_t>();
 
 		bool fail = false;
 
-		for (DWORD i = 0; i < numEntries; i++)
+		for (uint32_t i = 0; i < numEntries; i++)
 		{
-			DWORD data_id = reader.Read<DWORD>();
+			uint32_t data_id = reader.Read<uint32_t>();
 
 			CPhatDataBinEntry *entry = new CPhatDataBinEntry();
 			if (!entry->UnPack(&reader))
@@ -412,22 +421,22 @@ bool CPhatDataBin::Save(const char *filepath)
 	{
 		BinaryWriter writer;
 
-		writer.Write<DWORD>(1);
-		writer.Write<DWORD>(_entries.size());
+		writer.Write<uint32_t>(1);
+		writer.Write<uint32_t>(_entries.size());
 
 		for (auto &entry : _entries)
 		{
-			writer.Write<DWORD>(entry.first);
+			writer.Write<uint32_t>(entry.first);
 			entry.second->Pack(&writer);
 		}
 
 		BYTE *fileData = writer.GetData();
-		DWORD fileSize = writer.GetSize();
+		uint32_t fileSize = writer.GetSize();
 
-		DWORD xor_val = fileSize + (fileSize << 15);
-		for (DWORD i = 0; i < (fileSize >> 2); i++)
+		uint32_t xor_val = fileSize + (fileSize << 15);
+		for (uint32_t i = 0; i < (fileSize >> 2); i++)
 		{
-			((DWORD *)fileData)[i] ^= xor_val;
+			((uint32_t *)fileData)[i] ^= xor_val;
 			xor_val <<= 3;
 			xor_val += fileSize;
 		}
@@ -440,5 +449,53 @@ bool CPhatDataBin::Save(const char *filepath)
 	return false;
 }
 
+bool InferredData::LoadJsonData(fs::path path, load_func_t cb)
+{
+	std::ifstream fileStream(path);
+
+	if (fileStream.is_open())
+	{
+		json temp;
+		fileStream >> temp;
+		fileStream.close();
+		cb(temp);
+
+		return true;
+	}
+
+	return false;
+}
+
+bool InferredData::LoadJsonData(fs::path path, PackableJson &data)
+{
+	return LoadJsonData(path, [&data](json& json) { data.UnPackJson(json); });
+}
+
+bool InferredData::LoadCacheData(uint32_t id, uint32_t magic1, uint32_t magic2, PackObj &data)
+{
+	BYTE *buffer = NULL;
+	uint32_t length = 0;
+	if (LoadDataFromPhatDataBin(id, &buffer, &length, magic1, magic2))
+	{
+		BinaryReader reader(buffer, length);
+		data.UnPack(&reader);
+		delete[] buffer;
+
+		return true;
+	}
+
+	return false;
+}
+
+void InferredData::SaveJsonData(fs::path path, PackableJson &data)
+{
+	json tmp;
+	data.PackJson(tmp);
+
+	std::ofstream out(path);
+	out << std::setw(4) << tmp << std::endl;
+	out.flush();
+	out.close();
+}
 
 #endif

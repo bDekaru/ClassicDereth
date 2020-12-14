@@ -1,5 +1,6 @@
 
 #pragma once
+#include "easylogging++.h"
 
 class CKillable
 {
@@ -9,12 +10,12 @@ public:
 		bAlive = TRUE;
 	}
 
-	void Kill(const char *szSource, DWORD dwLine)
+	void Kill(const char *szSource, uint32_t dwLine)
 	{
 #ifdef _DEBUG
 		if (szSource)
 		{
-			LOG(Temp, Debug, "Kill() @ %s: %u\n", szSource, dwLine);
+			DEBUG_DATA << "Kill() @" << szSource << ":" << dwLine;
 		}
 
 #endif

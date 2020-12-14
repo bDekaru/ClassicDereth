@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PartCell.h"
 #include "BSPData.h"
 #include "PhysicsPart.h"
@@ -33,7 +33,7 @@ void CPartCell::add_part(CPhysicsPart *part, ClipPlaneList **planes, Frame *fram
 
 void CPartCell::remove_part(CPhysicsPart *part)
 {
-	for (DWORD i = 0; i < num_shadow_parts; i++)
+	for (uint32_t i = 0; i < num_shadow_parts; i++)
 	{
 		CShadowPart *shadowPart = shadow_part_list.array_data[i];
 		if (shadowPart->part == part)
@@ -69,7 +69,7 @@ CShadowPart::CShadowPart(unsigned int nump, Frame *frame_, CPhysicsPart *part_)
 	if (nump)
 	{
 		planes = new ClipPlaneList*[nump];
-		for (DWORD i = 0; i < nump; i++)
+		for (uint32_t i = 0; i < nump; i++)
 			planes[i] = NULL;
 	}
 	else
@@ -82,7 +82,7 @@ CShadowPart::~CShadowPart()
 {
 	if (planes)
 	{
-		for (DWORD i = 0; i < num_planes; i++)
+		for (uint32_t i = 0; i < num_planes; i++)
 		{
 			if (planes[i])
 			{
@@ -94,7 +94,7 @@ CShadowPart::~CShadowPart()
 	}
 }
 
-void CShadowPart::draw(DWORD ClipPlaneIndex)
+void CShadowPart::draw(uint32_t ClipPlaneIndex)
 {
 #if PHATSDK_RENDER_AVAILABLE
 	part->Draw(FALSE);

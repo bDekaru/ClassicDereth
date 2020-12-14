@@ -1,10 +1,10 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ServerObjectMaint.h"
 #include "PhysicsObj.h"
 #include "World.h"
 
-void CServerObjectMaint::GotoLostCell(class CPhysicsObj *, unsigned long)
+void CServerObjectMaint::GotoLostCell(class CPhysicsObj *, uint32_t)
 {
 }
 
@@ -12,15 +12,15 @@ void CServerObjectMaint::RemoveFromLostCell(class CPhysicsObj *)
 {
 }
 
-void CServerObjectMaint::AddObjectToBeDestroyed(unsigned long)
+void CServerObjectMaint::AddObjectToBeDestroyed(uint32_t)
 {
 }
 
-void CServerObjectMaint::RemoveObjectToBeDestroyed(unsigned long)
+void CServerObjectMaint::RemoveObjectToBeDestroyed(uint32_t)
 {
 }
 
-CPhysicsObj *CServerObjectMaint::GetObject(DWORD object_id)
+CPhysicsObj *CServerObjectMaint::GetObject(uint32_t object_id)
 {
 	return g_pWorld->FindObject(object_id);
 }

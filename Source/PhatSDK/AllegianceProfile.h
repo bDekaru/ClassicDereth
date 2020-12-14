@@ -57,16 +57,29 @@ public:
 	int m_spokesBroadcastTime = 0;
 	unsigned int m_monarchBroadcastsToday = 0;
 	unsigned int m_spokesBroadcastsToday = 0;
-	std::string m_motd;
-	std::string m_motdSetBy;
+	std::string m_motd; // deprecated?
+	std::string m_motdSetBy; // deprecated?
 	std::string m_AllegianceName;
 	int m_NameLastSetTime = 0;
 	unsigned int m_chatRoomID = 0;
-	PHashTable<DWORD, eAllegianceOfficerLevel> m_AllegianceOfficers;
-	SmartArray<std::string> m_OfficerTitles;
-	Position m_BindPoint;
+	PHashTable<uint32_t, eAllegianceOfficerLevel> m_AllegianceOfficers; // deprecated?
+	SmartArray<std::string> m_OfficerTitles; // deprecated?
+	Position m_BindPoint; // deprecated?
 	int m_isLocked = 0;
 	unsigned int m_ApprovedVassal = 0;
+
+	// part of pack/unpack to database only - not sent as part of the allegiance update according to retail PCAPs
+	std::string m_storedMOTD = "";
+	std::string m_storedMOTDSetBy = "";
+	Position m_storedBindPoint = Position();
+	std::vector<std::string> m_officerTitleList = { "Speaker", "Seneschal", "Castellan" };
+	PHashTable<uint32_t, eAllegianceOfficerLevel> m_officerList = {}; // weenie id, officer level pairs
+
+	PHashTable<uint32_t, std::string> m_BanList = {}; // account id, character name pairs (was never sent as part of allegiance update)
+	PHashTable<uint32_t, int> m_chatGagList = {}; // (player id, gag end time in seconds)
+
+	bool allAllegiancesUpdated = false;
+	bool packForDB = false;
 };
 
 class AllegianceProfile : public PackObj

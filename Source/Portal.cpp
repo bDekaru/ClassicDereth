@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Portal.h"
 #include "World.h"
 #include "ChatMsgs.h"
@@ -38,12 +38,21 @@ CPortal::~CPortal()
 {
 }
 
-#if 0 // deprecated
-void CPortal::Tick()
+void CPortal::PostSpawn()
 {
-	ProximityThink();
+	Position dest;
+	// DESTINATION_POSITION
+	if (m_Qualities.InqPosition(RELATIVE_DESTINATION_POSITION, dest))
+	{
+		// convert relative position to absolute
+		Position pos;
+		pos.objcell_id = m_Position.objcell_id;
+		pos.frame.combine(&m_Position.frame, &dest.frame);
+		m_Qualities.SetPosition(DESTINATION_POSITION, pos);
+	}
+
+	CWeenieObject::PostSpawn();
 }
-#endif
 
 void CPortal::Tick()
 {
@@ -54,6 +63,21 @@ void CPortal::CheckedTeleport(CWeenieObject *pOther)
 {
 	if (pOther && !(pOther->m_PhysicsState & PhysicsState::HIDDEN_PS))
 	{
+		if (CPlayerWeenie *player = pOther->AsPlayer())
+		{
+			if (player->CheckPKActivity())
+			{
+				pOther->NotifyWeenieError(WERROR_PORTAL_PK_ATTACKED_TOO_RECENTLY);
+				return;
+			}
+			
+			if (player->IsInPortalSpace() || player->InqFloatQuality(LAST_PORTAL_TELEPORT_TIMESTAMP_FLOAT, 0) >= Timer::cur_time)
+			{
+				player->NotifyWeenieError(WERROR_PORTAL_TOO_RECENTLY);
+				return;
+			}
+		}
+
 		ChanceExecuteEmoteSet(pOther->GetID(), Use_EmoteCategory);
 
 		std::string restriction;
@@ -63,12 +87,12 @@ void CPortal::CheckedTeleport(CWeenieObject *pOther)
 			{
 				if (!player->InqQuest(restriction.c_str()))
 				{
-					pOther->SendText("You try to enter the portal but there is no effect.", LTT_MAGIC);
+					pOther->NotifyWeenieError(WERROR_PORTAL_QUEST_RESTRICTED);
 					return;
 				}
 			}
 		}
-
+		
 		int minLevel = InqIntQuality(MIN_LEVEL_INT, 0);
 		int maxLevel = InqIntQuality(MAX_LEVEL_INT, 0);
 
@@ -76,14 +100,25 @@ void CPortal::CheckedTeleport(CWeenieObject *pOther)
 
 		if (minLevel && currentLevel < minLevel)
 		{
-			pOther->SendText("You are not powerful enough to use this portal yet.", LTT_MAGIC);
+			pOther->NotifyWeenieError(WERROR_PORTAL_LEVEL_TOO_LOW);
 		}
 		else if (maxLevel && currentLevel > maxLevel)
 		{
-			pOther->SendText("You are too powerful to use this portal.", LTT_MAGIC);
+			pOther->NotifyWeenieError(WERROR_PORTAL_LEVEL_TOO_HIGH);
 		}
 		else
 		{
+			if (!(InqIntQuality(PORTAL_BITMASK_INT, 0) & PortalEnum::NOT_RECALLABLE_NOR_LINKABLE))
+			{
+				uint32_t origPortID = InqDIDQuality(ORIGINAL_PORTAL_DID, 0);
+				if (origPortID > 0)
+					// We are interacting with a summoned portal. So make sure we set our link to the original one not 1955!
+					pOther->m_Qualities.SetDataID(LAST_PORTAL_DID, origPortID);
+				else
+					//We are interacting with an original portal.
+					pOther->m_Qualities.SetDataID(LAST_PORTAL_DID, m_Qualities.id);
+			}
+
 			Teleport(pOther);
 		}
 	}
@@ -93,7 +128,13 @@ int CPortal::DoCollision(const class ObjCollisionProfile &prof)
 {
 	if (prof._bitfield & Player_OCPB)
 	{
-		CheckedTeleport(g_pWorld->FindObject(prof.id));
+		int portalBitmask;
+		if (m_Qualities.InqInt(PORTAL_BITMASK_INT, portalBitmask) && portalBitmask == 0) //if PORTAL_BITMASK_INT not present, portal is considered to have no bitmask restrictions.
+		{
+			g_pWorld->FindObject(prof.id)->NotifyWeenieError(WERROR_PORTAL_PLAYERS_NOT_ALLOWED);
+		}
+		else
+			CheckedTeleport(g_pWorld->FindObject(prof.id));
 	}
 
 	return 1;

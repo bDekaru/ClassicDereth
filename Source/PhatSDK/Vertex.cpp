@@ -1,9 +1,9 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ObjCache.h"
 #include "Vertex.h"
 
-DWORD CVertexArray::vertex_size = sizeof(CVertex); // 0x24;
+uint32_t CVertexArray::vertex_size = sizeof(CVertex); // 0x24;
 
 CVertexArray::CVertexArray()
 {
@@ -21,7 +21,7 @@ void CVertexArray::DestroyVertex()
 {
     if (vertex_type == 1)
     {
-        for (DWORD i = 0; i < num_vertices; i++)
+        for (uint32_t i = 0; i < num_vertices; i++)
         {
             ((CVertex *)((BYTE *)vertices + i*vertex_size))->Destroy();
         }
@@ -37,8 +37,8 @@ void CVertexArray::DestroyVertex()
 
 BOOL CVertexArray::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, vertex_type);
-    UNPACK(DWORD, num_vertices);
+    UNPACK(uint32_t, vertex_type);
+    UNPACK(uint32_t, num_vertices);
     
     if (!AllocateVertex(num_vertices, vertex_type))
         return FALSE;
@@ -46,7 +46,7 @@ BOOL CVertexArray::UnPack(BYTE** ppData, ULONG iSize)
     switch (vertex_type)
     {
     case 1:
-        for (DWORD i = 0; i < num_vertices; i++)
+        for (uint32_t i = 0; i < num_vertices; i++)
             ((CVertex *)((BYTE *)vertices + i*vertex_size))->UnPack(ppData, iSize);
 
         break;
@@ -63,7 +63,7 @@ BOOL CVertexArray::UnPack(BYTE** ppData, ULONG iSize)
     return TRUE;
 }
 
-BOOL CVertexArray::AllocateVertex(DWORD VertexCount, DWORD VertexType)
+BOOL CVertexArray::AllocateVertex(uint32_t VertexCount, uint32_t VertexType)
 {
     LPVOID VertexBuffer;
 
@@ -94,7 +94,7 @@ BOOL CVertexArray::AllocateVertex(DWORD VertexCount, DWORD VertexType)
 
     if (VertexType == 1)
     {
-        for (DWORD i = 0; i < num_vertices; i++)
+        for (uint32_t i = 0; i < num_vertices; i++)
             ((CVertex *)((BYTE *)vertices + i*vertex_size))->Init();
     }
 

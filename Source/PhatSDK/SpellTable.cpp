@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "SpellTable.h"
 #include "SpellComponentTable.h"
 
@@ -11,14 +11,14 @@ DEFINE_PACK(SpellFormula)
 DEFINE_UNPACK(SpellFormula)
 {
 	for (int i = 0; i < 8; i++)
-		_comps[i] = pReader->Read<DWORD>();
+		_comps[i] = pReader->Read<uint32_t>();
 
 	return true;
 }
 
 BOOL SpellFormula::Complete()
 {
-	for (DWORD i = 0; i < 5; i++)
+	for (uint32_t i = 0; i < 5; i++)
 	{
 		if (!_comps[i])
 			return FALSE;
@@ -38,7 +38,7 @@ ITEM_TYPE SpellFormula::GetTargetingType()
 	return SpellComponentTable::GetTargetTypeFromComponentID(_comps[i - 1]);
 }
 
-DWORD SpellFormula::GetPowerLevelOfPowerComponent()
+uint32_t SpellFormula::GetPowerLevelOfPowerComponent()
 {
 	return MagicSystem::DeterminePowerLevelOfComponent(_comps[0]);
 }
@@ -59,7 +59,7 @@ bool SpellFormula::RandomizeForName(const char *accountName, int spellVersion)
 
 bool SpellFormula::RandomizeVersion1(const char *accountName)
 {
-	int amountOfComponents;
+	int amountOfComponents = 0;
 	if (_comps[0])
 		amountOfComponents = 1;
 	if (_comps[1])
@@ -214,7 +214,7 @@ DEFINE_PACK(Spell)
 
 DEFINE_UNPACK(Spell)
 {
-	_spell_id = pReader->Read<DWORD>();
+	_spell_id = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -318,16 +318,16 @@ DEFINE_UNPACK(CSpellBase)
 		_desc[i] = (char)(BYTE)((BYTE)((BYTE)_desc[i] << 4) | (BYTE)((BYTE)_desc[i] >> 4));
 #endif
 
-	_school = pReader->Read<DWORD>();
-	_iconID = pReader->Read<DWORD>();
-	_category = pReader->Read<DWORD>();
-	_bitfield = pReader->Read<DWORD>();
+	_school = pReader->Read<uint32_t>();
+	_iconID = pReader->Read<uint32_t>();
+	_category = pReader->Read<uint32_t>();
+	_bitfield = pReader->Read<uint32_t>();
 	_base_mana = pReader->Read<int>();
 	_base_range_constant = pReader->Read<float>();
 	_base_range_mod = pReader->Read<float>();
 	_power = pReader->Read<int>();
 	_spell_economy_mod = pReader->Read<float>();
-	_formula_version = pReader->Read<DWORD>();
+	_formula_version = pReader->Read<uint32_t>();
 	_component_loss = pReader->Read<float>();
 
 	_meta_spell.UnPack(pReader);
@@ -339,7 +339,7 @@ DEFINE_UNPACK(CSpellBase)
 	_recovery_interval = pReader->Read<double>();
 	_recovery_amount = pReader->Read<float>();
 	_display_order = pReader->Read<int>();
-	_non_component_target_type = pReader->Read<DWORD>();
+	_non_component_target_type = pReader->Read<uint32_t>();
 	_mana_mod = pReader->Read<int>();
 
 	return true;
@@ -349,7 +349,7 @@ SpellFormula CSpellBase::InqSpellFormula() const
 {
 	SpellFormula formula = _formula;
 	
-	for (DWORD i = 0; i < SPELLFORMULA_MAX_COMPS; i++)
+	for (uint32_t i = 0; i < SPELLFORMULA_MAX_COMPS; i++)
 	{
 		if (formula._comps[i])
 			formula._comps[i] -= (PString::compute_hash(_name.c_str()) % 0x12107680) + (PString::compute_hash(_desc.c_str()) % 0xBEADCF45);
@@ -391,7 +391,7 @@ int CSpellBase::InqTargetType() const
 	return 0;
 }
 
-/*
+
 DEFINE_PACK(SpellSetTierList)
 {
 	UNFINISHED();
@@ -399,6 +399,8 @@ DEFINE_PACK(SpellSetTierList)
 
 DEFINE_UNPACK(SpellSetTierList)
 {
+	m_tierSpellList.UnPack(pReader);
+	return true;
 }
 
 DEFINE_PACK(SpellSet)
@@ -408,8 +410,10 @@ DEFINE_PACK(SpellSet)
 
 DEFINE_UNPACK(SpellSet)
 {
+	m_spellSetTiers.UnPack(pReader);
+	return true;
 }
-*/
+
 
 CSpellTable::CSpellTable()
 {
@@ -433,16 +437,33 @@ DEFINE_LEGACY_PACK_MIGRATOR(CSpellTable)
 
 DEFINE_PACK(CSpellTable)
 {
-	pWriter->Write<DWORD>(id);
+	pWriter->Write<uint32_t>(id);
 	_spellBaseHash.Pack(pWriter);
 	// m_SpellSetHash....
 }
 
 DEFINE_UNPACK(CSpellTable) // type 0x0E00000E
 {
-	DWORD data_id = pReader->Read<DWORD>(); // id
+	uint32_t data_id = pReader->Read<uint32_t>(); // id
 	_spellBaseHash.UnPack(pReader);
-	// m_SpellSetHash....
+	_spellSetHash.UnPack(pReader);
+
+#if 0
+	for (auto it : _spellSetHash)
+	{
+		SERVER_INFO << "Set ID: " << it.first;
+		for (auto it2 : it.second.m_spellSetTiers)
+		{
+			SERVER_INFO << "Level/Pieces: " << it2.first;
+			for (auto it3 : it2.second.m_tierSpellList)
+			{
+				SERVER_INFO << "Set spells: " << it3;
+			}
+		}
+
+	}
+#endif
+
 
 #if PHATSDK_IS_SERVER
 	_categoryToResearchableSpellsMap.clear();
@@ -501,7 +522,7 @@ DEFINE_UNPACK(CSpellTable) // type 0x0E00000E
 }
 
 #if PHATSDK_IS_SERVER
-DWORD CSpellTable::ChangeSpellToDifferentLevel(DWORD spell_id, DWORD spell_level)
+uint32_t CSpellTable::ChangeSpellToDifferentLevel(uint32_t spell_id, uint32_t spell_level)
 {
 	if (const CSpellBase *spell = GetSpellBase(spell_id))
 	{
@@ -511,7 +532,7 @@ DWORD CSpellTable::ChangeSpellToDifferentLevel(DWORD spell_id, DWORD spell_level
 			{
 				if (auto levelEntry = levelMap->lookup(spell_level))
 				{
-					return (DWORD) *levelEntry;
+					return (uint32_t) *levelEntry;
 				}
 			}
 		}
@@ -521,7 +542,12 @@ DWORD CSpellTable::ChangeSpellToDifferentLevel(DWORD spell_id, DWORD spell_level
 }
 #endif
 
-const CSpellBase *CSpellTable::GetSpellBase(DWORD spell_id)
+const CSpellBase *CSpellTable::GetSpellBase(uint32_t spell_id)
 {
 	return _spellBaseHash.lookup(spell_id);
+}
+
+const SpellSet *CSpellTable::GetSpellSet(uint32_t set_id)
+{
+	return _spellSetHash.lookup(set_id);
 }

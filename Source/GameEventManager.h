@@ -14,5 +14,7 @@ public:
 	void StopEvent(const char *eventName);
 	bool IsEventStarted(const char *eventName);
 
+	GameEventDef* GetEvent(const char *eventName);
+
 	PackableHashTableWithJson<std::string, GameEventDef, std::string> _gameEvents;
 };

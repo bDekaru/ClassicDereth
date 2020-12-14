@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Scene.h"
 
 ObjectDesc::ObjectDesc()
@@ -17,7 +17,7 @@ DEFINE_PACK(ObjectDesc)
 
 DEFINE_UNPACK(ObjectDesc)
 {
-	obj_id = pReader->Read<DWORD>();
+	obj_id = pReader->Read<uint32_t>();
 	base_loc.UnPack(pReader);
 	freq = pReader->Read<float>();
 	displace_x = pReader->Read<float>();
@@ -132,7 +132,7 @@ void Scene::Destroyer(DBObj *pScene)
 	delete ((Scene *)pScene);
 }
 
-Scene *Scene::Get(DWORD ID)
+Scene *Scene::Get(uint32_t ID)
 {
 	return (Scene *)ObjCaches::Scenes->Get(ID);
 }
@@ -162,10 +162,11 @@ DEFINE_UNPACK(Scene)
 {
 	Destroy();
 	
-	num_objects = pReader->ReadDWORD();
+	version = pReader->ReadUInt32();
+	num_objects = pReader->ReadUInt32();
 	objects = new ObjectDesc[num_objects];
 
-	for (DWORD i = 0; i < num_objects; i++)
+	for (uint32_t i = 0; i < num_objects; i++)
 	{
 		objects[i].UnPack(pReader);
 	}

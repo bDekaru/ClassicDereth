@@ -1,14 +1,14 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "VitaeSystem.h"
 
-DWORD64 VitaeSystem::VitaeCPPoolThreshold(float cur_vitae, unsigned int level)
+uint64_t VitaeSystem::VitaeCPPoolThreshold(float cur_vitae, unsigned int level)
 {
-	return (DWORD64)((pow((double)level, 2.5) * 2.5 + 20.0) * pow(cur_vitae, 5.0) + 0.5);
+	return (uint64_t)((pow((double)level, 2.5) * 2.5 + 20.0) * pow(cur_vitae, 5.0) + 0.5);
 }
 
-bool VitaeSystem::DetermineNewVitaeLevel(float cur_vitae, unsigned int level, DWORD64 *xpPool, float *newVitae) // custom
+bool VitaeSystem::DetermineNewVitaeLevel(float cur_vitae, unsigned int level, uint64_t *xpPool, float *newVitae) // custom
 {
 	if ((cur_vitae + F_EPSILON) >= 1.0f)
 	{
@@ -20,7 +20,7 @@ bool VitaeSystem::DetermineNewVitaeLevel(float cur_vitae, unsigned int level, DW
 
 	while ((new_vitae + F_EPSILON) < 1.0f)
 	{
-		DWORD64 xpNeeded = VitaeCPPoolThreshold(cur_vitae, level);
+		uint64_t xpNeeded = VitaeCPPoolThreshold(cur_vitae, level);
 
 		if (xpNeeded > *xpPool)
 		{

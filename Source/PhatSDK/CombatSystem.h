@@ -28,13 +28,13 @@ public:
 
 	void Clear();
 
-	CombatManeuver *TryGetCombatManuever(DWORD style, AttackType at, ATTACK_HEIGHT height); // custom
+	CombatManeuver *TryGetCombatManuever(uint32_t style, AttackType at, ATTACK_HEIGHT height); // custom
 
 	//void MeleeAttackToMotion();
 	//void MotionToDamageType();
 	//void DetermineDamageTypePrecedence();
 	//void FiringAngleToMotion();
-	DWORD CombatStyleToMotion(CombatStyle style);
+	uint32_t CombatStyleToMotion(CombatStyle style);
 	COMBAT_MODE CombatStyleToCombatMode(CombatStyle style);
 
 	unsigned int _num_combat_maneuvers = 0;
@@ -44,6 +44,6 @@ public:
 class CombatSystem
 {
 public:
-	static BOOL InqCombatHitAdjectives(DAMAGE_TYPE damage_type, const long double php, std::string &single_adj, std::string &plural_adj);
+	static BOOL InqCombatHitAdjectives(DAMAGE_TYPE damage_type, const double php, std::string &single_adj, std::string &plural_adj);
 };
 

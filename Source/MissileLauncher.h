@@ -8,7 +8,7 @@ class CMissileLauncherWeenie : public CWeenieObject
 public:
 	CMissileLauncherWeenie();
 
-	virtual class CMissileLauncherWeenie *AsMissileLauncher() { return this; }
+	virtual class CMissileLauncherWeenie *AsMissileLauncher() override { return this; }
 
 	virtual COMBAT_MODE GetEquippedCombatMode() override { return COMBAT_MODE::MISSILE_COMBAT_MODE; }
 };

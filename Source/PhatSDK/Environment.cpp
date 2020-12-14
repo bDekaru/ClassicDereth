@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Polygon.h"
 #include "BSPData.h"
 #include "Environment.h"
@@ -25,7 +25,7 @@ void CEnvironment::Destroyer(DBObj* pEnvironment)
     delete ((CEnvironment *)pEnvironment);
 }
 
-CEnvironment *CEnvironment::Get(DWORD ID)
+CEnvironment *CEnvironment::Get(uint32_t ID)
 {
     return (CEnvironment *)ObjCaches::Environments->Get(ID);
 }
@@ -49,18 +49,18 @@ void CEnvironment::Destroy()
 
 BOOL CEnvironment::UnPack(BYTE **ppData, ULONG iSize)
 {
-    UNPACK(DWORD, id);
-    UNPACK(DWORD, num_cells);
+    UNPACK(uint32_t, id);
+    UNPACK(uint32_t, num_cells);
 
     cells = new CCellStruct[ num_cells ];
 
-    for (DWORD i = 0; i < num_cells; i++)
+    for (uint32_t i = 0; i < num_cells; i++)
         UNPACK_OBJ(cells[i]);
 
     return TRUE;
 }
 
-CCellStruct *CEnvironment::get_cellstruct(DWORD index)
+CCellStruct *CEnvironment::get_cellstruct(uint32_t index)
 {
     return &cells[index];
 }
@@ -141,7 +141,7 @@ void CCellStruct::Destroy()
 
 CPolygon *CCellStruct::get_portal(WORD index)
 {
-    for (DWORD i = 0; i < num_portals; i++)
+    for (uint32_t i = 0; i < num_portals; i++)
     {
         if (index == portals[i]->poly_id)
             return portals[i];
@@ -157,11 +157,11 @@ BOOL CCellStruct::point_in_cell(const Vector& point)
 
 BOOL CCellStruct::UnPack(BYTE **ppData, ULONG iSize)
 {
-    UNPACK(DWORD, cellstruct_id);
+    UNPACK(uint32_t, cellstruct_id);
 
-    UNPACK(DWORD, num_polygons);
-    UNPACK(DWORD, num_physics_polygons);
-    UNPACK(DWORD, num_portals);
+    UNPACK(uint32_t, num_polygons);
+    UNPACK(uint32_t, num_physics_polygons);
+    UNPACK(uint32_t, num_portals);
 
     if (!UNPACK_OBJ(vertex_array))
         return FALSE;
@@ -169,13 +169,13 @@ BOOL CCellStruct::UnPack(BYTE **ppData, ULONG iSize)
     CPolygon::SetPackVerts(&vertex_array);
 
     polygons = new CPolygon[ num_polygons ];
-    for (DWORD i = 0; i < num_polygons; i++)
+    for (uint32_t i = 0; i < num_polygons; i++)
         UNPACK_OBJ(polygons[i]);
 
     portals = new CPolygon*[ num_portals ];
-    for (DWORD i = 0; i < num_portals; i++)
+    for (uint32_t i = 0; i < num_portals; i++)
     {
-        DWORD Index;
+        uint32_t Index;
         UNPACK(WORD, Index);
 
         portals[i] = &polygons[Index];
@@ -189,7 +189,7 @@ BOOL CCellStruct::UnPack(BYTE **ppData, ULONG iSize)
     UNPACK_POBJ(cell_bsp);
 
     physics_polygons = new CPolygon[ num_physics_polygons ];
-    for (DWORD i = 0; i < num_physics_polygons; i++)
+    for (uint32_t i = 0; i < num_physics_polygons; i++)
         UNPACK_OBJ(physics_polygons[i]);
 
     BSPNODE::pack_poly = physics_polygons;
@@ -200,7 +200,7 @@ BOOL CCellStruct::UnPack(BYTE **ppData, ULONG iSize)
     
 #if !PHATSDK_USE_EXTENDED_CELL_DATA
     BOOL LastField;
-    UNPACK(DWORD, LastField);
+    UNPACK(uint32_t, LastField);
 
     if (LastField)
     {

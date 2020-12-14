@@ -1,5 +1,4 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Polygon.h"
 #include "BSPData.h"
 #include "Transition.h"
@@ -10,7 +9,7 @@
 #endif
 
 CPolygon *BSPNODE::pack_poly;
-DWORD BSPNODE::pack_tree_type;
+uint32_t BSPNODE::pack_tree_type;
 
 CSphere::CSphere(const Vector& center_, float radius_)
 {
@@ -241,7 +240,7 @@ TransitionState CCylSphere::collide_with_point(OBJECTINFO *object, SPHEREPATH *p
 			if (time > 1.0)
 				return COLLIDED_TS;
 
-			Vector offset = (path->global_curr_center[0] + offset) - check_pos->center;
+			offset = (path->global_curr_center[0] + offset) - check_pos->center;
 			collisions->set_collision_normal(collision_normal);
 			path->add_offset_to_check_pos(&offset, check_pos->radius);
 			return ADJUSTED_TS;
@@ -268,7 +267,7 @@ TransitionState CCylSphere::collide_with_point(OBJECTINFO *object, SPHEREPATH *p
 				return COLLIDED_TS;
 
 			Vector v50 = path->global_curr_center[0] + offset;
-			Vector offset = v50 - check_pos->center;
+			offset = v50 - check_pos->center;
 			collisions->set_collision_normal(collision_normal);
 			path->add_offset_to_check_pos(&offset, check_pos->radius);
 			return ADJUSTED_TS;
@@ -372,7 +371,7 @@ TransitionState CSphere::slide_sphere(OBJECTINFO *object, SPHEREPATH *path, COLL
 	if (collision_normal.normalize_check_small())
 		return TransitionState::COLLIDED_TS;
 
-	return slide_sphere(path, collisions, &collision_normal, &path->global_curr_center[sphere_number]);
+	return check_pos->slide_sphere(path, collisions, &collision_normal, &path->global_curr_center[sphere_number]);
 }
 
 TransitionState CSphere::slide_sphere(SPHEREPATH *path, COLLISIONINFO *collisions, Vector *collision_normal, Vector *curr_pos)
@@ -495,8 +494,8 @@ TransitionState CSphere::slide_sphere(OBJECTINFO *object, SPHEREPATH *path, COLL
 			return TransitionState::COLLIDED_TS;
 
 		direction.x = collision_normal.x - someVec.x;
-		direction.y = direction.y - someVec.x;
-		direction.z = direction.z - someVec.x;
+		direction.y = direction.y - someVec.y;
+		direction.z = direction.z - someVec.z;
 
 		path->add_offset_to_check_pos(&direction, path->global_sphere[sphere_num].radius);
 		return TransitionState::SLID_TS;
@@ -808,7 +807,7 @@ TransitionState CCylSphere::step_sphere_down(OBJECTINFO &object, SPHEREPATH &pat
 	Vector contact_pt;
 	contact_pt.x = check_pos.center.x;
 	contact_pt.y = check_pos.center.y;
-	contact_pt.x = check_pos.center.z + (v12 - check_pos.radius);
+	contact_pt.z = check_pos.center.z + (v12 - check_pos.radius);
 
 	Vector normal;
 	normal = Vector(0, 0, 1.0f);
@@ -1184,11 +1183,6 @@ BSPNODE::BSPNODE()
 
 BSPNODE::~BSPNODE()
 {
-	Destroy();
-}
-
-void BSPNODE::Destroy()
-{
 	if (pos_node)
 	{
 		delete pos_node;
@@ -1251,13 +1245,13 @@ BOOL BSPNODE::UnPack(BYTE** ppData, ULONG iSize)
 	}
 
 	UNPACK_OBJ(sphere);
-	UNPACK(DWORD, num_polys);
+	UNPACK(uint32_t, num_polys);
 
 	if (num_polys)
 	{
 		in_polys = new CPolygon*[num_polys];
 
-		for (DWORD i = 0; i < num_polys; i++)
+		for (uint32_t i = 0; i < num_polys; i++)
 		{
 			WORD Index;
 			UNPACK(WORD, Index);
@@ -1276,8 +1270,8 @@ BOOL BSPNODE::UnPack(BYTE** ppData, ULONG iSize)
 
 BOOL BSPNODE::UnPackChild(BSPNODE** pOut, BYTE** ppData, ULONG iSize)
 {
-	DWORD NodeType;
-	UNPACK(DWORD, NodeType);
+	uint32_t NodeType;
+	UNPACK(uint32_t, NodeType);
 
 	if (NodeType == 'PORT')
 	{
@@ -1551,7 +1545,7 @@ void BSPNODE::draw_no_check()
 	}
 }
 
-void BSPNODE::draw_check(DWORD unknown)
+void BSPNODE::draw_check(uint32_t unknown)
 {
 	switch (type)
 	{
@@ -2063,7 +2057,7 @@ int BSPNODE::box_intersects_cell_bsp(BBox *box)
 
 BSPLEAF::BSPLEAF()
 {
-	leaf_index = (DWORD)-1;
+	leaf_index = (uint32_t)-1;
 	solid = 0;
 }
 
@@ -2073,20 +2067,20 @@ BSPLEAF::~BSPLEAF()
 
 BOOL BSPLEAF::UnPackLeaf(BYTE** ppData, ULONG iSize)
 {
-	UNPACK(DWORD, leaf_index);
+	UNPACK(uint32_t, leaf_index);
 
 	if (pack_tree_type != 1)
 		return TRUE;
 
-	UNPACK(DWORD, solid);
+	UNPACK(uint32_t, solid);
 	UNPACK_OBJ(sphere);
-	UNPACK(DWORD, num_polys);
+	UNPACK(uint32_t, num_polys);
 
 	if (num_polys)
 	{
 		in_polys = new CPolygon*[num_polys];
 
-		for (DWORD i = 0; i < num_polys; i++)
+		for (uint32_t i = 0; i < num_polys; i++)
 		{
 			WORD Index;
 			UNPACK(WORD, Index);
@@ -2222,14 +2216,9 @@ BSPPORTAL::BSPPORTAL()
 
 BSPPORTAL::~BSPPORTAL()
 {
-	Destroy();
-}
-
-void BSPPORTAL::Destroy()
-{
 	if (in_portals)
 	{
-		for (DWORD i = 0; i < num_portals; i++)
+		for (uint32_t i = 0; i < num_portals; i++)
 		{
 			if (in_portals[i])
 				delete in_portals[i];
@@ -2240,8 +2229,6 @@ void BSPPORTAL::Destroy()
 	}
 
 	num_portals = 0;
-
-	BSPNODE::Destroy();
 }
 
 BOOL BSPPORTAL::UnPackPortal(BYTE** ppData, ULONG iSize)
@@ -2263,14 +2250,14 @@ BOOL BSPPORTAL::UnPackPortal(BYTE** ppData, ULONG iSize)
 
 	UNPACK_OBJ(sphere);
 
-	UNPACK(DWORD, num_polys);
-	UNPACK(DWORD, num_portals);
+	UNPACK(uint32_t, num_polys);
+	UNPACK(uint32_t, num_portals);
 
 	if (num_polys)
 	{
 		in_polys = new CPolygon*[num_polys];
 
-		for (DWORD i = 0; i < num_polys; i++)
+		for (uint32_t i = 0; i < num_polys; i++)
 		{
 			WORD Index;
 			UNPACK(WORD, Index);
@@ -2283,7 +2270,7 @@ BOOL BSPPORTAL::UnPackPortal(BYTE** ppData, ULONG iSize)
 	{
 		in_portals = new CPortalPoly *[num_portals];
 
-		for (DWORD i = 0; i < num_portals; i++)
+		for (uint32_t i = 0; i < num_portals; i++)
 		{
 			in_portals[i] = new CPortalPoly();
 			in_portals[i]->UnPack(ppData, iSize);
@@ -2530,7 +2517,7 @@ TransitionState BSPTREE::placement_insert(CTransition *transition)
 	if (transition->sphere_path.bldg_check)
 		someBool = (transition->sphere_path.hits_interior_cell == 0);
 
-	for (DWORD i = 0; i < 20; i++)
+	for (uint32_t i = 0; i < 20; i++)
 	{
 		/*
 		BOOL center_solid = FALSE;
@@ -2648,7 +2635,7 @@ int BSPTREE::adjust_to_plane(CSphere *check_pos, Vector curr_pos, CPolygon *hit_
 	int v6 = 0;
 	Vector movement = check_pos->center - curr_pos;
 
-	DWORD i;
+	uint32_t i;
 	for (i = 0; i < 15; i++)
 	{
 		double time_touch = hit_poly->adjust_sphere_to_poly(check_pos, &curr_pos, &movement);
@@ -2805,15 +2792,15 @@ int BSPTREE::box_intersects_cell_bsp(BBox *box)
 	return root_node->box_intersects_cell_bsp(box);
 }
 
-void BSPNODE::DetachPortalsAndPurgeNodes(SmartArray<BSPNODE *> *io_PortalsToKeep)
+void BSPNODE::DetachPortalsAndPurgeNodes(std::vector<BSPNODE*> &keep)//SmartArray<BSPNODE *> *io_PortalsToKeep)
 {
 	if (pos_node)
 	{
-		pos_node->DetachPortalsAndPurgeNodes(io_PortalsToKeep);
+		pos_node->DetachPortalsAndPurgeNodes(keep);
 
 		if (pos_node->type == 'PORT')
 		{
-			io_PortalsToKeep->add(&pos_node); // AddToEnd
+			keep.push_back(pos_node); // AddToEnd
 		}
 		else
 		{
@@ -2825,11 +2812,11 @@ void BSPNODE::DetachPortalsAndPurgeNodes(SmartArray<BSPNODE *> *io_PortalsToKeep
 
 	if (neg_node)
 	{
-		neg_node->DetachPortalsAndPurgeNodes(io_PortalsToKeep);
+		neg_node->DetachPortalsAndPurgeNodes(keep);
 
 		if (neg_node->type == 'PORT')
 		{
-			io_PortalsToKeep->add(&neg_node); // AddToEnd
+			keep.push_back(neg_node); // AddToEnd
 		}
 		else
 		{
@@ -2840,22 +2827,27 @@ void BSPNODE::DetachPortalsAndPurgeNodes(SmartArray<BSPNODE *> *io_PortalsToKeep
 	}
 }
 
-void BSPNODE::LinkPortalNodeChain(SmartArray<BSPNODE *> *_Portals)
+void BSPNODE::LinkPortalNodeChain(std::vector<BSPNODE*> &portals)//SmartArray<BSPNODE *> *_Portals)
 {
-	for (int i = _Portals->num_used - 1; i >= 0; i--)
+	BSPNODE **tmp = &pos_node;
+	for (int i = (int)portals.size() - 1; i >= 0; i--)
 	{
-		pos_node = _Portals->array_data[i];
+		*tmp = portals[i];
+		tmp = &(*tmp)->pos_node;
 
-		if (i > 0)
-		{
-			pos_node->pos_node = _Portals->array_data[i - 1];
-		}
+		//if (i > 0)
+		//{
+		//	pos_node->pos_node = portals[i - 1];
+		//}
 	}
 }
 
 void BSPTREE::RemoveNonPortalNodes()
 {
-	SmartArray<BSPNODE *> PortalsToKeep;
-	root_node->DetachPortalsAndPurgeNodes(&PortalsToKeep);
-	root_node->LinkPortalNodeChain(&PortalsToKeep);
+	//SmartArray<BSPNODE *> PortalsToKeep;
+	std::vector<BSPNODE*> portals;
+	root_node->DetachPortalsAndPurgeNodes(portals);
+	root_node->LinkPortalNodeChain(portals);
+	//root_node->DetachPortalsAndPurgeNodes(&PortalsToKeep);
+	//root_node->LinkPortalNodeChain(&PortalsToKeep);
 }

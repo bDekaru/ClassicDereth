@@ -1,5 +1,6 @@
-
 #pragma once
+
+#include <mutex>
 
 namespace Random
 {
@@ -11,7 +12,15 @@ namespace Random
 
 	uint32_t GenUInt(uint32_t min, uint32_t max);
 	int32_t GenInt(int32_t min, int32_t max);
+	double GenFloat();
 	double GenFloat(double min, double max);
+	float GenFloat(float min, float max);
+
+	float RollDice(float min, float max);
+
+	extern uint32_t currentSeed;
+	void SetSeed(uint32_t newSeed);
+	uint32_t GetSeed();
 };
 
 class PhatString : public std::string
@@ -38,7 +47,7 @@ public:
 			return !strcmp(c_str(), other.c_str());
 		}
 
-		return !_stricmp(c_str(), other.c_str());
+		return !stricmp(c_str(), other.c_str());
 	}
 
 	PhatString AsUppercase()
@@ -66,94 +75,121 @@ public:
 	}
 };
 
+//#define SCOPE_LOCK std::scoped_lock lock##__COUNTER__(this->mutex);
+#define SCOPE_LOCK std::scoped_lock<std::recursive_mutex>& scope_lock();
 class CLockable
 {
 public:
-	CLockable()
-	{
-		InitializeCriticalSection(&_cs);
-	}
-
-	~CLockable()
-	{
-		DeleteCriticalSection(&_cs);
-	}
+	CLockable() = default;
+	virtual ~CLockable() = default;
 
 	inline void Lock()
 	{
-		EnterCriticalSection(&_cs);
+		mutex.lock();
 	}
 
 	inline void Unlock()
 	{
-		LeaveCriticalSection(&_cs);
+		mutex.unlock();
+	}
+
+	__forceinline const std::scoped_lock<std::recursive_mutex> scope_lock()
+	{
+		return std::scoped_lock(mutex);
 	}
 
 private:
-	CRITICAL_SECTION _cs;
+	std::recursive_mutex mutex;
 };
 
 
 template <class T>
-class TLockable : public T
+class TLockable : public T, public CLockable
 {
 public:
-	TLockable()
-	{
-		InitializeCriticalSection(&_cs);
-	}
-
-	virtual ~TLockable()
-	{
-		DeleteCriticalSection(&_cs);
-	}
-
-	inline void Lock()
-	{
-		EnterCriticalSection(&_cs);
-	}
-
-	inline void Unlock()
-	{
-		LeaveCriticalSection(&_cs);
-	}
-
-private:
-	CRITICAL_SECTION _cs;
+	TLockable() = default;
+	virtual ~TLockable() = default;
 };
 
-class CScopedLock
+class ThreadedFileLoader
 {
-public:
-	inline CScopedLock(CLockable *lock)
+protected:
+	using file_load_func_t = std::function<void(fs::path)>;
+	void PerformLoad(fs::path root, file_load_func_t loadfn)
 	{
-		_lock = lock;
-		_lock->Lock();
-	}
+		if (!fs::exists(root) || !fs::is_directory(root))
+			return;
 
-	inline ~CScopedLock()
-	{
-		_lock->Unlock();
-	}
+		auto itr = fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied);
+		const auto end = fs::recursive_directory_iterator();
 
-private:
-	CLockable *_lock;
+		std::list< std::future<void> > tasks;
+
+		uint32_t maxTasks = std::thread::hardware_concurrency();
+
+		while (itr != end)
+		{
+			fs::path path = itr->path();
+			if (!itr->is_directory() && path.extension().compare(".json") == 0)
+			{
+				tasks.push_back(std::async(std::launch::async, [path, loadfn]()
+				{
+					loadfn(path);
+				}));
+			}
+
+			try
+			{
+				itr++;
+			}
+			catch (std::exception &ex)
+			{
+			}
+
+			while (tasks.size() > maxTasks)
+			{
+				auto task = tasks.begin();
+				while (task != tasks.end())
+				{
+					auto status = task->wait_for(std::chrono::milliseconds(0));
+					if (status == std::future_status::ready)
+					{
+						task = tasks.erase(task);
+					}
+					else
+					{
+						task++;
+					}
+				}
+				std::this_thread::yield();
+			}
+		}
+
+		while (tasks.size() > 0)
+		{
+			tasks.front().wait();
+			tasks.pop_front();
+		}
+
+	}
 };
 
 class CClient;
 struct BlockData;
 
-void EnumerateFolderFilePaths(std::list<std::string> &results, const char *basePath, const char *fileMask, bool bSubFolders);
+//void EnumerateFolderFilePaths(std::list<std::string> &results, const char *basePath, const char *fileMask, bool bSubFolders);
 char *DataToHexString(const void *input, unsigned int inputlen, char *output);
-bool LoadDataFromFile(const char *filepath, BYTE **data, DWORD *length);
-bool LoadDataFromPhatDataBin(DWORD data_id, BYTE **data, DWORD *length, DWORD magic1, DWORD magic2);
-bool LoadDataFromCompressedFile(const char *filepath, BYTE **data, DWORD *length, DWORD magic1, DWORD magic2);
+bool LoadDataFromFile(const char *filepath, BYTE **data, uint32_t *length);
+bool LoadDataFromPhatDataBin(uint32_t data_id, BYTE **data, uint32_t *length, uint32_t magic1, uint32_t magic2);
+bool LoadDataFromCompressedFile(const char *filepath, BYTE **data, uint32_t *length, uint32_t magic1, uint32_t magic2);
 long FindNeedle(void *haystack, unsigned int haystacklength, void *needle, unsigned int needlelength);
+std::string TimeToString(int seconds);
 bool ReplaceString(std::string& str, const std::string& from, const std::string& to);
+std::string ReplaceInString(std::string subject, const std::string& search, const std::string& replace);
 
-extern void MsgBox(const char* format, ...);
-extern void MsgBox(UINT iType, const char* format, ...);
-extern void MsgBoxError(DWORD dwError, const char* event);
+//extern void MsgBox(const char* format, ...);
+//extern void MsgBox(UINT iType, const char* format, ...);
+//extern void MsgBoxError(uint32_t dwError, const char* event);
 
 #define cs(x) csprintf(x)
 extern char* csprintf(const char* format, ...); //static buffer
@@ -170,13 +206,13 @@ unsigned long GetLocalIP();
 std::string GetLocalIPString();
 
 extern std::string DebugBytesToString(void *data, unsigned int len);
-extern void _OutputConsole(const char* format, ...);
+//extern void _OutputConsole(const char* format, ...);
 #define _DebugMe() LOG(Temp, Normal, "Debug me: %s %u\n", __FUNCTION__, __LINE__);
 
-extern BOOL SaveConfigKey(const char* Key, DWORD value);
-extern BOOL SaveConfigKey(const char* Key, const char* value);
-extern BOOL ReadConfigKey(const char* Key, DWORD* value);
-extern BOOL ReadConfigKey(const char* Key, char* value, DWORD size);
+//extern BOOL SaveConfigKey(const char* Key, uint32_t value);
+//extern BOOL SaveConfigKey(const char* Key, const char* value);
+//extern BOOL ReadConfigKey(const char* Key, uint32_t* value);
+//extern BOOL ReadConfigKey(const char* Key, char* value, uint32_t size);
 
 extern bool FileExists(const char *filePath);
 
@@ -184,14 +220,16 @@ extern float NorthSouth(char *szCoord);
 extern float EastWest(char *szCoord);
 extern bool GetLocation(double NS, double EW, class Position &pos);
 extern BOOL IsWaterBlock(BlockData*);
-extern BOOL IsWaterBlock(DWORD dwCell);
+extern BOOL IsWaterBlock(uint32_t dwCell);
 extern BOOL HasObjectBlock(BlockData*);
-extern BOOL HasObjectBlock(DWORD dwCell);
-extern float CalcSurfaceZ(DWORD dwCell, float xOffset, float yOffset, bool bUseLCell = true);
+extern BOOL HasObjectBlock(uint32_t dwCell);
+extern float CalcSurfaceZ(uint32_t dwCell, float xOffset, float yOffset, bool bUseLCell = true);
 
-DWORD64 GetProcessMemoryUsage();
-DWORD64 GetFreeMemory();
-DWORD64 GetTotalMemory();
+float GetRatingMod(int ratingAdj);
+
+uint64_t GetProcessMemoryUsage();
+uint64_t GetFreeMemory();
+uint64_t GetTotalMemory();
 
 // Because the land system sucks.
 #define BLOCK_WORD(x) ((WORD)((x & 0xFFFF0000) >> 16))
@@ -202,14 +240,17 @@ DWORD64 GetTotalMemory();
 #define CELL_Y(x) ((BYTE)((x >> 0) & 7))
 
 // Used for mapping out the above data to offsets from (0, 0).
-#define BASE_OFFSET(X, x) (((DWORD)X << 3) | x)
-#define BLOCK_OFFSET(x) ((WORD)((DWORD)x >> 3))
+#define BASE_OFFSET(X, x) (((uint32_t)X << 3) | x)
+#define BLOCK_OFFSET(x) ((WORD)((uint32_t)x >> 3))
 
 // Potential view cell-range.
 #define PVC_RANGE 8
 
 // Land boundaries.
-const DWORD dwMinimumCellX = 0x0;
-const DWORD dwMinimumCellY = 0x0;
-const DWORD dwMaximumCellX = (0x800 - 1);
-const DWORD dwMaximumCellY = (0x800 - 1);
+const uint32_t dwMinimumCellX = 0x0;
+const uint32_t dwMinimumCellY = 0x0;
+const uint32_t dwMaximumCellX = (0x800 - 1);
+const uint32_t dwMaximumCellY = (0x800 - 1);
+
+// strictness 1 = chat, strictness 2 = player names, titles, allegiance names
+extern bool containsBadCharacters(std::string, int strictness = 1);

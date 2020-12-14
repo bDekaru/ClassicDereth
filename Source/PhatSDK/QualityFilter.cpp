@@ -1,11 +1,11 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "QualityFilter.h"
 
 #define UNPACK_STATS(statName, countName) \
 	for (int i = 0; i < countName; i++) \
-		Set##statName(pReader->Read<DWORD>(), 1);
+		Set##statName(pReader->Read<uint32_t>(), 1);
 
 QualityFilter::QualityFilter()
 {
@@ -82,7 +82,7 @@ DEFINE_PACK(ACQualityFilter)
 
 DEFINE_UNPACK(ACQualityFilter)
 {
-	pReader->Read<DWORD>(); // id
+	pReader->Read<uint32_t>(); // id
 
 	QualityFilter::UnPack(pReader);
 

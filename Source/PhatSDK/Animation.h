@@ -17,9 +17,9 @@ public:
 	ULONG pack_size();
 	BOOL UnPack(BYTE **ppData, ULONG iSize);
 
-	DWORD anim_id; // 0x04
-	long low_frame; // 0x08
-	long high_frame; // 0x0C
+	uint32_t anim_id; // 0x04
+	int32_t low_frame; // 0x08
+	int32_t high_frame; // 0x0C
 	float framerate; // 0x10
 };
 
@@ -37,14 +37,14 @@ public:
 	void multiply_framerate(float fRate);
 
 	BOOL has_anim();
-	long get_low_frame();
-	long get_high_frame();
+	int32_t get_low_frame();
+	int32_t get_high_frame();
 	float get_starting_frame();
 	float get_ending_frame();
-	void set_animation_id(DWORD AnimID);
+	void set_animation_id(uint32_t AnimID);
 
-	AnimFrame *get_part_frame(long index);
-	AFrame *get_pos_frame(long index);
+	AnimFrame *get_part_frame(int32_t index);
+	AFrame *get_pos_frame(int32_t index);
 
 	AnimSequenceNode *GetNext();
 	AnimSequenceNode *GetPrev();
@@ -56,8 +56,8 @@ public:
 	 // AnimSequenceNode *m_pPrev; // 0x08 
 	CAnimation *anim; // 0x0C
 	float framerate; // 0x10
-	long low_frame; // 0x14
-	long high_frame; // 0x18
+	int32_t low_frame; // 0x14
+	int32_t high_frame; // 0x18
 };
 
 class CAnimation : public DBObj
@@ -68,7 +68,7 @@ public:
 
 	static DBObj *Allocator();
 	static void Destroyer(DBObj *pAnimation);
-	static CAnimation *Get(DWORD ID);
+	static CAnimation *Get(uint32_t ID);
 	static void Release(CAnimation *pAnimation);
 
 	void Destroy();
@@ -78,8 +78,8 @@ public:
 	AFrame *pos_frames; // 0x1C / 0x28
 	AnimFrame *part_frames; // 0x20 / 0x2C
 	BOOL has_hooks; // 0x24 / 0x30
-	DWORD num_parts; // 0x28 / 0x34
-	DWORD num_frames; // 0x2C / 0x38
+	uint32_t num_parts; // 0x28 / 0x34
+	uint32_t num_frames; // 0x2C / 0x38
 };
 
 

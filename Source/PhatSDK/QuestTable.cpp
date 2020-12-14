@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "QuestTable.h"
 
@@ -11,14 +11,14 @@ DEFINE_PACK(QuestProfile)
 {
 	pWriter->Write<double>(_last_update);
 	pWriter->Write<int>(_real_time);
-	pWriter->Write<DWORD>(_num_completions);
+	pWriter->Write<uint32_t>(_num_completions);
 }
 
 DEFINE_UNPACK(QuestProfile)
 {
 	_last_update = pReader->Read<double>();
 	_real_time = pReader->Read<int>();
-	_num_completions = pReader->Read<DWORD>();
+	_num_completions = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -29,14 +29,14 @@ void QuestProfile::Stamp()
 	IncrementNumCompletions();
 }
 
-void QuestProfile::IncrementNumCompletions()
+void QuestProfile::IncrementNumCompletions(int amount)
 {
-	_num_completions++;
+	_num_completions += amount;
 }
 
-void QuestProfile::DecrementNumCompletions()
+void QuestProfile::DecrementNumCompletions(int amount)
 {
-	_num_completions--;
+	_num_completions-= amount;
 	if (_num_completions < 0)
 		_num_completions = 0;
 }
@@ -175,29 +175,49 @@ unsigned int QuestTable::InqQuestSolves(const char *questName) // custom
 	return 0;
 }
 
+unsigned int QuestTable::InqQuestMax(const char *questName) // custom subfunction for Kill tasks. Used to determine completion point for msging.
+{
+	std::string trimmedQuestName = GetNeutralQuestName(questName, true);
+	QuestProfile *prof = GetQuest(trimmedQuestName.c_str());
+	
+	if (QuestDef *questDef = CQuestDefDB::GetQuestDef(trimmedQuestName.c_str()))
+	{
+			return questDef->_maxsolves;
+	}
+
+	return 0;
+}
+
+std::string QuestTable::Ktref(const char *questName) // Kill task trim quest name before stamping to remove @kt from quest stamp
+{
+	std::string trimmedQuestName = GetNeutralQuestName(questName, true);
+
+	return trimmedQuestName;
+}
+
 void QuestTable::SetQuestCompletions(const char *questName, int numCompletions)
 {
 	AddQuest(questName);
 	GetQuest(questName)->_num_completions = numCompletions;
 }
 
-void QuestTable::IncrementQuest(const char *questName)
+void QuestTable::IncrementQuest(const char *questName, int amount)
 {
 	AddQuest(questName);
 	
 	if (QuestProfile *quest = GetQuest(questName))
 	{
-		quest->IncrementNumCompletions();
+		quest->IncrementNumCompletions(amount);
 	}
 }
 
-void QuestTable::DecrementQuest(const char *questName)
+void QuestTable::DecrementQuest(const char *questName, int amount)
 {
 	AddQuest(questName);
 
 	if (QuestProfile *quest = GetQuest(questName))
 	{
-		quest->DecrementNumCompletions();
+		quest->DecrementNumCompletions(amount);
 	}
 }
 

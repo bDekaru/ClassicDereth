@@ -14,6 +14,7 @@ public:
 
 	const char *GetGameDirectory();
 	std::string GetGameFile(const char *filename);
+	std::string GetGameData(const char *type, const char *filename);
 
 	void SetWindowHandle(HWND);
 	HWND GetWindowHandle();
@@ -23,22 +24,22 @@ public:
 	void SetClientCount(WORD wCount);
 	WORD GetClientCount();
 
-	void PacketSent(DWORD dwLength);
-	void PacketRecv(DWORD dwLength);
+	void PacketSent(uint32_t dwLength);
+	void PacketRecv(uint32_t dwLength);
 	UINT64 GetPacketSendCount();
 	UINT64 GetPacketRecvCount();
 	UINT64 GetPacketSendSize();
 	UINT64 GetPacketRecvSize();
 	void ResetPackets();
 
-	UINT64 m_CounterStart;
-	UINT64 m_CounterTime;
-	UINT64 m_CounterFreq;
+	time_point m_start;
+	time_point m_last;
 
 private:
 	HWND m_hWnd;
 	HWND m_hConsoleWnd;
-	char m_GameDir[MAX_PATH + 2];
+	//char m_GameDir[MAX_PATH + 2];
+	fs::path m_GameDir;
 
 	WORD m_wClientCount;
 	UINT64 m_cPacketSendCount;
@@ -46,7 +47,7 @@ private:
 	UINT64 m_cPacketSendSize;
 	UINT64 m_cPacketRecvSize;
 
-	double m_fTime;
+	double m_fTime = 0.0;
 };
 
 extern CGlobals *g_pGlobals;
@@ -54,18 +55,27 @@ extern CGlobals *g_pGlobals;
 class CStopWatch
 {
 public:
-	CStopWatch()
+	CStopWatch() : m_start(steady_clock::now())
 	{
-		m_fStartTime = g_pGlobals->UpdateTime();
+		//m_fStartTime = g_pGlobals->UpdateTime();
+	}
+
+	void Reset()
+	{
+		m_start = steady_clock::now();
 	}
 
 	double GetElapsed()
 	{
-		return (g_pGlobals->UpdateTime() - m_fStartTime);
+		std::chrono::duration<double> elapsed = steady_clock::now() - m_start;
+		return elapsed.count();
+		//return (g_pGlobals->UpdateTime() - m_fStartTime);
 	}
 
 private:
-	double m_fStartTime;
+	time_point m_start;
+
+	//double m_fStartTime;
 };
 
 namespace Time

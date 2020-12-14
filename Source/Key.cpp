@@ -1,8 +1,8 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Key.h"
 #include "UseManager.h"
 #include "Player.h"
+#include "Config.h"
 
 CKeyWeenie::CKeyWeenie()
 {
@@ -37,11 +37,18 @@ int CKeyWeenie::DoUseWithResponse(CWeenieObject *player, CWeenieObject *with)
 		else
 		{
 			std::string lockCode;
-			if (with->m_Qualities.InqString(LOCK_CODE_STRING, lockCode) && !_stricmp(lockCode.c_str(), InqStringQuality(KEY_CODE_STRING, "").c_str()))
+			if ((with->m_Qualities.InqString(LOCK_CODE_STRING, lockCode) && !stricmp(lockCode.c_str(), InqStringQuality(KEY_CODE_STRING, "").c_str()) || InqBoolQuality(OPENS_ANY_LOCK_BOOL, FALSE)))
 			{
 				DecrementStackOrStructureNum();
 				with->SetLocked(FALSE);
 				with->EmitSound(Sound_LockSuccess, 1.0f);
+				with->m_Qualities.SetInstanceID(LAST_UNLOCKER_IID, player->id);
+
+				if (with->IsContainer() && with->_nextReset < 0)
+				{
+					// Unlocked chests have 10 minutes before the chest resets.
+					with->_nextReset = Timer::cur_time + 600;
+				}
 
 				int structureNum = 0;
 				if (m_Qualities.InqInt(STRUCTURE_INT, structureNum, TRUE) && structureNum > 0)

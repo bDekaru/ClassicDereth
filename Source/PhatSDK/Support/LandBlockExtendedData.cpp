@@ -1,12 +1,12 @@
 
-#include "stdafx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 
 DEFINE_PACK(CLandBlockWeenie)
 {
-	pWriter->Write<DWORD>(wcid);
+	pWriter->Write<uint32_t>(wcid);
 	pos.Pack(pWriter);
-	pWriter->Write<DWORD>(iid);
+	pWriter->Write<uint32_t>(iid);
 }
 
 DEFINE_PACK_JSON(CLandBlockWeenie)
@@ -18,9 +18,9 @@ DEFINE_PACK_JSON(CLandBlockWeenie)
 
 DEFINE_UNPACK(CLandBlockWeenie)
 {
-	wcid = pReader->Read<DWORD>();
+	wcid = pReader->Read<uint32_t>();
 	pos.UnPack(pReader);
-	iid = pReader->Read<DWORD>();
+	iid = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -34,8 +34,8 @@ DEFINE_UNPACK_JSON(CLandBlockWeenie)
 
 DEFINE_PACK(CLandBlockWeenieLink)
 {
-	pWriter->Write<DWORD>(source);
-	pWriter->Write<DWORD>(target);
+	pWriter->Write<uint32_t>(source);
+	pWriter->Write<uint32_t>(target);
 }
 
 DEFINE_PACK_JSON(CLandBlockWeenieLink)
@@ -46,8 +46,8 @@ DEFINE_PACK_JSON(CLandBlockWeenieLink)
 
 DEFINE_UNPACK(CLandBlockWeenieLink)
 {
-	source = pReader->Read<DWORD>();
-	target = pReader->Read<DWORD>();
+	source = pReader->Read<uint32_t>();
+	target = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -67,7 +67,7 @@ DEFINE_PACK(CLandBlockExtendedData)
 DEFINE_PACK_JSON(CLandBlockExtendedData)
 {
 	json &weeniesList = writer["weenies"];
-	for (DWORD i = 0; i < weenies.num_used; i++)
+	for (uint32_t i = 0; i < weenies.num_used; i++)
 	{
 		json entry;
 		weenies.array_data[i].PackJson(entry);
@@ -75,7 +75,7 @@ DEFINE_PACK_JSON(CLandBlockExtendedData)
 	}
 
 	json &linksList = writer["links"];
-	for (DWORD i = 0; i < weenie_links.num_used; i++)
+	for (uint32_t i = 0; i < weenie_links.num_used; i++)
 	{
 		json entry;
 		weenie_links.array_data[i].PackJson(entry);
@@ -92,9 +92,13 @@ DEFINE_UNPACK(CLandBlockExtendedData)
 
 DEFINE_UNPACK_JSON(CLandBlockExtendedData)
 {
-	if (reader.find("weenies") != reader.end())
+	json::const_iterator itr = reader.end();
+	json::const_iterator end = reader.end();
+
+	itr = reader.find("weenies");
+	if (itr != end)
 	{
-		for (const json &entry : reader["weenies"])
+		for (const json &entry : *itr)
 		{
 			CLandBlockWeenie weenie;
 			weenie.UnPackJson(entry);
@@ -102,9 +106,10 @@ DEFINE_UNPACK_JSON(CLandBlockExtendedData)
 		}
 	}
 
-	if (reader.find("links") != reader.end())
+	itr = reader.find("links");
+	if (itr != end)
 	{
-		for (const json &entry : reader["links"])
+		for (const json &entry : *itr)
 		{
 			CLandBlockWeenieLink weenie_link;
 			weenie_link.UnPackJson(entry);
@@ -130,25 +135,25 @@ void CLandBlockExtendedDataTable::Destroy()
 	landblocks.clear();
 }
 
-WORD CLandBlockExtendedDataTable::get_terrain(DWORD landcell)
-{
-	if (!terrain_data)
-		return 0;
+//WORD CLandBlockExtendedDataTable::get_terrain(uint32_t landcell)
+//{
+//	if (!terrain_data)
+//		return 0;
+//
+//	int32_t x, y;
+//	if (!LandDefs::gid_to_lcoord(landcell, x, y))
+//		return 0;
+//
+//	return terrain_data[(x * 255 * 9) + y];
+//}
 
-	long x, y;
-	if (!LandDefs::gid_to_lcoord(landcell, x, y))
-		return 0;
-
-	return terrain_data[(x * 255 * 9) + y];
-}
-
-WORD CLandBlockExtendedDataTable::get_terrain(DWORD landblock, int vertex_x, int vertex_y)
+WORD CLandBlockExtendedDataTable::get_terrain(uint32_t landblock, int vertex_x, int vertex_y)
 {
 	if (!terrain_data)
 		return 0;
 	
-	DWORD block_x = (landblock >> 24) & 0xFF;
-	DWORD block_y = (landblock >> 16) & 0xFF;
+	uint32_t block_x = (landblock >> 24) & 0xFF;
+	uint32_t block_y = (landblock >> 16) & 0xFF;
 
 	WORD *terrain_base = &terrain_data[((block_x * 255) + block_y) * 9 * 9];
 
@@ -164,7 +169,7 @@ DEFINE_PACK(CLandBlockExtendedDataTable)
 DEFINE_PACK_JSON(CLandBlockExtendedDataTable)
 {
 	/*
-	for (PackableHashTableWithJson<DWORD, CLandBlockExtendedData>::iterator i = landblocks.begin(); i != landblocks.end();)
+	for (PackableHashTableWithJson<uint32_t, CLandBlockExtendedData>::iterator i = landblocks.begin(); i != landblocks.end();)
 	{
 		if ((i->first & 0xFFFF0000) != 0x1f50000)
 		{
@@ -181,16 +186,16 @@ DEFINE_PACK_JSON(CLandBlockExtendedDataTable)
 	/*
 	json terrain_data_entry;
 
-	for (DWORD x = 0; x < 255; x++)
+	for (uint32_t x = 0; x < 255; x++)
 	{
-		for (DWORD y = 0; y < 255; y++)
+		for (uint32_t y = 0; y < 255; y++)
 		{
 			json landblock_entry;
 			landblock_entry["block_id"] = (x << 8) | y;
 
-			for (DWORD vertex_x = 0; vertex_x < 9; vertex_x++)
+			for (uint32_t vertex_x = 0; vertex_x < 9; vertex_x++)
 			{
-				for (DWORD vertex_y = 0; vertex_y < 9; vertex_y++)
+				for (uint32_t vertex_y = 0; vertex_y < 9; vertex_y++)
 				{
 					json vertex_entry;
 					vertex_entry["x"] = vertex_x;
@@ -222,16 +227,16 @@ DEFINE_UNPACK(CLandBlockExtendedDataTable)
 #ifdef _DEBUG
 	if (pReader->GetLastError())
 	{
-		DebugBreak();
+		// DebugBreak();
 	}
 #endif
 	
 	/*
 	for (auto &entry : landblocks)
 	{
-		DWORD block_id = entry.first;
+		uint32_t block_id = entry.first;
 
-		for (DWORD i = 0; i < entry.second.weenies.num_used; i++)
+		for (uint32_t i = 0; i < entry.second.weenies.num_used; i++)
 		{
 			if (((entry.second.weenies.array_data[i].pos.objcell_id >> 16) & 0xFFFF) != (block_id >> 16))
 			{
@@ -242,7 +247,7 @@ DEFINE_UNPACK(CLandBlockExtendedDataTable)
 			}
 		}
 
-		for (DWORD i = 0; i < entry.second.weenie_links.num_used; i++)
+		for (uint32_t i = 0; i < entry.second.weenie_links.num_used; i++)
 		{
 			if (((entry.second.weenie_links.array_data[i].source >> 12) & 0xFFFF) != (block_id >> 16))
 			{
@@ -268,14 +273,14 @@ DEFINE_UNPACK_JSON(CLandBlockExtendedDataTable)
 
 	for (auto &entry : landblocks)
 	{
-		DWORD block_id = entry.first;
+		uint32_t block_id = entry.first;
 
-		for (DWORD i = 0; i < entry.second.weenies.num_used; i++)
+		for (uint32_t i = 0; i < entry.second.weenies.num_used; i++)
 		{
 			entry.second.weenies.array_data[i].iid |= 0x70000000 | (block_id >> 4);
 		}
 
-		for (DWORD i = 0; i < entry.second.weenie_links.num_used; i++)
+		for (uint32_t i = 0; i < entry.second.weenie_links.num_used; i++)
 		{
 			entry.second.weenie_links.array_data[i].source |= 0x70000000 | (block_id >> 4);
 			entry.second.weenie_links.array_data[i].target |= 0x70000000 | (block_id >> 4);
@@ -289,10 +294,10 @@ DEFINE_UNPACK_JSON(CLandBlockExtendedDataTable)
 		if (!entry.count("block_id"))
 			continue;
 
-		DWORD block_id = entry["block_id"];
+		uint32_t block_id = entry["block_id"];
 
-		DWORD x = (block_id & 0xFF00) >> 8;
-		DWORD y = (block_id & 0xFF);
+		uint32_t x = (block_id & 0xFF00) >> 8;
+		uint32_t y = (block_id & 0xFF);
 
 		if (x >= 255)
 			continue;
@@ -301,9 +306,9 @@ DEFINE_UNPACK_JSON(CLandBlockExtendedDataTable)
 
 		for (const json &vertex_entry : entry["vertices"])
 		{
-			DWORD vertex_x = vertex_entry["x"];
-			DWORD vertex_y = vertex_entry["y"];
-			DWORD encounter = vertex_entry["encounter"];
+			uint32_t vertex_x = vertex_entry["x"];
+			uint32_t vertex_y = vertex_entry["y"];
+			uint32_t encounter = vertex_entry["encounter"];
 
 			if (vertex_x >= 9)
 				continue;

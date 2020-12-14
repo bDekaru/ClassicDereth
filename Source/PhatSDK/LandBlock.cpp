@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhysicsObj.h"
 #include "LandDefs.h"
 #include "LandCell.h"
@@ -45,7 +45,7 @@ void CLandBlock::Destroyer(DBObj* pLandBlock)
 	delete ((CLandBlock *)pLandBlock);
 }
 
-CLandBlock *CLandBlock::Get(DWORD ID)
+CLandBlock *CLandBlock::Get(uint32_t ID)
 {
 	// LOG(Temp, Normal, "CLandBlock::Get(0x%08X)\n", ID);
 	return (CLandBlock *)ObjCaches::LandBlocks->Get(ID);
@@ -70,15 +70,8 @@ void CLandBlock::add_static_object(CPhysicsObj *pObject)
 
 void CLandBlock::destroy_static_objects(void)
 {
-	for (DWORD i = 0; i < num_static_objects; i++)
-	{
-		if (static_objects.array_data[i])
-		{
-			static_objects.array_data[i]->leave_world();
-			delete static_objects.array_data[i];
-		}
-	}
-
+	// the cells do this work
+	static_objects.shrink(0);
 	num_static_objects = 0;
 }
 
@@ -87,7 +80,7 @@ void CLandBlock::destroy_buildings(void)
 
 	if (buildings)
 	{
-		for (DWORD i = 0; i < num_buildings; i++)
+		for (uint32_t i = 0; i < num_buildings; i++)
 		{
 			if (buildings[i])
 			{
@@ -184,9 +177,9 @@ void CLandBlock::release_objs()
 {
 	if (side_vertex_count == 9)
 	{
-		for (DWORD i = 0; i < side_cell_count; i++)
+		for (uint32_t i = 0; i < side_cell_count; i++)
 		{
-			for (DWORD j = 0; j < side_cell_count; ++j)
+			for (uint32_t j = 0; j < side_cell_count; ++j)
 				lcell[(i * side_cell_count) + j].release_objects();
 		}
 
@@ -198,8 +191,8 @@ BOOL CLandBlock::UnPack(BYTE **ppData, ULONG iSize)
 {
 	Destroy();
 
-	UNPACK(DWORD, id);
-	UNPACK(DWORD, lbi_exists);
+	UNPACK(uint32_t, id);
+	UNPACK(uint32_t, lbi_exists);
 
 	CLandBlockStruct::UnPack(ppData, iSize);
 
@@ -209,18 +202,18 @@ BOOL CLandBlock::UnPack(BYTE **ppData, ULONG iSize)
 	return TRUE;
 }
 
-CLandCell *CLandBlock::get_landcell(DWORD cell_id)
+CLandCell *CLandBlock::get_landcell(uint32_t cell_id)
 {
-	long x, y;
+	int32_t x, y;
 	LandDefs::gid_to_lcoord(cell_id, x, y);
 
-	DWORD index = (y & 7) + ((x & 7) * side_cell_count);
+	uint32_t index = (y & 7) + ((x & 7) * side_cell_count);
 	return (lcell[index].id == cell_id) ? &lcell[index] : NULL;
 }
 
 void CLandBlock::adjust_scene_obj_height()
 {
-	DWORD num_lbi_objects = lbi ? lbi->num_objects : 0;
+	uint32_t num_lbi_objects = lbi ? lbi->num_objects : 0;
 
 	while (num_lbi_objects < num_static_objects)
 	{
@@ -252,7 +245,7 @@ void CLandBlock::adjust_scene_obj_height()
 
 const BOOL use_scene_files = TRUE;
 
-void CLandBlock::init_static_objs(LongNIValHash<unsigned long> *hash)
+void CLandBlock::init_static_objs(LongNIValHash<uint32_t> *hash)
 {
 	if (side_cell_count == 8)
 	{
@@ -260,7 +253,7 @@ void CLandBlock::init_static_objs(LongNIValHash<unsigned long> *hash)
 		{
 			adjust_scene_obj_height();
 
-			for (DWORD i = 0; i < num_static_objects; i++)
+			for (uint32_t i = 0; i < num_static_objects; i++)
 			{
 				CPhysicsObj *static_obj = static_objects.data[i];
 				if (static_obj && !static_obj->is_completely_visible())
@@ -273,7 +266,7 @@ void CLandBlock::init_static_objs(LongNIValHash<unsigned long> *hash)
 		{
 			if (lbi)
 			{
-				for (DWORD i = 0; i < lbi->num_objects; i++)
+				for (uint32_t i = 0; i < lbi->num_objects; i++)
 				{
 					CPhysicsObj *static_obj = CPhysicsObj::makeObject(lbi->object_ids[i], 0, 0);
 					if (static_obj)
@@ -283,7 +276,7 @@ void CLandBlock::init_static_objs(LongNIValHash<unsigned long> *hash)
 						p.frame = lbi->object_frames[i];
 
 						Vector loc = p.frame.m_origin;
-						DWORD cell_id = p.objcell_id;
+						uint32_t cell_id = p.objcell_id;
 						cell_id = LandDefs::adjust_to_outside(&cell_id, &loc) ? cell_id : 0;
 						CLandCell *pLandCell = get_landcell(cell_id);
 
@@ -299,9 +292,9 @@ void CLandBlock::init_static_objs(LongNIValHash<unsigned long> *hash)
 					}
 				}
 
-				for (DWORD i = 0; i < (side_cell_count * side_cell_count); i++)
+				for (uint32_t i = 0; i < (side_cell_count * side_cell_count); i++)
 				{					
-					DWORD restriction = lbi->GetRestrictionIID(lcell[i].GetID());
+					uint32_t restriction = lbi->GetRestrictionIID(lcell[i].GetID());
 					if (restriction)
 					{
 						lcell[i].restriction_obj = restriction;
@@ -328,12 +321,12 @@ void CLandBlock::init_buildings()
 			{
 				num_buildings = 0;
 				stab_num = 0;
-				DWORD max_stab = 0;
+				uint32_t max_stab = 0;
 
 				if (lbi->num_buildings > 0)
 					buildings = new CBuildingObj *[lbi->num_buildings];
 
-				for (DWORD i = 0; i < lbi->num_buildings; i++)
+				for (uint32_t i = 0; i < lbi->num_buildings; i++)
 				{
 					BuildInfo *buildInfo = lbi->buildings[i];
 					
@@ -351,7 +344,7 @@ void CLandBlock::init_buildings()
 						p.frame = buildInfo->building_frame;
 						
 						Vector loc = p.frame.m_origin;
-						DWORD cell_id = p.objcell_id;
+						uint32_t cell_id = p.objcell_id;
 						BOOL adjusted = LandDefs::adjust_to_outside(&cell_id, &loc);
 						CLandCell *pLandCell = get_landcell(adjusted ? cell_id : 0);
 						if (pLandCell)
@@ -378,32 +371,32 @@ void CLandBlock::get_land_scenes()
 	
 	if (CRegionDesc::current_region)
 	{
-		for (DWORD i = 0; i < side_vertex_count; i++)
+		for (uint32_t i = 0; i < side_vertex_count; i++)
 		{
-			for (DWORD j = 0; j < side_vertex_count; j++)
+			for (uint32_t j = 0; j < side_vertex_count; j++)
 			{
-				DWORD v4 = (terrain[(i * side_vertex_count) + j] >> 2) & 0x1F;
-				DWORD v6 = (terrain[(i * side_vertex_count) + j] >> 2) & 0x1F;
-				DWORD scene_id = (terrain[(i * side_vertex_count) + j] >> 11);
+				uint32_t v4 = (terrain[(i * side_vertex_count) + j] >> 2) & 0x1F;
+				uint32_t v6 = (terrain[(i * side_vertex_count) + j] >> 2) & 0x1F;
+				uint32_t scene_id = (terrain[(i * side_vertex_count) + j] >> 11);
 
 				if (scene_id < CRegionDesc::current_region->NumSceneType(v6))
 				{
-					DWORD scene_count = CRegionDesc::current_region->SceneCount(v4, scene_id);
+					uint32_t scene_count = CRegionDesc::current_region->SceneCount(v4, scene_id);
 
 					if (scene_count)
 					{
-						DWORD v9 = i + block_coord.x;
-						DWORD v10 = j + block_coord.y;
+						uint32_t v9 = i + block_coord.x;
+						uint32_t v10 = j + block_coord.y;
 
 						double v11 = (double)(v10 * (712977289 * v9 + 1813693831) - 1109124029 * v9 + 2139937281) * 2.3283064e-10;
-						DWORD v12 = (DWORD) floor(v11 * scene_count);
+						uint32_t v12 = (uint32_t) floor(v11 * scene_count);
 						
 						if (scene_count == 1 || (v12 >= scene_count))
 						{
 							v12 = 0;
 						}
 
-						DWORD sid = CRegionDesc::current_region->GetScene(v4, scene_id, v12);
+						uint32_t sid = CRegionDesc::current_region->GetScene(v4, scene_id, v12);
 
 						if (sid != 0)
 						{
@@ -411,20 +404,20 @@ void CLandBlock::get_land_scenes()
 
 							if (pScene)
 							{
-								DWORD v44 = 1813693831 * v10;
+								uint32_t v44 = 1813693831 * v10;
 								int v16 = -1109124029 * v9;
-								DWORD v38 = 1360117743 * v9 * v10 + 1888038839;
-								DWORD v17 = 23399 * v38;
+								uint32_t v38 = 1360117743 * v9 * v10 + 1888038839;
+								uint32_t v17 = 23399 * v38;
 								int v43 = -1109124029 * v9;
 
-								for (DWORD k = 0; k < pScene->num_objects; k++)
+								for (uint32_t k = 0; k < pScene->num_objects; k++)
 								{
 									ObjectDesc *obj = &pScene->objects[k];
-									DWORD someval = v16 + v44 - v17;
+									uint32_t someval = v16 + v44 - v17;
 
 									if ((double)someval * 2.3283064e-10 < obj->freq && !obj->weenie_obj)
 									{
-										DWORD obj_id = obj->obj_id;
+										uint32_t obj_id = obj->obj_id;
 
 										Vector obj_vector;
 										obj->Place(v9, v10, k, &obj_vector);
@@ -451,7 +444,7 @@ void CLandBlock::get_land_scenes()
 											{
 												v20 = &walkable->plane;
 												Plane::set_height(&walkable->plane, &obj_vector);
-												if (*(_DWORD *)(v18 + 100))
+												if (*(_uint32_t *)(v18 + 100))
 													ObjectDesc::ObjAlign((ObjectDesc *)v18, v20, &obj_vector, &obj_frame);
 												else
 													ObjectDesc::GetObjFrame((ObjectDesc *)v18, v9, v10, kq, &obj_vector, &obj_frame);
@@ -505,9 +498,9 @@ void CLandBlock::get_land_scenes()
 									{
 										v18 = (int)&v15->objects[v35 / 0x70];
 										obj_id.id = v16 + v44 - v17;
-										if ((double)obj_id.id * 2.3283064e-10 < *(float *)(v18 + 68) && !*(_DWORD *)(v18 + 108))
+										if ((double)obj_id.id * 2.3283064e-10 < *(float *)(v18 + 68) && !*(_uint32_t *)(v18 + 108))
 										{
-											obj_id.id = *(_DWORD *)v18;
+											obj_id.id = *(_uint32_t *)v18;
 											ObjectDesc::Place((ObjectDesc *)v18, v9, v10, kq, &obj_vector);
 											obj_vector.x = (double)iq * 24.0 + obj_vector.x;
 											obj_vector.y = (double)jq * 24.0 + obj_vector.y;
@@ -519,13 +512,13 @@ void CLandBlock::get_land_scenes()
 											{
 												p.vfptr = (PackObjVtbl *)&Position::`vftable';
 													p.objcell_id = 0;
-												LODWORD(p.frame.qw) = 1065353216;
-												LODWORD(p.frame.qx) = 0;
-												LODWORD(p.frame.qy) = 0;
-												LODWORD(p.frame.qz) = 0;
-												LODWORD(p.frame.m_fOrigin.x) = 0;
-												LODWORD(p.frame.m_fOrigin.y) = 0;
-												LODWORD(p.frame.m_fOrigin.z) = 0;
+												LOuint32_t(p.frame.qw) = 1065353216;
+												LOuint32_t(p.frame.qx) = 0;
+												LOuint32_t(p.frame.qy) = 0;
+												LOuint32_t(p.frame.qz) = 0;
+												LOuint32_t(p.frame.m_fOrigin.x) = 0;
+												LOuint32_t(p.frame.m_fOrigin.y) = 0;
+												LOuint32_t(p.frame.m_fOrigin.z) = 0;
 												Frame::cache(&p.frame);
 												p.objcell_id = m_DID.id;
 												p.frame.m_fOrigin.y = obj_vector.y;
@@ -539,7 +532,7 @@ void CLandBlock::get_land_scenes()
 												{
 													v20 = &walkable->plane;
 													Plane::set_height(&walkable->plane, &obj_vector);
-													if (*(_DWORD *)(v18 + 100))
+													if (*(_uint32_t *)(v18 + 100))
 														ObjectDesc::ObjAlign((ObjectDesc *)v18, v20, &obj_vector, &obj_frame);
 													else
 														ObjectDesc::GetObjFrame((ObjectDesc *)v18, v9, v10, kq, &obj_vector, &obj_frame);
@@ -597,10 +590,10 @@ void CLandBlock::get_land_scenes()
 									|| (v38 = v10 * (712977289 * v9 + 1813693831) - 1109124029 * v9 + 2139937281,
 										v11 = (double)v38 * 2.3283064e-10,
 										v38 = v7,
-										v12 = (unsigned __int64)_floor(v11 * (double)v7),
+										v12 = (uint64_t)_floor(v11 * (double)v7),
 										(unsigned int)v12 >= v8))
 								{
-									LODWORD(v12) = 0;
+									LOuint32_t(v12) = 0;
 								}
 								CRegionDesc::current_region->GetScene(&sid, v4, scene_id, v12);
 								if (sid.id != stru_844AF4.id)
@@ -625,9 +618,9 @@ void CLandBlock::get_land_scenes()
 											{
 												v18 = (int)&v15->objects[v35 / 0x70];
 												obj_id.id = v16 + v44 - v17;
-												if ((double)obj_id.id * 2.3283064e-10 < *(float *)(v18 + 68) && !*(_DWORD *)(v18 + 108))
+												if ((double)obj_id.id * 2.3283064e-10 < *(float *)(v18 + 68) && !*(_uint32_t *)(v18 + 108))
 												{
-													obj_id.id = *(_DWORD *)v18;
+													obj_id.id = *(_uint32_t *)v18;
 													ObjectDesc::Place((ObjectDesc *)v18, v9, v10, kq, &obj_vector);
 													obj_vector.x = (double)iq * 24.0 + obj_vector.x;
 													obj_vector.y = (double)jq * 24.0 + obj_vector.y;
@@ -639,13 +632,13 @@ void CLandBlock::get_land_scenes()
 													{
 														p.vfptr = (PackObjVtbl *)&Position::`vftable';
 															p.objcell_id = 0;
-														LODWORD(p.frame.qw) = 1065353216;
-														LODWORD(p.frame.qx) = 0;
-														LODWORD(p.frame.qy) = 0;
-														LODWORD(p.frame.qz) = 0;
-														LODWORD(p.frame.m_fOrigin.x) = 0;
-														LODWORD(p.frame.m_fOrigin.y) = 0;
-														LODWORD(p.frame.m_fOrigin.z) = 0;
+														LOuint32_t(p.frame.qw) = 1065353216;
+														LOuint32_t(p.frame.qx) = 0;
+														LOuint32_t(p.frame.qy) = 0;
+														LOuint32_t(p.frame.qz) = 0;
+														LOuint32_t(p.frame.m_fOrigin.x) = 0;
+														LOuint32_t(p.frame.m_fOrigin.y) = 0;
+														LOuint32_t(p.frame.m_fOrigin.z) = 0;
 														Frame::cache(&p.frame);
 														p.objcell_id = m_DID.id;
 														p.frame.m_fOrigin.y = obj_vector.y;
@@ -659,7 +652,7 @@ void CLandBlock::get_land_scenes()
 														{
 															v20 = &walkable->plane;
 															Plane::set_height(&walkable->plane, &obj_vector);
-															if (*(_DWORD *)(v18 + 100))
+															if (*(_uint32_t *)(v18 + 100))
 																ObjectDesc::ObjAlign((ObjectDesc *)v18, v20, &obj_vector, &obj_frame);
 															else
 																ObjectDesc::GetObjFrame((ObjectDesc *)v18, v9, v10, kq, &obj_vector, &obj_frame);

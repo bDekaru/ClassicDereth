@@ -9,11 +9,13 @@ public:
 	void StartServerFrame();
 	void EndServerFrame();
 
-	void UpdateClientList(class CClient **clients, DWORD maxRange);
+	void UpdateClientList(class CClient **clients, uint32_t maxRange);
 
 private:
-	UINT64 _frameRatePeriodStart;
-	UINT64 _nextFrameRatePeriodEnd;
-	UINT64 _frameRateCount;
-	UINT64 _frameRateCountLastPeriod;
+	time_point _frameStart;
+	time_point _frameNext;
+	uint32_t _frameRateCount;
+	uint32_t _frameRateCountLast;
+
+	void Reset(time_point &now);
 };

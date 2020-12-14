@@ -10,11 +10,12 @@ public:
 	void Reset();
 	void Initialize();
 
-	SmartArray<DWORD> *GetSpawnsForCell(DWORD cell_id);
+	//SmartArray<uint32_t> *GetSpawnsForCell(uint32_t cell_id);
 
 protected:
 	void LoadLocalStorage();
 	void SaveCoverageBitmap();
 
-	PackableHashTable<DWORD, SmartArray<DWORD>> m_CreatureSpawns;
+	PackableHashTable<uint32_t, SmartArray<uint32_t>> m_CreatureSpawns;
 };
+

@@ -1,8 +1,8 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "BinaryReader.h"
 
-BinaryReader::BinaryReader(void *pData, DWORD dwSize)
+BinaryReader::BinaryReader(void *pData, uint32_t dwSize)
 {
 	m_dwErrorCode = 0;
 
@@ -24,7 +24,7 @@ BinaryReader::~BinaryReader()
 
 void BinaryReader::ReadAlign()
 {
-	DWORD dwOffset = (DWORD)(m_pData - m_pStart);
+	uint32_t dwOffset = (uint32_t)(m_pData - m_pStart);
 	if ((dwOffset % 4) != 0)
 		m_pData += (4 - (dwOffset % 4));
 }
@@ -47,7 +47,7 @@ void *BinaryReader::ReadArray(size_t size)
 
 char *BinaryReader::ReadString()
 {
-	WORD wLen = ReadWORD();
+	WORD wLen = ReadUInt16();
 
 	if (m_dwErrorCode || wLen > MAX_BINARYREADER_STRING_LENGTH)
 	{
@@ -74,7 +74,7 @@ char *BinaryReader::ReadString()
 
 char *BinaryReader::ReadSerializedString()
 {
-	DWORD length = ReadCompressedUInt32();
+	uint32_t length = ReadCompressedUInt32();
 
 	if (m_dwErrorCode || length > MAX_BINARYREADER_STRING_LENGTH)
 	{
@@ -114,27 +114,27 @@ BYTE *BinaryReader::GetDataEnd()
 	return m_pEnd;
 }
 
-DWORD BinaryReader::GetDataLen()
+uint32_t BinaryReader::GetDataLen()
 {
-	return (DWORD)(m_pEnd - m_pStart);
+	return (uint32_t)(m_pEnd - m_pStart);
 }
 
-DWORD BinaryReader::GetOffset()
+uint32_t BinaryReader::GetOffset()
 {
-	return (DWORD)(m_pData - m_pStart);
+	return (uint32_t)(m_pData - m_pStart);
 }
 
-void BinaryReader::SetOffset(DWORD offset)
+void BinaryReader::SetOffset(uint32_t offset)
 {
 	m_pData = m_pStart + offset;
 }
 
-DWORD BinaryReader::GetLastError()
+uint32_t BinaryReader::GetLastError()
 {
 	return m_dwErrorCode;
 }
 
-DWORD BinaryReader::GetDataRemaining()
+uint32_t BinaryReader::GetDataRemaining()
 {
 	return m_pEnd - m_pData;
 }
@@ -149,15 +149,44 @@ const char *BinaryReader::ReadWStringToString()
 		return "";
 	}
 
-	wchar_t *wStr = (wchar_t *)ReadArray(charLength * sizeof(wchar_t));
+	char16_t *wStr = (char16_t *)ReadArray(charLength * sizeof(char16_t));
 	if (m_dwErrorCode)
 		return "";
 
 	char *mbStr = new char[charLength + 1];
-	wcstombs(mbStr, wStr, charLength);
+
+	// the codecvt bits are broken in vs 2015/2017
+	// it is supposed to be fixed in 2019-16.2 when it is released
+#if _MSC_VER >= 1900 && _MSC_VER < 1925
+	wcstombs(mbStr, (wchar_t*)wStr, charLength);
+#else
+	std::u16string s16(wStr);
+	std::string s8 = string16_convert_t{}.to_bytes(s16);
+
+	s8.copy(mbStr, s8.length());
+#endif
+
 	mbStr[charLength] = 0;
 	m_stringCache.push_back(mbStr);
 	return mbStr;
+}
+
+std::u16string BinaryReader::ReadString16(void)
+{
+	unsigned int charLength = ReadCompressedUInt32();
+
+	if (m_dwErrorCode || charLength > MAX_BINARYREADER_STRING_LENGTH)
+	{
+		m_dwErrorCode = 1;
+		return u"";
+	}
+
+	char16_t *wStr = (char16_t *)ReadArray(charLength * sizeof(char16_t));
+	if (m_dwErrorCode)
+		return u"";
+
+	std::u16string s16(wStr, charLength);
+	return s16;
 }
 
 const char *BinaryReader::ReadNewString()

@@ -41,10 +41,13 @@ public:
 	DECLARE_PACKABLE_JSON()
 
 	static const char *GetAttributeName(STypeAttribute key); // custom
+	virtual uint32_t GetMaxXp();
+	uint32_t GetXpNeededForMaxXp();
 
-	DWORD _level_from_cp = 0;
-	DWORD _init_level = 0;
-	DWORD _cp_spent = 0;
+
+	uint32_t _level_from_cp = 0;
+	uint32_t _init_level = 0;
+	uint32_t _cp_spent = 0;
 };
 
 class SecondaryAttribute : public Attribute
@@ -56,7 +59,9 @@ public:
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()
 
-	DWORD _current = 0;
+	virtual uint32_t GetMaxXp() override;
+
+	uint32_t _current = 0;
 };
 
 class AttributeCache : public PackObj, public PackableJson
@@ -71,14 +76,14 @@ public:
 	void Clear();
 
 	BOOL SetAttribute(STypeAttribute key, const Attribute &attrib);
-	BOOL SetAttribute(STypeAttribute key, DWORD initialValue);
+	BOOL SetAttribute(STypeAttribute key, uint32_t initialValue);
 	virtual BOOL InqAttribute(STypeAttribute index, Attribute &value);
-	virtual BOOL InqAttribute(STypeAttribute index, DWORD &value);
+	virtual BOOL InqAttribute(STypeAttribute index, uint32_t &value);
 
 	BOOL SetAttribute2nd(STypeAttribute2nd key, const SecondaryAttribute &attrib);
-	BOOL SetAttribute2nd(STypeAttribute2nd key, DWORD value);
+	BOOL SetAttribute2nd(STypeAttribute2nd key, uint32_t value);
 	virtual BOOL InqAttribute2nd(STypeAttribute2nd index, SecondaryAttribute &value);
-	virtual BOOL InqAttribute2nd(STypeAttribute2nd index, DWORD &value);
+	virtual BOOL InqAttribute2nd(STypeAttribute2nd index, uint32_t &value);
 
 	void CopyFrom(AttributeCache *pOther); // custom
 
@@ -102,13 +107,17 @@ public:
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()
 
+	static const char *SkillSacToName(SKILL_ADVANCEMENT_CLASS type); // custom
 	void SetSkillAdvancementClass(SKILL_ADVANCEMENT_CLASS val);
+	bool IsMaxed();
+	uint32_t GetMaxXP();
+	uint32_t GetXpNeededForMaxXp();
 
 	SKILL_ADVANCEMENT_CLASS _sac = UNDEF_SKILL_ADVANCEMENT_CLASS;
-	DWORD _pp = 0;
-	DWORD _init_level = 0;
-	DWORD _level_from_pp = 0;
-	long _resistance_of_last_check = 0;
+	uint32_t _pp = 0;
+	uint32_t _init_level = 0;
+	uint32_t _level_from_pp = 0;
+	int32_t _resistance_of_last_check = 0;
 	double _last_used_time = 0.0;
 };
 
@@ -133,15 +142,15 @@ public:
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()
 
-	void AddSpell(DWORD spellid, const SpellBookPage &spell);
-	void RemoveSpell(DWORD spellid);
+	void AddSpell(uint32_t spellid, const SpellBookPage &spell);
+	void RemoveSpell(uint32_t spellid);
 	void ClearSpells();
 
-	void TranscribeSpells(const std::list<DWORD> &spells);
+	void TranscribeSpells(const std::list<uint32_t> &spells);
 	void Prune();
-	bool Exists(DWORD spellid);
+	bool Exists(uint32_t spellid);
 
-	PackableHashTableWithJson<DWORD, SpellBookPage> _spellbook;
+	PackableHashTableWithJson<uint32_t, SpellBookPage> _spellbook;
 };
 
 class CBaseQualities : public PackObj, public PackableJson
@@ -159,9 +168,11 @@ public:
 	void SetInt(STypeInt key, int value);
 	BOOL InqInt(STypeInt key, int &value, BOOL raw = FALSE, BOOL allow_negative = FALSE);
 	void RemoveInt(STypeInt key);
+	void AdjInt(STypeInt key, int value, int &newvalue);
+	void AdjInt(STypeInt key, int value);
 
-	void SetInt64(STypeInt64 key, __int64 value);
-	BOOL InqInt64(STypeInt64 key, __int64 &value);
+	void SetInt64(STypeInt64 key, int64_t value);
+	BOOL InqInt64(STypeInt64 key, int64_t &value);
 	void RemoveInt64(STypeInt64 key);
 
 	virtual BOOL EnchantFloat(STypeFloat key, double &value) = 0;
@@ -177,12 +188,12 @@ public:
 	BOOL InqString(STypeString key, std::string &value);
 	void RemoveString(STypeString key);
 
-	void SetDataID(STypeDID key, DWORD value);
-	BOOL InqDataID(STypeDID key, DWORD &value);
+	void SetDataID(STypeDID key, uint32_t value);
+	BOOL InqDataID(STypeDID key, uint32_t &value);
 	void RemoveDataID(STypeDID key);
 
-	void SetInstanceID(STypeIID key, DWORD value);
-	BOOL InqInstanceID(STypeIID key, DWORD &value);
+	void SetInstanceID(STypeIID key, uint32_t value);
+	BOOL InqInstanceID(STypeIID key, uint32_t &value);
 	void RemoveInstanceID(STypeIID key);
 
 	void SetPosition(STypePosition key, const Position &value);
@@ -192,23 +203,23 @@ public:
 	// custom
 	void CopyFrom(CBaseQualities *pOther);
 	int GetInt(STypeInt key, int defaultValue);
-	long long GetInt64(STypeInt64 key, long long defaultValue);
+	int64_t GetInt64(STypeInt64 key, int64_t defaultValue);
 	BOOL GetBool(STypeBool key, BOOL defaultValue);
 	double GetFloat(STypeFloat key, double defaultValue);
 	std::string GetString(STypeString key, std::string defaultValue);
-	DWORD GetDID(STypeDID key, DWORD defaultValue);
-	DWORD GetIID(STypeIID key, DWORD defaultValue);
+	uint32_t GetDID(STypeDID key, uint32_t defaultValue);
+	uint32_t GetIID(STypeIID key, uint32_t defaultValue);
 	Position GetPosition(STypePosition key, const Position &defaultValue);
 	// end of custom
 
 	int m_WeenieType = Undef_WeenieType;
 	PackableHashTableWithJson<STypeInt, int> *m_IntStats = NULL;
-	PackableHashTableWithJson<STypeInt64, __int64> *m_Int64Stats = NULL;
+	PackableHashTableWithJson<STypeInt64, int64_t> *m_Int64Stats = NULL;
 	PackableHashTableWithJson<STypeBool, BOOL> *m_BoolStats = NULL;
 	PackableHashTableWithJson<STypeFloat, double> *m_FloatStats = NULL;
 	PackableHashTableWithJson<STypeString, std::string> *m_StringStats = NULL;
-	PackableHashTableWithJson<STypeDID, DWORD> *m_DIDStats = NULL;
-	PackableHashTableWithJson<STypeIID, DWORD> *m_IIDStats = NULL;
+	PackableHashTableWithJson<STypeDID, uint32_t> *m_DIDStats = NULL;
+	PackableHashTableWithJson<STypeIID, uint32_t> *m_IIDStats = NULL;
 	PackableHashTableWithJson<STypePosition, Position> *m_PositionStats = NULL;
 };
 
@@ -219,7 +230,7 @@ public:
 	DECLARE_PACKABLE_JSON()
 
 	union {
-		DWORD wcid;
+		uint32_t wcid;
 		WClassIDEnum wclass;
 	};
 	int try_to_bond;
@@ -234,9 +245,9 @@ public:
 		int regen_algorithm;
 	};
 	union {
-		long stack_size;
-		long max_number;
-		long amount;
+		int stack_size;
+		int max_number;
+		int amount;
 	};
 };
 
@@ -303,7 +314,7 @@ public:
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()
 
-	PackableHashTableWithJson<long, BodyPart> _body_part_table;
+	PackableHashTableWithJson<int32_t, BodyPart> _body_part_table;
 };
 
 class StatMod : public PackObj, public PackableJson
@@ -319,15 +330,15 @@ public:
 
 struct EnchantedQualityDetails
 {
-	long double rawValue = 0.0;
-	long double valueIncreasingMultiplier = 1.0;
-	long double valueDecreasingMultiplier = 1.0;
-	long double valueIncreasingAdditive = 0.0;
-	long double valueDecreasingAdditive = 0.0;
+	double rawValue = 0.0;
+	double valueIncreasingMultiplier = 1.0;
+	double valueDecreasingMultiplier = 1.0;
+	double valueIncreasingAdditive = 0.0;
+	double valueDecreasingAdditive = 0.0;
 
-	long double enchantedValue = 0.0;
-	long double enchantedValue_IncreasingOnly = 0.0;
-	long double enchantedValue_DecreasingOnly = 0.0;
+	double enchantedValue = 0.0;
+	double enchantedValue_IncreasingOnly = 0.0;
+	double enchantedValue_DecreasingOnly = 0.0;
 
 	void CalculateEnchantedValue()
 	{
@@ -336,8 +347,7 @@ struct EnchantedQualityDetails
 		enchantedValue *= valueDecreasingMultiplier;
 		enchantedValue += valueIncreasingAdditive;
 		enchantedValue += valueDecreasingAdditive;
-
-		enchantedValue = max(enchantedValue, 0.0);
+		enchantedValue = std::max(enchantedValue, 0.0);
 
 		CalculateIncreasingEnchantedValue();
 		CalculateDecreasingEnchantedValue();
@@ -348,8 +358,7 @@ struct EnchantedQualityDetails
 		enchantedValue_DecreasingOnly = rawValue;
 		enchantedValue_DecreasingOnly *= valueDecreasingMultiplier;
 		enchantedValue_DecreasingOnly += valueDecreasingAdditive;
-
-		enchantedValue_DecreasingOnly = max(enchantedValue_DecreasingOnly, 0.0);
+		enchantedValue_DecreasingOnly = std::max(enchantedValue_DecreasingOnly, 0.0);
 	}
 
 	void CalculateIncreasingEnchantedValue()
@@ -357,8 +366,7 @@ struct EnchantedQualityDetails
 		enchantedValue_IncreasingOnly = rawValue;
 		enchantedValue_IncreasingOnly *= valueIncreasingMultiplier;
 		enchantedValue_IncreasingOnly += valueIncreasingAdditive;
-
-		enchantedValue_IncreasingOnly = max(enchantedValue_IncreasingOnly, 0.0);
+		enchantedValue_IncreasingOnly = std::max(enchantedValue_IncreasingOnly, 0.0);
 	}
 };
 
@@ -380,12 +388,13 @@ public:
 	unsigned int m_SpellSetID = 0;
 	unsigned int _spell_category = 0;
 	int _power_level = 0;
-	long double _start_time = -1.0;
-	long double _duration = -1.0;
+	double _start_time = -1.0;
+	double _duration = -1.0;
 	unsigned int _caster = 0;
 	float _degrade_modifier = 0.0f;
 	float _degrade_limit = 0.0f;
-	long double _last_time_degraded = -1.0;
+	double _last_time_degraded = -1.0;
+	uint32_t _dtype = 0;
 	StatMod _smod;
 };
 
@@ -421,7 +430,7 @@ public:
 	static BOOL Duel(Enchantment *challenger, PackableListWithJson<Enchantment> *list);
 	BOOL PurgeEnchantments();
 	BOOL PurgeEnchantmentList(PackableListWithJson<Enchantment> *list);
-	BOOL RemoveEnchantments(PackableListWithJson<DWORD> *to_remove);
+	BOOL RemoveEnchantments(PackableListWithJson<uint32_t> *to_remove);
 	BOOL PurgeBadEnchantments();
 	BOOL PurgeBadEnchantmentList(PackableListWithJson<Enchantment> *list);
 	BOOL InqVitae(Enchantment *vitae);
@@ -435,12 +444,19 @@ public:
 	BOOL EnchantFloat(unsigned int stype, double *val);
 	BOOL EnchantBodyArmorValue(unsigned int part, DAMAGE_TYPE dt, int *val);
 
-	void GetExpiredEnchantments(PackableListWithJson<Enchantment> *list, PackableListWithJson<DWORD> *expired); // custom
-	void GetExpiredEnchantments(PackableListWithJson<DWORD> *expired); // custom
+	void GetExpiredEnchantments(PackableListWithJson<Enchantment> *list, PackableListWithJson<uint32_t> *expired); // custom
+	void GetExpiredEnchantments(PackableListWithJson<uint32_t> *expired); // custom
+
+	Enchantment* AddCooldown(uint32_t cooldownId, double duration, uint32_t caster);
+	BOOL InqCooldown(uint32_t cooldownId);
+
+	Enchantment* GetHighestEnchantOfCategory(unsigned int category, unsigned int smod_type);
 
 	PackableListWithJson<Enchantment> *_mult_list = NULL;
 	PackableListWithJson<Enchantment> *_add_list = NULL;
 	PackableListWithJson<Enchantment> *_cooldown_list = NULL;
+	std::list<Enchantment> *_rating_list = NULL;
+
 	Enchantment *_vitae = NULL;
 	unsigned int m_cHelpfulEnchantments = 0;
 	unsigned int m_cHarmfulEnchantments = 0;
@@ -472,14 +488,14 @@ public:
 	float delay = 0.0f;
 	float extent = 1.0f;
 	unsigned int amount = 0;
-	unsigned __int64 amount64 = 0;
-	unsigned __int64 heroxp64 = 0;
-	unsigned __int64 min64 = 0;
-	unsigned __int64 max64 = 0;
+	uint64_t amount64 = 0;
+	uint64_t heroxp64 = 0;
+	uint64_t min64 = 0;
+	uint64_t max64 = 0;
 	unsigned int min = 0;
 	unsigned int max = 0;
-	long double fmin = 0.0;
-	long double fmax = 0.0;
+	double fmin = 0.0;
+	double fmax = 0.0;
 	unsigned int stat = 0;
 	unsigned int motion = 0;
 	PScriptType pscript = PScriptType::PS_Invalid;
@@ -489,7 +505,7 @@ public:
 	unsigned int spellid = 0;
 	std::string teststring;
 	std::string msg;
-	long double percent = 0.0;
+	double percent = 0.0;
 	int display = 0;
 	unsigned int wealth_rating = 0;
 	unsigned int treasure_class = 0;
@@ -505,7 +521,7 @@ public:
 
 	EmoteCategory category = EmoteCategory::Invalid_EmoteCategory;
 	float probability = 0.0f;
-	DWORD classID = 0;
+	uint32_t classID = 0;
 	std::string quest;
 	unsigned int style = 0;
 	unsigned int substyle = 0;
@@ -521,7 +537,7 @@ public:
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()
 
-	PackableHashTableWithJson<unsigned long, PackableListWithJson<EmoteSet>> _emote_table;
+	PackableHashTableWithJson<uint32_t, PackableListWithJson<EmoteSet>> _emote_table;
 };
 
 class PageData : public PackObj, public PackableJson
@@ -578,13 +594,13 @@ public:
 	}
 
 	float probability = 0.0f;
-	DWORD type = 0; // ID
-	long double delay = 600.0;
+	uint32_t type = 0; // ID
+	double delay = 600.0;
 	int initCreate = 1;
 	int maxNum = -1;
 	RegenerationType whenCreate = Destruction_RegenerationType;
 	RegenLocationType whereCreate  = Scatter_RegenLocationType;
-	int stackSize = -1;
+	int stackSize = 0;
 	unsigned int ptid  = 0;
 	float shade = 0.0f;
 	Position pos_val;
@@ -610,15 +626,15 @@ public:
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()
 
-	DWORD m_wcidOrTtype = 0; // ID
-	long double ts = 0.0;
+	uint32_t m_wcidOrTtype = 0; // ID
+	double ts = 0.0;
 	int m_bTreasureType = 0;
 	unsigned int slot = 0;
 	int checkpointed = 0;
 	int shop = 0;
 	int amount = 0;
 
-	DWORD m_objectId = 0;
+	uint32_t m_objectId = 0;
 };
 
 class GeneratorRegistry : public PackObj, public PackableJson
@@ -627,7 +643,7 @@ public:
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()
 
-	PackableHashTableWithJson<unsigned long, GeneratorRegistryNode> _registry;
+	PackableHashTableWithJson<uint32_t, GeneratorRegistryNode> _registry;
 };
 
 class GeneratorQueueNode : public PackObj, public PackableJson
@@ -637,7 +653,7 @@ public:
 	DECLARE_PACKABLE_JSON()
 
 	unsigned int slot = 0;
-	long double when = 0.0;
+	double when = 0.0;
 };
 
 class GeneratorQueue : public PackObj, public PackableJson
@@ -662,9 +678,9 @@ public:
 
 	virtual BOOL EnchantInt(STypeInt key, int &value, BOOL allow_negative) override;
 	virtual BOOL EnchantFloat(STypeFloat key, double &value) override;
-	BOOL EnchantAttribute(STypeAttribute key, DWORD &value);
-	BOOL EnchantAttribute2nd(STypeAttribute2nd key, DWORD &value);
-	BOOL EnchantSkill(STypeSkill key, DWORD &value);
+	BOOL EnchantAttribute(STypeAttribute key, uint32_t &value);
+	BOOL EnchantAttribute2nd(STypeAttribute2nd key, uint32_t &value);
+	BOOL EnchantSkill(STypeSkill key, uint32_t &value);
 	BOOL EnchantBodyArmorValue(unsigned int part, DAMAGE_TYPE dt, int *val);
 	BOOL PurgeEnchantments();
 	BOOL PurgeBadEnchantments();
@@ -675,38 +691,43 @@ public:
 	BOOL GetIntEnchantmentDetails(unsigned int stype, EnchantedQualityDetails *val); // custom, implied
 	BOOL GetFloatEnchantmentDetails(unsigned int stype, EnchantedQualityDetails *val);
 
-	BOOL BoundsCheck(STypeAttribute2nd key, DWORD &val, DWORD &max);
+	float GetAddRating(STypeInt rating, bool raw);
+	float GetPositiveRating(STypeInt rating, bool raw);
+	float GetNegativeRating(STypeInt rating, bool raw);
 
-	BOOL SetAttribute(STypeAttribute key, DWORD initialValue);
+	BOOL BoundsCheck(STypeAttribute2nd key, uint32_t &val, uint32_t &max);
+
+	BOOL SetAttribute(STypeAttribute key, uint32_t initialValue);
 	BOOL SetAttribute(STypeAttribute key, const Attribute &value);
 	virtual BOOL InqAttribute(STypeAttribute key, Attribute &value);
-	virtual BOOL InqAttribute(STypeAttribute key, DWORD &value, BOOL raw);
+	virtual BOOL InqAttribute(STypeAttribute key, uint32_t &value, BOOL raw);
 
-	BOOL InqAttribute2ndBaseLevel(STypeAttribute2nd key, DWORD &value, BOOL raw);
-	BOOL SetAttribute2nd(STypeAttribute2nd key, DWORD value);
+	BOOL InqAttribute2ndBaseLevel(STypeAttribute2nd key, uint32_t &value, BOOL raw);
+	BOOL SetAttribute2nd(STypeAttribute2nd key, uint32_t value);
 	BOOL SetAttribute2nd(STypeAttribute2nd key, const SecondaryAttribute &value);
-	BOOL SetAttribute2nd(STypeAttribute2nd key, DWORD value, DWORD &result, DWORD &max);
+	BOOL SetAttribute2nd(STypeAttribute2nd key, uint32_t value, uint32_t &result, uint32_t &max);
 	BOOL InqAttribute2nd(STypeAttribute2nd key, SecondaryAttribute &value);
-	BOOL InqAttribute2nd(STypeAttribute2nd key, DWORD &value, BOOL raw);
+	BOOL InqAttribute2nd(STypeAttribute2nd key, uint32_t &value, BOOL raw);
 
 	void SetSkill(STypeSkill key, const Skill &value);
-	void SetSkillLevel(STypeSkill key, DWORD value);
+	void SetSkillLevel(STypeSkill key, uint32_t value);
 	void SetSkillAdvancementClass(STypeSkill key, SKILL_ADVANCEMENT_CLASS value);
-	BOOL InqSkill(STypeSkill key, DWORD &value, BOOL raw);
+	BOOL InqSkill(STypeSkill key, uint32_t &value, BOOL raw);
 	BOOL InqSkill(STypeSkill key, Skill &value);
 	BOOL InqSkillAdvancementClass(STypeSkill key, SKILL_ADVANCEMENT_CLASS &value);
-	BOOL InqSkillLevel(STypeSkill key, DWORD &value);
-	BOOL InqSkillBaseLevel(STypeSkill key, DWORD &value, BOOL raw);
+	BOOL InqSkillLevel(STypeSkill key, uint32_t &value);
+	BOOL InqSkillBaseLevel(STypeSkill key, uint32_t &value, BOOL raw);
 
 	BOOL InqBodyArmorValue(unsigned int part, DAMAGE_TYPE dt, int &value, BOOL raw);
 
-	void AddSpell(DWORD spellid);
+	void AddSpell(uint32_t spellid);
+	void RemoveSpell(uint32_t spellid);
 
 	BOOL InqLoad(float &load);
 	BOOL InqJumpVelocity(float extent, float &v_z);
 	BOOL InqRunRate(float &rate);
 	BOOL CanJump(float extent);
-	BOOL JumpStaminaCost(float extent, long & cost);
+	BOOL JumpStaminaCost(float extent, int32_t & cost);
 
 	BOOL HasSpellBook();
 	BOOL IsSpellKnown(const unsigned int spell);
@@ -714,6 +735,9 @@ public:
 	BOOL UpdateEnchantment(Enchantment *to_update);
 
 	void CopyFrom(CACQualities *pOther); // custom
+
+	Enchantment* AddCooldown(uint32_t cooldownId, double duration);
+	BOOL InqCooldown(uint32_t cooldownId);
 	
 	class AttributeCache *_attribCache = NULL;
 	PackableHashTableWithJson<STypeSkill, Skill> *_skillStatsTable = NULL;

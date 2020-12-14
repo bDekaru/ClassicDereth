@@ -9,7 +9,7 @@ public:
 
 	virtual bool Initialize( );
 
-	inline DWORD GetBaseFrame( ) {
+	inline uint32_t GetBaseFrame( ) {
 		return ((m_fSpeed >= 0)? m_dwStartFrame : m_dwEndFrame );
 	}
 
@@ -19,13 +19,13 @@ private:
 	float	m_fSpeed;
 
 	double	m_fStartTime;
-	DWORD	m_dwCurrentFrame;
-	DWORD	m_dwStartFrame;
-	DWORD	m_dwEndFrame;
+	uint32_t	m_dwCurrentFrame;
+	uint32_t	m_dwStartFrame;
+	uint32_t	m_dwEndFrame;
 
-	DWORD	m_dwTarget;
-	DWORD	m_dwAction;	//For identifying actions (lifestone recall, etc.)
-	DWORD	m_dwActionData[10];
+	uint32_t	m_dwTarget;
+	uint32_t	m_dwAction;	//For identifying actions (lifestone recall, etc.)
+	uint32_t	m_dwActionData[10];
 };
 
 class SequencedAnimation : public AnimationPackage

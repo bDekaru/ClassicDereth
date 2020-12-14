@@ -44,19 +44,19 @@ public:
 		TRANSLUCENCY = (1 << 18) // 0x40000
 	};
 
-	DWORD bitfield;
+	uint32_t bitfield;
 	PhysicsState state;
 	BYTE *movement_buffer;
-	DWORD movement_buffer_length;
-	DWORD autonomous_movement;
-	DWORD animframe_id;
+	uint32_t movement_buffer_length;
+	uint32_t autonomous_movement;
+	uint32_t animframe_id;
 	Position pos;
-	DWORD mtable_id; // These are tag ids like animpartchange
-	DWORD stable_id;
-	DWORD phstable_id;
-	DWORD setup_id;
-	DWORD parent_id;
-	DWORD location_id;
+	uint32_t mtable_id; // These are tag ids like animpartchange
+	uint32_t stable_id;
+	uint32_t phstable_id;
+	uint32_t setup_id;
+	uint32_t parent_id;
+	uint32_t location_id;
 	std::list<ChildInfo> children;
 	float object_scale;
 	float friction;
@@ -110,8 +110,8 @@ public:
 		newObj.bitfield = binaryReader.ReadUInt32();
 		newObj.state = (PhysicsState)binaryReader.ReadUInt32();
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::MOVEMENT) != 0) {
-			DWORD buff_length = binaryReader.ReadUInt32();
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::MOVEMENT) != 0) {
+			uint32_t buff_length = binaryReader.ReadUInt32();
 			if (buff_length > 0)
 			{
 				if (newObj.movement_buffer)
@@ -123,81 +123,81 @@ public:
 
 			newObj.autonomous_movement = binaryReader.ReadUInt32();
 		}
-		else if ((newObj.bitfield & (DWORD)PhysicsDescInfo::ANIMFRAME_ID) != 0) {
+		else if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::ANIMFRAME_ID) != 0) {
 			newObj.animframe_id = binaryReader.ReadUInt32();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::POSITION) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::POSITION) != 0) {
 			newObj.pos.UnPack(&binaryReader);
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::MTABLE) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::MTABLE) != 0) {
 			newObj.mtable_id = binaryReader.ReadUInt32();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::STABLE) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::STABLE) != 0) {
 			newObj.stable_id = binaryReader.ReadUInt32();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::PETABLE) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::PETABLE) != 0) {
 			newObj.phstable_id = binaryReader.ReadUInt32();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::CSETUP) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::CSETUP) != 0) {
 			newObj.setup_id = binaryReader.ReadUInt32();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::PARENT) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::PARENT) != 0) {
 			newObj.parent_id = binaryReader.ReadUInt32();
 			newObj.location_id = binaryReader.ReadUInt32();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::CHILDREN) != 0) {
-			DWORD num_children = binaryReader.ReadUInt32();
-			for (DWORD i = 0; i < num_children; ++i) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::CHILDREN) != 0) {
+			uint32_t num_children = binaryReader.ReadUInt32();
+			for (uint32_t i = 0; i < num_children; ++i) {
 				newObj.children.push_back(ChildInfo::read(binaryReader));
 			}
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::OBJSCALE) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::OBJSCALE) != 0) {
 			newObj.object_scale = binaryReader.ReadSingle();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::FRICTION) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::FRICTION) != 0) {
 			newObj.friction = binaryReader.ReadSingle();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::ELASTICITY) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::ELASTICITY) != 0) {
 			newObj.elasticity = binaryReader.ReadSingle();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::TRANSLUCENCY) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::TRANSLUCENCY) != 0) {
 			newObj.translucency = binaryReader.ReadSingle();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::VELOCITY) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::VELOCITY) != 0) {
 			newObj.velocity.x = binaryReader.ReadSingle();
 			newObj.velocity.y = binaryReader.ReadSingle();
 			newObj.velocity.z = binaryReader.ReadSingle();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::ACCELERATION) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::ACCELERATION) != 0) {
 			newObj.acceleration.x = binaryReader.ReadSingle();
 			newObj.acceleration.y = binaryReader.ReadSingle();
 			newObj.acceleration.z = binaryReader.ReadSingle();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::OMEGA) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::OMEGA) != 0) {
 			newObj.omega.x = binaryReader.ReadSingle();
 			newObj.omega.y = binaryReader.ReadSingle();
 			newObj.omega.z = binaryReader.ReadSingle();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::DEFAULT_SCRIPT) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::DEFAULT_SCRIPT) != 0) {
 			newObj.default_script = (PScriptType)binaryReader.ReadUInt32();
 		}
 
-		if ((newObj.bitfield & (DWORD)PhysicsDescInfo::DEFAULT_SCRIPT_INTENSITY) != 0) {
+		if ((newObj.bitfield & (uint32_t)PhysicsDescInfo::DEFAULT_SCRIPT_INTENSITY) != 0) {
 			newObj.default_script_intensity = binaryReader.ReadSingle();
 		}
 

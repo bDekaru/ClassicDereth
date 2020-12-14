@@ -9,7 +9,7 @@ class className \
 public: \
 	static DBObj *Allocator(); \
 	static void Destroyer(DBObj *); \
-	static className *Get(DWORD ID); \
+	static className *Get(uint32_t ID); \
 	static void Release(className *); \
 };
 

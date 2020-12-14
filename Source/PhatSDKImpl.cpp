@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "ServerCellManager.h"
 #include "InferredPortalData.h"
@@ -20,17 +20,19 @@ public:
 		SafeDelete(g_pPhatSDK);
 	}
 
-	double GetCurrTime()
+	virtual ~CPhatSDKServerImpl() = default;
+
+	double GetCurrTime() override
 	{
 		return g_pGlobals->Time();
 	}
 
-	double GetRandomFloat(double min, double max)
+	double GetRandomFloat(double min, double max) override
 	{
 		return Random::GenFloat(min, max);
 	}
 
-	BYTE *GetPortalDataEntry(DWORD id, DWORD *length)
+	BYTE *GetPortalDataEntry(uint32_t id, uint32_t *length) override
 	{
 		DATEntry entry;
 		if (DATDisk::pPortal && DATDisk::pPortal->GetData(id, &entry))
@@ -44,7 +46,7 @@ public:
 		return NULL;
 	}
 
-	BYTE *GetCellDataEntry(DWORD id, DWORD *length)
+	BYTE *GetCellDataEntry(uint32_t id, uint32_t *length) override
 	{
 		DATEntry entry;
 		if (DATDisk::pCell && DATDisk::pCell->GetData(id, &entry))
@@ -58,9 +60,9 @@ public:
 		return NULL;
 	}
 
-	CEnvCell *EnvCell_GetVisible(DWORD cell_id)
+	CEnvCell *EnvCell_GetVisible(uint32_t cell_id, bool bDoPostLoad = true) override
 	{
-		return (CEnvCell *)g_pCellManager->GetObjCell(cell_id);
+		return (CEnvCell *)g_pCellManager->GetObjCell(cell_id, bDoPostLoad);
 	}
 
 	CQuestDefDB *GetQuestDefDB() override

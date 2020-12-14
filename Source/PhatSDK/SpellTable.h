@@ -13,7 +13,7 @@ public:
 
 	BOOL Complete();
 	ITEM_TYPE GetTargetingType();
-	DWORD GetPowerLevelOfPowerComponent();
+	uint32_t GetPowerLevelOfPowerComponent();
 	bool RandomizeForName(const char *accountName, int spellVersion);
 	bool RandomizeVersion1(const char *accountName);
 	bool RandomizeVersion2(const char *accountName);
@@ -52,14 +52,14 @@ public:
 		_degrade_limit = pReader->Read<float>();
 
 #ifdef EMULATE_INFERRED_SPELL_DATA
-		_spellCategory = pReader->Read<DWORD>();
+		_spellCategory = pReader->Read<uint32_t>();
 		_smod.UnPack(pReader);
 #endif
 
 		return true;
 	}
 
-	long double _duration = -1.0;
+	double _duration = -1.0;
 	float _degrade_modifier = 0.0f;
 	float _degrade_limit = INVALID_ENCHANTMENT_DEGRADE_LIMIT;
 
@@ -84,10 +84,10 @@ public:
 		Spell::UnPack(pReader);
 
 #ifdef EMULATE_INFERRED_SPELL_DATA
-		DWORD etype = pReader->Read<DWORD>();
+		uint32_t etype = pReader->Read<uint32_t>();
 		int baseIntensity = pReader->Read<int>();
 		int variance = pReader->Read<int>();
-		DWORD wcid = pReader->Read<DWORD>();
+		uint32_t wcid = pReader->Read<uint32_t>();
 		int numProjectiles = pReader->Read<int>();
 		float numProjectilesVariance = pReader->Read<int>();
 		float spreadAngle = pReader->Read<float>();
@@ -107,7 +107,7 @@ public:
 		Vector peturbation;
 		peturbation.UnPack(pReader);
 
-		DWORD imbuedEffect = pReader->Read<DWORD>();
+		uint32_t imbuedEffect = pReader->Read<uint32_t>();
 		int slayerCreatureType = pReader->Read<int>();
 		float slayerDamageBonus = pReader->Read<float>();
 		double critFreq = pReader->Read<double>();
@@ -175,7 +175,7 @@ public:
 		pReader->Read<float>();
 		pReader->Read<float>();
 		pReader->Read<float>();
-		pReader->Read<DWORD>();
+		pReader->Read<uint32_t>();
 #endif
 
 		return true;
@@ -299,7 +299,7 @@ public:
 	std::string _name;
 	std::string _desc;
 	unsigned int _school;
-	DWORD _iconID;
+	uint32_t _iconID;
 	unsigned int _category;
 	unsigned int _bitfield;
 	int _base_mana;
@@ -314,20 +314,21 @@ public:
 	PScriptType _caster_effect;
 	PScriptType _target_effect;
 	PScriptType _fizzle_effect;
-	long double _recovery_interval;
+	double _recovery_interval;
 	float _recovery_amount;
 	int _display_order;
 	unsigned int _non_component_target_type;
 	MetaSpell _meta_spell;
 };
 
-/*
+
 class SpellSetTierList : public PackObj
 {
+public:
 	DECLARE_PACKABLE()
 
-	unsigned int m_PieceCount;
-	std::list<unsigned long> m_SpellList;
+	// list of spells for a given set count/level
+	PackableList<uint32_t> m_tierSpellList;
 };
 
 class SpellSet : public PackObj
@@ -335,9 +336,10 @@ class SpellSet : public PackObj
 public:
 	DECLARE_PACKABLE()
 
-	std::list<SpellSetTierList> m_countTiers;
+	// key is level/number of pieces, value is a list of spell ids
+	PackableHashTable<uint32_t, SpellSetTierList> m_spellSetTiers;
 };
-*/
+
 
 class CSpellTable : public PackObj, public DBObj
 {
@@ -351,14 +353,15 @@ public:
 
 	void Destroy(); // custom
 
-	const CSpellBase *GetSpellBase(DWORD spell_id);
+	const CSpellBase *GetSpellBase(uint32_t spell_id);
+	const SpellSet *GetSpellSet(uint32_t set_id);
 
-	PackableHashTable<unsigned long, CSpellBase> _spellBaseHash;
-	// don't do this for now PHashTable<unsigned long, SpellSet> m_SpellSetHash;
+	PackableHashTable<uint32_t, CSpellBase> _spellBaseHash;
+	PackableHashTable<uint32_t, SpellSet> _spellSetHash;
 
 #if PHATSDK_IS_SERVER
-	DWORD ChangeSpellToDifferentLevel(DWORD spell_id, DWORD spell_level);
+	uint32_t ChangeSpellToDifferentLevel(uint32_t spell_id, uint32_t spell_level);
 
-	PackableHashTable<unsigned long, PackableHashTable<int, PackableHashTable<int, SpellID>>> _categoryToResearchableSpellsMap; // category->self targeted?->magic level->spell id
+	PackableHashTable<uint32_t, PackableHashTable<int, PackableHashTable<int, SpellID>>> _categoryToResearchableSpellsMap; // category->self targeted?->magic level->spell id
 #endif
 };

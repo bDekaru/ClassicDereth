@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Surface.h"
 #include "PhysicsObj.h"
 #include "Environment.h"
@@ -45,7 +45,7 @@ void CEnvCell::Destroyer(DBObj* pEnvCell)
 	delete ((CEnvCell *)pEnvCell);
 }
 
-CEnvCell *CEnvCell::Get(DWORD ID)
+CEnvCell *CEnvCell::Get(uint32_t ID)
 {
 	return (CEnvCell *)ObjCaches::EnvCells->Get(ID);
 }
@@ -60,7 +60,7 @@ void CEnvCell::Destroy()
 {
 	if (surfaces)
 	{
-		for (DWORD i = 0; i < num_surfaces; i++)
+		for (uint32_t i = 0; i < num_surfaces; i++)
 			CSurface::Release(surfaces[i]);
 
 		delete[] surfaces;
@@ -105,7 +105,7 @@ void CEnvCell::Destroy()
 
 	if (static_objects)
 	{
-		for (DWORD i = 0; i < num_static_objects; i++)
+		for (uint32_t i = 0; i < num_static_objects; i++)
 		{
 			if (static_objects[i])
 			{
@@ -136,26 +136,26 @@ BOOL CEnvCell::UnPack(BYTE **ppData, ULONG iSize)
 {
 #ifdef PRE_TOD
 #else
-	UNPACK(DWORD, id);
+	UNPACK(uint32_t, id);
 #endif
 
-	DWORD Flags;
+	uint32_t Flags;
 
-	UNPACK(DWORD, Flags);
+	UNPACK(uint32_t, Flags);
 	seen_outside = FBitSet(Flags, 0);
 
-	UNPACK(DWORD, id);
+	UNPACK(uint32_t, id);
 
-	DWORD LandBlock = GetID() & 0xFFFF0000;
+	uint32_t LandBlock = GetID() & 0xFFFF0000;
 
 	UNPACK(BYTE, num_surfaces);
 	UNPACK(BYTE, num_portals);
 	UNPACK(WORD, num_stabs);
 
 	surfaces = new CSurface*[num_surfaces];
-	for (DWORD i = 0; i < num_surfaces; i++)
+	for (uint32_t i = 0; i < num_surfaces; i++)
 	{
-		DWORD SurfaceID;
+		uint32_t SurfaceID;
 		UNPACK(WORD, SurfaceID);
 		SurfaceID |= 0x08000000;
 
@@ -166,7 +166,7 @@ BOOL CEnvCell::UnPack(BYTE **ppData, ULONG iSize)
 	PACK_ALIGN();
 #endif
 
-	DWORD EnvironmentID, StructIndex;
+	uint32_t EnvironmentID, StructIndex;
 
 	UNPACK(WORD, EnvironmentID);
 	EnvironmentID |= 0x0D000000;
@@ -185,7 +185,7 @@ BOOL CEnvCell::UnPack(BYTE **ppData, ULONG iSize)
 	{
 		portals = new CCellPortal[num_portals];
 
-		for (DWORD i = 0; i < num_portals; i++)
+		for (uint32_t i = 0; i < num_portals; i++)
 		{
 			// This is the index of the portal polygon.
 			WORD PolyIndex;
@@ -200,11 +200,11 @@ BOOL CEnvCell::UnPack(BYTE **ppData, ULONG iSize)
 
 	if (num_stabs > 0)
 	{
-		stab_list = new DWORD[num_stabs];
+		stab_list = new uint32_t[num_stabs];
 
-		for (DWORD i = 0; i < num_stabs; i++)
+		for (uint32_t i = 0; i < num_stabs; i++)
 		{
-			DWORD CellID;
+			uint32_t CellID;
 			UNPACK(WORD, CellID);
 
 			stab_list[i] = LandBlock | CellID;
@@ -216,16 +216,16 @@ BOOL CEnvCell::UnPack(BYTE **ppData, ULONG iSize)
 
 	if (Flags & 2)
 	{
-		UNPACK(DWORD, num_static_objects);
+		UNPACK(uint32_t, num_static_objects);
 
 		if (num_static_objects > 0)
 		{
-			static_object_ids = new DWORD[num_static_objects];
+			static_object_ids = new uint32_t[num_static_objects];
 			static_object_frames = new Frame[num_static_objects];
 
-			for (DWORD i = 0; i < num_static_objects; i++)
+			for (uint32_t i = 0; i < num_static_objects; i++)
 			{
-				UNPACK(DWORD, static_object_ids[i]);
+				UNPACK(uint32_t, static_object_ids[i]);
 				UNPACK_OBJ(static_object_frames[i]);
 			}
 		}
@@ -237,26 +237,26 @@ BOOL CEnvCell::UnPack(BYTE **ppData, ULONG iSize)
 #if PHATSDK_USE_EXTENDED_CELL_DATA
 	if (Flags & 4)
 	{
-		UNPACK(DWORD, num_dynamic_objects);
+		UNPACK(uint32_t, num_dynamic_objects);
 
 		if (num_dynamic_objects > 0)
 		{
-			dynamic_object_wcids = new DWORD[num_dynamic_objects];
+			dynamic_object_wcids = new uint32_t[num_dynamic_objects];
 			dynamic_object_pos = new Position[num_dynamic_objects];
-			dynamic_object_iids = new DWORD[num_dynamic_objects];
+			dynamic_object_iids = new uint32_t[num_dynamic_objects];
 
-			for (DWORD i = 0; i < num_dynamic_objects; i++)
+			for (uint32_t i = 0; i < num_dynamic_objects; i++)
 			{
-				UNPACK(DWORD, dynamic_object_wcids[i]);
+				UNPACK(uint32_t, dynamic_object_wcids[i]);
 				UNPACK_OBJ_READER(dynamic_object_pos[i]);
-				UNPACK(DWORD, dynamic_object_iids[i]);
+				UNPACK(uint32_t, dynamic_object_iids[i]);
 			}
 		}
 	}
 #endif
 
 	if (Flags & 8)
-		UNPACK(DWORD, restriction_obj);
+		UNPACK(uint32_t, restriction_obj);
 	else
 		restriction_obj = 0;
 
@@ -298,7 +298,7 @@ void CEnvCell::init_static_objects()
 {
 	if (static_objects)
 	{
-		for (DWORD i = 0; i < num_static_objects; i++)
+		for (uint32_t i = 0; i < num_static_objects; i++)
 		{
 			if (static_objects[i])
 			{
@@ -313,7 +313,7 @@ void CEnvCell::init_static_objects()
 		{
 			static_objects = new CPhysicsObj*[num_static_objects];
 
-			for (DWORD i = 0; i < num_static_objects; i++)
+			for (uint32_t i = 0; i < num_static_objects; i++)
 			{
 				if (static_object_ids[i])
 					static_objects[i] = CPhysicsObj::makeObject(static_object_ids[i], 0, FALSE);
@@ -341,7 +341,7 @@ CCellPortal::~CCellPortal()
 {
 }
 
-BOOL CCellPortal::UnPack(DWORD LandBlock, WORD *PolyIndex, BYTE **ppData, ULONG iSize)
+BOOL CCellPortal::UnPack(uint32_t LandBlock, WORD *PolyIndex, BYTE **ppData, ULONG iSize)
 {
 	BYTE Flags;
 	UNPACK(WORD, Flags);
@@ -366,7 +366,7 @@ BOOL CCellPortal::UnPack(DWORD LandBlock, WORD *PolyIndex, BYTE **ppData, ULONG 
 
 CEnvCell *CCellPortal::GetOtherCell(BOOL do_not_load)
 {
-	return CEnvCell::GetVisible(other_cell_id);
+	return CEnvCell::GetVisible(other_cell_id, !do_not_load);
 }
 
 BOOL CEnvCell::point_in_cell(const Vector& point)
@@ -414,10 +414,10 @@ TransitionState CEnvCell::find_env_collisions(CTransition *transition)
 	return ts;
 }
 
-CEnvCell *CEnvCell::GetVisible(DWORD cell_id)
+CEnvCell *CEnvCell::GetVisible(uint32_t cell_id, bool bDoPostLoad)
 {
 	// Should get any requested cell on a server, or visible cells on a client?
-	return g_pPhatSDK->EnvCell_GetVisible(cell_id);
+	return g_pPhatSDK->EnvCell_GetVisible(cell_id, bDoPostLoad);
 }
 
 CEnvCell *CEnvCell::find_visible_child_cell(Vector *origin, const int bSearchCells)
@@ -427,7 +427,7 @@ CEnvCell *CEnvCell::find_visible_child_cell(Vector *origin, const int bSearchCel
 
 	if (bSearchCells)
 	{
-		for (DWORD i = 0; i < num_stabs; i++)
+		for (uint32_t i = 0; i < num_stabs; i++)
 		{
 			CEnvCell *pEnvCell = CEnvCell::GetVisible(stab_list[i]);
 
@@ -440,7 +440,7 @@ CEnvCell *CEnvCell::find_visible_child_cell(Vector *origin, const int bSearchCel
 	}
 	else
 	{
-		for (DWORD i = 0; i < num_portals; i++)
+		for (uint32_t i = 0; i < num_portals; i++)
 		{
 			CEnvCell *pEnvCell = portals[i].GetOtherCell(TRUE);
 
@@ -459,12 +459,12 @@ void CEnvCell::find_transit_cells(Position *p, const unsigned int num_sphere, CS
 {
 	int check_outside = 0;
 
-	for (DWORD i = 0; i < num_portals; i++)
+	for (uint32_t i = 0; i < num_portals; i++)
 	{
 		CCellPortal *cellPortal = &portals[i];
 		if (cellPortal->other_cell_id == -1)
 		{
-			for (DWORD j = 0; j < num_sphere; j++)
+			for (uint32_t j = 0; j < num_sphere; j++)
 			{
 				float ia = sphere[j].radius + F_EPSILON;
 				Vector v = pos.frame.globaltolocal(sphere[j].center);
@@ -482,7 +482,7 @@ void CEnvCell::find_transit_cells(Position *p, const unsigned int num_sphere, CS
 			CEnvCell *otherCell = cellPortal->GetOtherCell(cell_array->do_not_load_cells);
 			if (otherCell)
 			{
-				for (DWORD j = 0; j < num_sphere; j++)
+				for (uint32_t j = 0; j < num_sphere; j++)
 				{
 					Vector v = otherCell->pos.frame.globaltolocal(sphere[j].center);
 
@@ -501,7 +501,7 @@ void CEnvCell::find_transit_cells(Position *p, const unsigned int num_sphere, CS
 			}
 			else
 			{
-				for (DWORD j = 0; j < num_sphere; j++)
+				for (uint32_t j = 0; j < num_sphere; j++)
 				{
 					Vector v = pos.frame.globaltolocal(sphere[j].center);
 
@@ -531,9 +531,9 @@ void CEnvCell::find_transit_cells(const unsigned int num_parts, CPhysicsPart **p
 	int check_outside = 0;
 	float radius, neg_radius;
 
-	for (DWORD i = 0; i < num_portals; i++)
+	for (uint32_t i = 0; i < num_portals; i++)
 	{
-		for (DWORD j = 0; j < num_parts; j++)
+		for (uint32_t j = 0; j < num_parts; j++)
 		{
 			CPhysicsPart *part = parts[j];
 			if (!part)
@@ -605,9 +605,9 @@ bool CEnvCell::Custom_GetDungeonDrop(int dropIndex, Frame *pDropFrame, int *pNum
 	int numDrops = 0;
 	bool bFoundDrop = false;
 
-	for (DWORD i = 0; i < num_static_objects; i++)
+	for (uint32_t i = 0; i < num_static_objects; i++)
 	{
-		DWORD setupID = static_object_ids[i];
+		uint32_t setupID = static_object_ids[i];
 		if ((setupID >= 0x02000C39 && setupID <= 0x02000C48) || (setupID == 0x02000F4A))
 		{
 			if (dropIndex == numDrops && pDropFrame)
@@ -627,20 +627,20 @@ bool CEnvCell::Custom_GetDungeonDrop(int dropIndex, Frame *pDropFrame, int *pNum
 	return bFoundDrop || (dropIndex < 0);
 }
 
-CPhysicsObj *CEnvCell::recursively_get_object(DWORD obj_iid, PackableHashTable<unsigned long, int> *visited_cells)
+CPhysicsObj *CEnvCell::recursively_get_object(uint32_t obj_iid, PackableHashTable<uint32_t, int32_t> *visited_cells)
 {
 	CPhysicsObj *pObject = get_object(obj_iid);
 
 	if (!pObject)
 	{
-		for (DWORD i = 0; i < num_portals; i++)
+		for (uint32_t i = 0; i < num_portals; i++)
 		{
-			DWORD cellid = portals[i].other_cell_id;
+			uint32_t cellid = portals[i].other_cell_id;
 
 			if (visited_cells->lookup(cellid))
 				continue;
 
-			if (cellid != (DWORD)-1)
+			if (cellid != (uint32_t)-1)
 			{
 				int ptrue = 1;
 				visited_cells->add(cellid, &ptrue);
@@ -666,7 +666,7 @@ void CEnvCell::check_building_transit(int portal_id, Position *p, const unsigned
 {
 	if (portal_id >= 0)
 	{
-		for (DWORD i = 0; i < num_sphere; i++)
+		for (uint32_t i = 0; i < num_sphere; i++)
 		{
 			CSphere v15;
 
@@ -688,7 +688,7 @@ void CEnvCell::check_building_transit(int portal_id, const unsigned int num_part
 {
 	if (portal_id >= 0)
 	{
-		for (DWORD i = 0; i < num_parts; i++)
+		for (uint32_t i = 0; i < num_parts; i++)
 		{
 			if (parts[i])
 			{

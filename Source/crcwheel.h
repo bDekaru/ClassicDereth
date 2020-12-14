@@ -3,8 +3,8 @@
 
 #include "ISAAC.h"
 
-extern void *AllocCrypto(DWORD seed);
+extern void *AllocCrypto(uint32_t seed);
 extern void FreeCrypto(void *pCryptoBuffer);
-extern DWORD GetNextXORVal(void *pCryptoBuffer);
+extern uint32_t GetNextXORVal(void *pCryptoBuffer);
 
 

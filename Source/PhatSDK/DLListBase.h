@@ -147,10 +147,10 @@ public:
 	~LListBase() {    }
 
 	// Made up
-	DWORD Size()
+	uint32_t Size()
 	{
 		LListData *pNode = head_;
-		DWORD iCount = 0;
+		uint32_t iCount = 0;
 
 		while (pNode)
 		{

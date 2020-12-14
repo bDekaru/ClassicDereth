@@ -1,5 +1,10 @@
 
 #pragma once
+#if defined(_MSC_VER)
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
 
 #include "LegacyPackObj.h"
 #include "BinaryReader.h"
@@ -74,10 +79,148 @@ public:
 class Vector
 {
 public:
+
+#if (defined(__AVX__))
+#pragma message("Using SIMD")
+
+	inline Vector() {
+		vec = _mm_setzero_ps();
+	}
+
+	inline Vector(float scalar) {
+		vec = _mm_set1_ps(scalar);
+	}
+
+	inline Vector(float _x, float _y, float _z) {
+		vec = _mm_set_ps(_x, _y, _z, 0.0f);
+	}
+
+private:
+	inline Vector(__m128 v) : vec(v) {
+	}
+
+public:
+	inline Vector operator*(const float amount) const {
+		Vector v(_mm_mul_ps(vec, _mm_set1_ps(amount)));
+		return v;
+	}
+	
+	inline Vector operator*(const Vector& quant) const {
+		Vector v(_mm_mul_ps(vec, quant.vec));
+		return v;
+	}
+	
+	inline Vector operator/(const float amount) const {
+		Vector v(_mm_div_ps(vec, _mm_set1_ps(amount)));
+		return v;
+	}
+	
+	inline Vector operator-(const Vector& quant) const {
+		Vector v(_mm_sub_ps(vec, quant.vec));
+		return v;
+	}
+	
+	inline Vector operator+(const Vector& quant) const {
+		Vector v(_mm_add_ps(vec, quant.vec));
+		return v;
+	}
+
+	inline Vector& operator*=(const float amount) {
+		vec = _mm_mul_ps(vec, _mm_set1_ps(amount));
+		return *this;
+	}
+	inline Vector& operator*=(const Vector& quant) {
+		vec = _mm_mul_ps(vec, quant.vec);
+		return *this;
+	}
+
+	inline Vector& operator/=(const float amount) {
+		__m128 scalar = _mm_set1_ps(amount);
+		vec = _mm_div_ps(vec, scalar);
+		return *this;
+	}
+	inline Vector& operator/=(const Vector& quant) {
+		vec = _mm_div_ps(vec, quant.vec);
+		return *this;
+	}
+
+	inline Vector& operator-=(const Vector& quant) {
+		vec = _mm_sub_ps(vec, quant.vec);
+		return *this;
+	}
+
+	inline Vector& operator+=(const Vector& quant) {
+		vec = _mm_add_ps(vec, quant.vec);
+		return *this;
+	}
+
+	inline static Vector fma(const Vector& a, const Vector& b, const Vector& c) {
+		Vector v(_mm_fmadd_ps(a.vec, b.vec, c.vec));
+		return v;
+	}
+
+	inline static Vector fma(const Vector& a, const Vector& b, float c) {
+		Vector v(_mm_fmadd_ps(a.vec, b.vec, _mm_set1_ps(c)));
+		return v;
+	}
+
+	inline float magnitude() const {
+		// here be magic.
+		// explanation at http://fastcpp.blogspot.com/2012/02/calculating-length-of-3d-vector-using.html
+		return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(vec, vec, 0xE1)));
+	}
+
+	inline float mag_squared() const {
+		return _mm_cvtss_f32(_mm_dp_ps(vec, vec, 0xE1));
+	}
+
+	inline float sum_of_square() const {
+		return mag_squared();
+	}
+
+	inline float dot_product(const Vector& v) const {
+		return _mm_cvtss_f32(_mm_dp_ps(vec, v.vec, 0xE1));
+	}
+
+	inline Vector& normalize() {
+		vec = _mm_div_ps(vec, _mm_sqrt_ps(_mm_dp_ps(vec, vec, 0xEE)));
+		return *this;
+	}
+
+	inline Vector cross(const Vector& v) const {
+		// SHUFFLE
+		// x >> 3
+		// y >> 2
+		// z >> 1
+		// w >> 0
+
+		Vector r(
+			_mm_sub_ps(
+				// = y * v.z, z * v.x, x * v.y
+				_mm_mul_ps(
+					_mm_shuffle_ps(vec, vec, _MM_SHUFFLE(2, 1, 3, 0)),
+					_mm_shuffle_ps(v.vec, v.vec, _MM_SHUFFLE(1, 3, 2, 0))
+				),
+				// = z * v.y, x * v.z, y * v.x
+				_mm_mul_ps(
+					_mm_shuffle_ps(vec, vec, _MM_SHUFFLE(1, 3, 2, 0)),
+					_mm_shuffle_ps(v.vec, v.vec, _MM_SHUFFLE(2, 1, 3, 0))
+				)
+			));
+		return r;
+	}
+
+#else
 	inline Vector() {
 		x = 0;
 		y = 0;
 		z = 0;
+	}
+
+	inline Vector(float scalar) {
+		x = scalar;
+		y = scalar;
+		z = scalar;
 	}
 
 	inline Vector(float _x, float _y, float _z) {
@@ -85,12 +228,29 @@ public:
 		y = _y;
 		z = _z;
 	}
+
+	inline Vector(const Vector&) = default;
+
 	inline Vector operator*(const float amount) const {
 		return Vector(x * amount, y * amount, z * amount);
 	}
+	
 	inline Vector operator*(const Vector& quant) const {
 		return Vector(x * quant.x, y * quant.y, z * quant.z);
 	}
+	
+	inline Vector operator/(const float amount) const {
+		return Vector(x / amount, y / amount, z / amount);
+	}
+	
+	inline Vector operator-(const Vector& quant) const {
+		return Vector(x - quant.x, y - quant.y, z - quant.z);
+	}
+	
+	inline Vector operator+(const Vector& quant) const {
+		return Vector(x + quant.x, y + quant.y, z + quant.z);
+	}
+
 	inline Vector& operator*=(const float amount) {
 		x *= amount;
 		y *= amount;
@@ -104,9 +264,6 @@ public:
 		return *this;
 	}
 
-	inline Vector operator/(const float amount) const {
-		return Vector(x / amount, y / amount, z / amount);
-	}
 	inline Vector& operator/=(const float amount) {
 		x /= amount;
 		y /= amount;
@@ -120,9 +277,6 @@ public:
 		return *this;
 	}
 
-	inline Vector operator-(const Vector& quant) const {
-		return Vector(x - quant.x, y - quant.y, z - quant.z);
-	}
 	inline Vector& operator-=(const Vector& quant) {
 		x -= quant.x;
 		y -= quant.y;
@@ -130,9 +284,6 @@ public:
 		return *this;
 	}
 
-	inline Vector operator+(const Vector& quant) const {
-		return Vector(x + quant.x, y + quant.y, z + quant.z);
-	}
 	inline Vector& operator+=(const Vector& quant) {
 		x += quant.x;
 		y += quant.y;
@@ -140,29 +291,66 @@ public:
 		return *this;
 	}
 
-	inline operator const float *() const {
-		return &x;
-	}
-	inline operator float *() {
-		return &x;
+	inline static Vector fma(const Vector& a, const Vector& b, const Vector& c)
+	{
+		Vector v;
+		v.x = fmaf(a.x, b.x, c.x);
+		v.y = fmaf(a.y, b.y, c.y);
+		v.z = fmaf(a.z, b.z, c.z);
+		return v;
 	}
 
-	float magnitude() const {
+	inline static Vector fma(const Vector& a, const Vector& b, float c)
+	{
+		Vector v;
+		v.x = fmaf(a.x, b.x, c);
+		v.y = fmaf(a.y, b.y, c);
+		v.z = fmaf(a.z, b.z, c);
+		return v;
+	}
+
+	inline float magnitude() const {
 		return (float)sqrt((x * x) + (y * y) + (z * z));
 	}
 
-	float mag_squared() const {
+	inline float mag_squared() const {
 		return (float)((x * x) + (y * y) + (z * z));
 	}
 
-	float sum_of_square() const {
+	inline float sum_of_square() const {
 		return ((x * x) + (y * y) + (z * z));
 	}
+
+	inline float dot_product(const Vector& v) const
+	{
+		return((x * v.x) + (y * v.y) + (z * v.z));
+	}
+
+	inline Vector& normalize()
+	{
+		float nfactor = 1 / magnitude();
+
+		x *= nfactor;
+		y *= nfactor;
+		z *= nfactor;
+
+		return *this;
+	}
+
+	inline Vector cross(const Vector& v) const {
+		Vector r(
+			y * v.z - z * v.y,
+			z * v.x - x * v.z,
+			x * v.y - y * v.x);
+
+		return r;
+	}
+
+#endif
 
 	inline ULONG pack_size() {
 		return(sizeof(float) * 3);
 	}
-
 
 	inline ULONG Pack(BYTE** ppData, ULONG iSize) { // For legacy purposes
 		PACK(float, x);
@@ -170,6 +358,7 @@ public:
 		PACK(float, z);
 		return pack_size();
 	}
+
 	inline BOOL UnPack(BYTE** ppData, ULONG iSize) { // For legacy purposes
 		if (iSize < pack_size())
 			return FALSE;
@@ -197,6 +386,7 @@ public:
 		writer["y"] = y;
 		writer["z"] = z;
 	}
+
 	inline bool UnPackJson(const json& reader) {
 		x = reader["x"];
 		y = reader["y"];
@@ -205,8 +395,7 @@ public:
 	}
 
 	BOOL IsValid() const;
-	float dot_product(const Vector& v) const;
-	Vector& normalize();
+
 	BOOL normalize_check_small();
 	BOOL is_zero() const;
 	float get_heading();
@@ -225,8 +414,22 @@ public:
 	bool operator==(const Vector& v) { return is_equal(v) ? true : false; }
 	bool operator!=(const Vector& v) { return !(*this == v); }
 
-	float x, y, z;
+	union
+	{
+		alignas(16) __m128 vec;
+		struct
+		{
+			float w, z, y, x;
+		};
+	};
+	
 };
+
+inline std::ostream& operator<<(std::ostream& out, const Vector& v)
+{
+	out << v.x << " " << v.y << " " << v.z;
+	return out;
+}
 
 float FindVectorZ(const Vector& p1, const Vector& p2, const Vector& p3, float x, float y);
 Vector cross_product(const Vector& v1, const Vector& v2);
@@ -336,6 +539,12 @@ public:
 	float w, x, y, z;
 };
 
+inline std::ostream& operator<<(std::ostream& out, const Quaternion& q)
+{
+	out << q.w << " " << q.x << " " << q.y << " " << q.z;
+	return out;
+}
+
 class Ray
 {
 public:
@@ -367,6 +576,15 @@ public:
 
 	Vector m_normal;
 	float m_dist;
+
+	BOOL set_height(Vector& point)
+	{
+		if (fabs(m_normal.z) < F_EPSILON)
+			return FALSE;
+
+		point.z = -((point.y * m_normal.y + point.x * m_normal.x + m_dist) / m_normal.z);
+		return TRUE;
+	}
 };
 
 bool is_newer_event_stamp(WORD oldStamp, WORD stamp);

@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Clothing.h"
 
 CClothingWeenie::CClothingWeenie()
@@ -15,7 +15,7 @@ int CClothingWeenie::Use(CPlayerWeenie *other)
 	return CWeenieObject::Use(other);
 }
 
-bool CClothingWeenie::IsValidWieldLocation(DWORD location)
+bool CClothingWeenie::IsValidWieldLocation(uint32_t location)
 {
 	if (InqIntQuality(LOCATIONS_INT, 0, TRUE) == location)
 		return true;
@@ -23,7 +23,7 @@ bool CClothingWeenie::IsValidWieldLocation(DWORD location)
 	return false;
 }
 
-bool CClothingWeenie::CanEquipWith(CWeenieObject *other, DWORD otherLocation)
+bool CClothingWeenie::CanEquipWith(CWeenieObject *other, uint32_t otherLocation)
 {
 	if (CWeenieObject::CanEquipWith(other, otherLocation))
 		return true;
@@ -140,9 +140,10 @@ float CClothingWeenie::GetEffectiveArmorLevel(DamageEventData &damageData, bool 
 	float factor = 1.0;
 
 	//Shields are being created as clothing but once the server resets they are no longer clothing.
-	//until we figure out why let's have this check here to make sure they pass thru.
+	//until we figure out why let's have this check here to make sure they pass thru
 	bool isShield = InqIntQuality(COMBAT_USE_INT, 0, TRUE) == COMBAT_USE::COMBAT_USE_SHIELD;
 	if (!isShield && !CoversBodyPart(damageData.hitPart, &factor))
+
 		return 0.0f;
 
 	return CWeenieObject::GetEffectiveArmorLevel(damageData, bIgnoreMagicArmor) * factor;
@@ -151,4 +152,9 @@ float CClothingWeenie::GetEffectiveArmorLevel(DamageEventData &damageData, bool 
 bool CClothingWeenie::IsHelm()
 {
 	return (InqIntQuality(LOCATIONS_INT, 0, TRUE) == HEAD_WEAR_LOC);
+}
+
+bool CClothingWeenie::IsCloak()
+{
+	return (InqIntQuality(LOCATIONS_INT, 0, TRUE) == CLOAK_LOC);
 }

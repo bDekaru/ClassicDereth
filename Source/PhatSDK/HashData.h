@@ -1,5 +1,6 @@
 
 #pragma once
+#include "easylogging++.h"
 
 template<typename _Kty> class HashBase;
 template<typename _Kty> class HashBaseData;
@@ -27,7 +28,7 @@ public:
 		id = 0;
 	}
 
-	const _Kty GetID()
+	 _Kty GetID()
 	{
 		return id;
 	}
@@ -357,19 +358,19 @@ private:
 	BOOL preserve_table; // 0x14
 };
 
-class LongHashData : public HashBaseData<unsigned long>
+class LongHashData : public HashBaseData<uint32_t>
 {
 public:
 	virtual ~LongHashData() { }
 };
 
 template<class _Mty>
-class LongHash : public HashBase<unsigned long>
+class LongHash : public HashBase<uint32_t>
 {
 public:
-	typedef HashBase<unsigned long> _Mybase;
-	typedef HashBaseData<unsigned long> _MybaseData;
-	typedef HashBaseIter<unsigned long> _MybaseIter;
+	typedef HashBase<uint32_t> _Mybase;
+	typedef HashBaseData<uint32_t> _MybaseData;
+	typedef HashBaseIter<uint32_t> _MybaseIter;
 
 	LongHash(size_t buckets)
 		: _Mybase(buckets)
@@ -386,12 +387,12 @@ public:
 		_Mybase::add(pData);
 	}
 
-	void remove(unsigned long Key)
+	void remove(uint32_t Key)
 	{
 		_Mybase::remove(Key);
 	}
 
-	_Mty *lookup(unsigned long Key)
+	_Mty *lookup(uint32_t Key)
 	{
 		// We are converting the data pointers to their parent objects.
 		_MybaseData *pData = _Mybase::lookup(Key);
@@ -404,20 +405,35 @@ public:
 
 	void destroy_contents()
 	{
-		_MybaseIter it(this);
+		try
+		{
+			_MybaseIter it(this);
+			try
+			{
+				while (!it.EndReached())
+					it.DeleteCurrent();
+			}
+			catch (...)
+			{
+				SERVER_ERROR << "Error progressing over iteration";
+			}
 
-		while (!it.EndReached())
-			it.DeleteCurrent();
+		}
+		catch (...)
+		{
+			SERVER_ERROR << "Failed to create iterator";
+		}
+
 	}
 };
 
 template<class _Mty>
-class LongNIValHashData : public HashBaseData<unsigned long>
+class LongNIValHashData : public HashBaseData<uint32_t>
 {
 public:
-	typedef HashBaseData<unsigned long> _Mybase;
+	typedef HashBaseData<uint32_t> _Mybase;
 
-	LongNIValHashData(_Mty Data, unsigned long Key) : m_Data(Data)
+	LongNIValHashData(_Mty Data, uint32_t Key) : m_Data(Data)
 	{
 		id = Key;
 	}
@@ -555,12 +571,12 @@ private:
 };
 
 template<class _Mty>
-class LongNIValHash : public HashBase<unsigned long>
+class LongNIValHash : public HashBase<uint32_t>
 {
 public:
-	typedef HashBase<unsigned long> _Mybase;
-	typedef HashBaseData<unsigned long> _MybaseData;
-	typedef HashBaseIter<unsigned long> _MybaseIter;
+	typedef HashBase<uint32_t> _Mybase;
+	typedef HashBaseData<uint32_t> _MybaseData;
+	typedef HashBaseIter<uint32_t> _MybaseIter;
 
 	typedef LongNIValHashData<_Mty> _MyData;
 	typedef LongNIValHashIter<_Mty> _MyIter;
@@ -575,18 +591,18 @@ public:
 		destroy_contents();
 	}
 
-	void add(_Mty Data, unsigned long Key)
+	void add(_Mty Data, uint32_t Key)
 	{
 		_MyData *pData = new _MyData(Data, Key);
 		_Mybase::add(pData);
 	}
 
-	_MybaseData *remove(unsigned long Key)
+	_MybaseData *remove(uint32_t Key)
 	{
 		return _Mybase::remove(Key);
 	}
 
-	BOOL remove(unsigned long Key, _Mty *pOutData)
+	BOOL remove(uint32_t Key, _Mty *pOutData)
 	{
 		// We are converting the data pointers to their parent objects.
 		_MybaseData *pData = _Mybase::remove(Key);
@@ -602,7 +618,7 @@ public:
 		return TRUE;
 	}
 
-	BOOL lookup(unsigned long Key, _Mty *pOutData)
+	BOOL lookup(uint32_t Key, _Mty *pOutData)
 	{
 		// We are converting the data pointers to their parent objects.
 		_MybaseData *pData = _Mybase::lookup(Key);
@@ -624,7 +640,7 @@ public:
 			it.DeleteCurrent();
 	}
 
-	BOOL clobber(_Mty *data, DWORD dataKey)
+	BOOL clobber(_Mty *data, uint32_t dataKey)
 	{
 		// !! modifies data
 
@@ -649,7 +665,7 @@ template<class _Mty>
 class LongNIHashData
 {
 public:
-	typedef DWORD _Kty;
+	typedef uint32_t _Kty;
 
 	LongNIHashData()
 	{
@@ -753,7 +769,7 @@ template<typename _Mty>
 class LongNIHash
 {
 public:
-	typedef DWORD _Kty;
+	typedef uint32_t _Kty;
 	typedef LongNIHashData<_Mty> _MyData;
 	typedef LongNIHashIter<_Mty> _MyIter;
 
@@ -777,7 +793,8 @@ public:
 	{
 		hash_table = new _MyData *[bucket_count];
 
-		ZeroMemory(hash_table, sizeof(_MyData *)  *bucket_count);
+		// ZeroMemory(hash_table, sizeof(_MyData *)  *bucket_count);
+		memset(hash_table, 0, sizeof(_MyData *)  *bucket_count);
 	}
 
 	void DeleteAll()
@@ -788,10 +805,17 @@ public:
 		{
 			_Mty *pNodeData = it.GetCurrentData();
 
-			it.Next();
+			try
+			{
+				it.Next();
 
-			if (pNodeData)
-				delete pNodeData;
+				if (pNodeData)
+					delete pNodeData;
+			}
+			catch (...)
+			{
+				SERVER_ERROR << "Error in HashData DeleteAll";
+			}
 		}
 
 		flush();
@@ -799,7 +823,7 @@ public:
 
 	void flush()
 	{
-		for (DWORD i = 0; i <bucket_count; i++)
+		for (uint32_t i = 0; i <bucket_count; i++)
 		{
 			_MyData *pData = hash_table[i];
 

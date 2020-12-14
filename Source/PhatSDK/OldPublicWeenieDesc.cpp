@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 
 #if PHATSDK_USE_PHYSICS_AND_WEENIE_DESC
@@ -68,13 +68,13 @@ DEFINE_UNPACK(OldPublicWeenieDesc)
 {
 	Reset();
 
-	DWORD header = pReader->Read<DWORD>();
+	uint32_t header = pReader->Read<uint32_t>();
 	_name = pReader->ReadString();
 	_wcid = pReader->Read<WORD>();
 	_iconID = 0x06000000 | pReader->Read<WORD>();
 
 	_type = (ITEM_TYPE) pReader->Read<int>();
-	_bitfield = pReader->Read<DWORD>(); // PublicWeenieDesc::BitfieldIndex
+	_bitfield = pReader->Read<uint32_t>(); // PublicWeenieDesc::BitfieldIndex
 
 	if (header & 1)
 		_plural_name = pReader->ReadString();
@@ -105,15 +105,15 @@ DEFINE_UNPACK(OldPublicWeenieDesc)
 	if (header & 0x2000)
 		_maxStackSize = pReader->Read<WORD>();
 	if (header & 0x4000)
-		_containerID = pReader->Read<DWORD>();
+		_containerID = pReader->Read<uint32_t>();
 	if (header & 0x8000)
-		_wielderID = pReader->Read<DWORD>();
+		_wielderID = pReader->Read<uint32_t>();
 	if (header & 0x10000)
-		_valid_locations = pReader->Read<DWORD>(); // LocationMask of INVENTORY_LOC
+		_valid_locations = pReader->Read<uint32_t>(); // LocationMask of INVENTORY_LOC
 	if (header & 0x20000)
-		_valid_locations = pReader->Read<DWORD>(); // LocationMask of INVENTORY_LOC
+		_valid_locations = pReader->Read<uint32_t>(); // LocationMask of INVENTORY_LOC
 	if (header & 0x40000)
-		_priority = pReader->Read<DWORD>();
+		_priority = pReader->Read<uint32_t>();
 	if (header & 0x100000)
 		_blipColor = pReader->Read<BYTE>();
 	if (header & 0x800000)
@@ -125,7 +125,7 @@ DEFINE_UNPACK(OldPublicWeenieDesc)
 	if (header & 0x400000)
 		_spellID = pReader->Read<WORD>();
 	if (header & 0x2000000)
-		_house_owner_iid = pReader->Read<DWORD>();
+		_house_owner_iid = pReader->Read<uint32_t>();
 	if (header & 0x8000000)
 		_pscript = (PScriptType) pReader->Read<WORD>();
 	if (header & 0x4000000)
@@ -136,13 +136,13 @@ DEFINE_UNPACK(OldPublicWeenieDesc)
 	if (header & 0x10000000)
 		_hook_type = pReader->Read<WORD>();
 	if (header & 0x20000000)
-		_hook_item_types = (ITEM_TYPE) pReader->Read<DWORD>();
+		_hook_item_types = (ITEM_TYPE) pReader->Read<uint32_t>();
 	if (header & 0x40)
-		_monarch = pReader->Read<DWORD>();
+		_monarch = pReader->Read<uint32_t>();
 	if (header & 0x40000000)
 		_iconOverlayID = 0x06000000 | pReader->Read<WORD>();
 	if (header & 0x80000000)
-		_material_type = pReader->Read<DWORD>();
+		_material_type = pReader->Read<uint32_t>();
 
 	pReader->ReadAlign();
 	return true;

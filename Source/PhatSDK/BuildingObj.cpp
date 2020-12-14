@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "BuildingObj.h"
 
 CBuildingObj::CBuildingObj() //  : shadow_list(128) unused
@@ -12,7 +12,7 @@ CBuildingObj::~CBuildingObj()
 	
 	if (leaf_cells)
 	{
-		for (DWORD i = 0; i < num_leaves; i++)
+		for (uint32_t i = 0; i < num_leaves; i++)
 		{
 			if (leaf_cells[i])
 				delete leaf_cells[i];
@@ -25,7 +25,7 @@ CBuildingObj::~CBuildingObj()
 	// num_shadow = 0;  unused
 }
 
-CBuildingObj *CBuildingObj::makeBuilding(DWORD data_id, unsigned int _num_portals, CBldPortal **_portals, unsigned int _num_leaves)
+CBuildingObj *CBuildingObj::makeBuilding(uint32_t data_id, unsigned int _num_portals, CBldPortal **_portals, unsigned int _num_leaves)
 {
 	CBuildingObj *building = new CBuildingObj();
 
@@ -37,12 +37,12 @@ CBuildingObj *CBuildingObj::makeBuilding(DWORD data_id, unsigned int _num_portal
 
 	building->num_leaves = _num_leaves;
 	building->leaf_cells = new CPartCell *[_num_leaves];
-	for (DWORD i = 0; i < building->num_leaves; i++)
+	for (uint32_t i = 0; i < building->num_leaves; i++)
 		building->leaf_cells[i] = NULL;
 
 	building->num_portals = _num_portals;
 	building->portals = new CBldPortal *[_num_portals];
-	for (DWORD i = 0; i < building->num_portals; i++)
+	for (uint32_t i = 0; i < building->num_portals; i++)
 		building->portals[i] = _portals[i];
 	
 	if (!building->InitObjectEnd())
@@ -62,13 +62,13 @@ void CBuildingObj::remove()
 	cell = NULL;
 }
 
-CPhysicsObj *CBuildingObj::get_object(DWORD obj_iid)
+CPhysicsObj *CBuildingObj::get_object(uint32_t obj_iid)
 {
-	PackableHashTable<unsigned long, int> visited_cells;
+	PackableHashTable<uint32_t, int32_t> visited_cells;
 
 	if (num_portals)
 	{
-		for (DWORD i = 0; i < num_portals; i++)
+		for (uint32_t i = 0; i < num_portals; i++)
 		{
 			if (portals[i])
 			{
@@ -96,9 +96,9 @@ void CBuildingObj::add_to_cell(CSortCell *new_cell)
 	cell = new_cell;
 }
 
-void CBuildingObj::add_to_stablist(DWORD * &block_stab_list, DWORD &max_size, DWORD &stab_num)
+void CBuildingObj::add_to_stablist(uint32_t * &block_stab_list, uint32_t &max_size, uint32_t &stab_num)
 {
-	for (DWORD i = 0; i < num_portals; i++)
+	for (uint32_t i = 0; i < num_portals; i++)
 		portals[i]->add_to_stablist(block_stab_list, max_size, stab_num);
 }
 
@@ -119,7 +119,7 @@ TransitionState CBuildingObj::find_building_collisions(CTransition *transition)
 
 void CBuildingObj::find_building_transit_cells(Position *p, const unsigned int num_sphere, CSphere *sphere, CELLARRAY *cell_array, SPHEREPATH *path)
 {
-	for (DWORD i = 0; i < num_portals; i++)
+	for (uint32_t i = 0; i < num_portals; i++)
 	{
 		CEnvCell *pOtherCell = portals[i]->GetOtherCell();
 		if (pOtherCell)
@@ -129,7 +129,7 @@ void CBuildingObj::find_building_transit_cells(Position *p, const unsigned int n
 
 void CBuildingObj::find_building_transit_cells(const unsigned int num_parts, CPhysicsPart **parts, CELLARRAY *cell_array)
 {
-	for (DWORD i = 0; i < num_portals; i++)
+	for (uint32_t i = 0; i < num_portals; i++)
 	{
 		CEnvCell *pOtherCell = portals[i]->GetOtherCell();
 		if (pOtherCell)

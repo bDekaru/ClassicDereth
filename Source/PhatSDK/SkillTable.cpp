@@ -1,14 +1,14 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "SkillTable.h"
 
 bool SkillBase::UnPack(BinaryReader *pReader)
 {
 	_description = pReader->ReadString();
 	_name = pReader->ReadString();
-	_iconID = pReader->Read<DWORD>();
-	_trained_cost = pReader->Read<DWORD>();
-	_specialized_cost = pReader->Read<DWORD>();
+	_iconID = pReader->Read<uint32_t>();
+	_trained_cost = pReader->Read<uint32_t>();
+	_specialized_cost = pReader->Read<uint32_t>();
 	_category = pReader->Read<int>();
 	_chargen_use = pReader->Read<int>();
 	_min_level = pReader->Read<int>();
@@ -30,7 +30,7 @@ DEFINE_PACK(SkillTable)
 DEFINE_UNPACK(SkillTable)
 {
 	// ignore the file ID
-	pReader->ReadDWORD();
+	pReader->ReadUInt32();
 
 	return _skillBaseHash.UnPack(pReader);
 }

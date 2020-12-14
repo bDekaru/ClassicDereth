@@ -39,12 +39,12 @@ public:
 
 	DECLARE_PACKABLE()
 
-	BOOL InqString(DWORD key, std::string &value);
+	BOOL InqString(uint32_t key, std::string &value);
 
-	PackableHashTable<unsigned long, long> *m_pIntStatsTable = NULL;
-	PackableHashTable<unsigned long, int> *m_pBoolStatsTable = NULL;
-	PackableHashTable<unsigned long, double> *m_pFloatStatsTable = NULL;
-	PackableHashTable<unsigned long, std::string> *m_pStrStatsTable = NULL;
+	PackableHashTable<uint32_t, int32_t> *m_pIntStatsTable = NULL;
+	PackableHashTable<uint32_t, int32_t> *m_pBoolStatsTable = NULL;
+	PackableHashTable<uint32_t, double> *m_pFloatStatsTable = NULL;
+	PackableHashTable<uint32_t, std::string> *m_pStrStatsTable = NULL;
 };
 
 class BasePropertyValue : public PackObj
@@ -81,11 +81,11 @@ public:
 		return *this;
 	}
 
-	BasePropertyValue *CreatePropertyValue(DWORD propName);
+	BasePropertyValue *CreatePropertyValue(uint32_t propName);
 
 	DECLARE_PACKABLE()
 
-	DWORD m_propertyName = 0;
+	uint32_t m_propertyName = 0;
 	BasePropertyValue *m_propertyValue = NULL;
 };
 
@@ -145,15 +145,15 @@ public:
 	}
 	virtual void Pack(BinaryWriter *pWriter) override
 	{
-		pWriter->Write<DWORD>(m_value);
+		pWriter->Write<uint32_t>(m_value);
 	}
 	virtual bool UnPack(BinaryReader *pReader) override
 	{
-		m_value = pReader->Read<DWORD>();
+		m_value = pReader->Read<uint32_t>();
 		return true;
 	}
 
-	DWORD m_value;
+	uint32_t m_value;
 };
 
 class Bitfield64PropertyValue : public BasePropertyValue
@@ -165,15 +165,15 @@ public:
 	}
 	virtual void Pack(BinaryWriter *pWriter) override
 	{
-		pWriter->Write<DWORD64>(m_value);
+		pWriter->Write<uint64_t>(m_value);
 	}
 	virtual bool UnPack(BinaryReader *pReader) override
 	{
-		m_value = pReader->Read<DWORD64>();
+		m_value = pReader->Read<uint64_t>();
 		return true;
 	}
 
-	DWORD64 m_value;
+	uint64_t m_value;
 };
 
 class BoolPropertyValue : public BasePropertyValue
@@ -225,15 +225,15 @@ public:
 	}
 	virtual void Pack(BinaryWriter *pWriter) override
 	{
-		pWriter->Write<__int64>(m_value);
+		pWriter->Write<int64_t>(m_value);
 	}
 	virtual bool UnPack(BinaryReader *pReader) override
 	{
-		m_value = pReader->Read<__int64>();
+		m_value = pReader->Read<int64_t>();
 		return true;
 	}
 
-	__int64 m_value;
+	int64_t m_value;
 };
 
 class FloatPropertyValue : public BasePropertyValue
@@ -285,15 +285,15 @@ public:
 	}
 	virtual void Pack(BinaryWriter *pWriter) override
 	{
-		pWriter->Write<DWORD>(m_value);
+		pWriter->Write<uint32_t>(m_value);
 	}
 	virtual bool UnPack(BinaryReader *pReader) override
 	{
-		m_value = pReader->Read<DWORD>();
+		m_value = pReader->Read<uint32_t>();
 		return true;
 	}
 
-	DWORD m_value;
+	uint32_t m_value;
 };
 
 class StringPropertyValue : public BasePropertyValue
@@ -342,13 +342,13 @@ public:
 
 	StringInfo_Override_Flag _override;
 	std::wstring _literal_value;
-	DWORD _string_id;
-	DWORD _table_id;
+	uint32_t _string_id;
+	uint32_t _table_id;
 	bool _has_strings;
 	std::string _str_token;
 	std::string _str_english;
 	std::string _str_comment;
-	// HashTable<DWORD, etc...> _variables;
+	// HashTable<uint32_t, etc...> _variables;
 };
 
 class StringInfoPropertyValue : public BasePropertyValue
@@ -375,7 +375,7 @@ public:
 
 	DECLARE_PACKABLE()
 
-	HashTable<DWORD, BaseProperty> m_hashProperties;
+	HashTable<uint32_t, BaseProperty> m_hashProperties;
 };
 
 class PlayerModule : public PackObj
@@ -391,21 +391,24 @@ public:
 
 	PlayerModule &operator=(const PlayerModule &other);
 
-	void SetPackHeader(DWORD *bitfield);
+	void SetPackHeader(uint32_t *bitfield);
 
 	void AddShortCut(ShortCutData &data);
 	void RemoveShortCut(int index);
-	void AddSpellFavorite(DWORD spell_id, int index, int spellBar);
-	void RemoveSpellFavorite(DWORD spell_id, int spellBar);
+	void AddSpellFavorite(uint32_t spell_id, int index, int spellBar);
+	void RemoveSpellFavorite(uint32_t spell_id, int spellBar);
+
+	void AddOrUpdateDesiredComp(uint32_t & compWCID, uint32_t & compQTY);
 
 	ShortCutManager *shortcuts_ = NULL;
-	PackableList<unsigned long> favorite_spells_[8];
-	PackableHashTable<DWORD, long> *desired_comps_ = NULL;
+	PackableList<uint32_t> favorite_spells_[8];
+	PackableHashTable<uint32_t, int32_t> *desired_comps_ = NULL;
 	unsigned int options_ = 0x50C4A542; // 0x50C4A54A; Custom (we don't want to ignore fellowship requests by default)
 	unsigned int options2_ = 0x948700 | DisplayNumberDeaths_CharacterOptions2; // Custom, show deaths by default
 	unsigned int spell_filters_ = 0x3FFF;
 	GenericQualitiesData *m_pPlayerOptionsData = NULL;
-	// PackObjPropertyCollection m_colGameplayOptions; TODO
 	std::string m_TimeStampFormat = "%#H:%M:%S ";
+	int windowDataLength = 0;
+	BYTE* windowData;
 };
 

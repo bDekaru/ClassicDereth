@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "SkyDesc.h"
 
 SkyDesc::SkyDesc()
@@ -36,10 +36,10 @@ DEFINE_UNPACK(SkyDesc)
 
 	pReader->ReadAlign();
 
-	DWORD numDayGroups = pReader->ReadDWORD();
+	uint32_t numDayGroups = pReader->ReadUInt32();
 	day_groups.grow(numDayGroups);
 
-	for (DWORD i = 0; i < numDayGroups; i++)
+	for (uint32_t i = 0; i < numDayGroups; i++)
 	{
 		DayGroup *newDay = new DayGroup();
 		newDay->UnPack(pReader);
@@ -114,25 +114,25 @@ DEFINE_UNPACK(DayGroup)
 
 	pReader->ReadAlign();
 	
-	DWORD numSkyObjs = pReader->Read<DWORD>();
+	uint32_t numSkyObjs = pReader->Read<uint32_t>();
 	sky_objects.grow(numSkyObjs);
 
-	for (DWORD i = 0; i < numSkyObjs; i++)
+	for (uint32_t i = 0; i < numSkyObjs; i++)
 	{
 		SkyObject *skyObject = new SkyObject();
 		skyObject->UnPack(pReader);
 		sky_objects.add(&skyObject);
 	}
 
-	DWORD numTimeOfDay = pReader->Read<DWORD>();
+	uint32_t numTimeOfDay = pReader->Read<uint32_t>();
 	sky_time.grow(numTimeOfDay);
 
-	for (DWORD i = 0; i < numTimeOfDay; i++)
+	for (uint32_t i = 0; i < numTimeOfDay; i++)
 	{
 		SkyTimeOfDay *skyTime = new SkyTimeOfDay();
 		skyTime->UnPack(pReader);
 
-		for (DWORD j = 0; j < skyTime->sky_obj_replace.num_used; j++)
+		for (uint32_t j = 0; j < skyTime->sky_obj_replace.num_used; j++)
 		{
 			skyTime->sky_obj_replace.array_data[j]->object =
 				sky_objects.array_data[skyTime->sky_obj_replace.array_data[j]->object_index];
@@ -151,8 +151,8 @@ DEFINE_PACK(SkyObjectReplace)
 
 DEFINE_UNPACK(SkyObjectReplace)
 {
-	object_index = pReader->Read<DWORD>();
-	gfx_obj_id = pReader->Read<DWORD>();
+	object_index = pReader->Read<uint32_t>();
+	gfx_obj_id = pReader->Read<uint32_t>();
 	rotate = pReader->Read<float>();
 	transparent = pReader->Read<float>();
 	luminosity = pReader->Read<float>();
@@ -183,9 +183,9 @@ DEFINE_UNPACK(SkyObject)
 	tex_velocity.x = pReader->Read<float>();
 	tex_velocity.y = pReader->Read<float>();
 	tex_velocity.z = 0.0f;
-	default_gfx_object = pReader->Read<DWORD>();
-	default_pes_object = pReader->Read<DWORD>();
-	properties = pReader->Read<DWORD>();
+	default_gfx_object = pReader->Read<uint32_t>();
+	default_pes_object = pReader->Read<uint32_t>();
+	properties = pReader->Read<uint32_t>();
 
 	pReader->ReadAlign();
 	return true;
@@ -213,20 +213,20 @@ DEFINE_UNPACK(SkyTimeOfDay)
 	dir_bright = pReader->Read<float>();
 	dir_heading = pReader->Read<float>();
 	dir_pitch = pReader->Read<float>();
-	dir_color.color = pReader->Read<DWORD>();
+	dir_color.color = pReader->Read<uint32_t>();
 	amb_bright = pReader->Read<float>();
-	amb_color.color = pReader->Read<DWORD>();
+	amb_color.color = pReader->Read<uint32_t>();
 	min_world_fog = pReader->Read<float>();
 	max_world_fog = pReader->Read<float>();
-	world_fog_color.color = pReader->Read<DWORD>();
+	world_fog_color.color = pReader->Read<uint32_t>();
 	world_fog = pReader->Read<int>();
 
 	pReader->ReadAlign();
 
-	DWORD numSkyReplace = pReader->Read<DWORD>();
+	uint32_t numSkyReplace = pReader->Read<uint32_t>();
 	sky_obj_replace.grow(numSkyReplace);
 
-	for (DWORD i = 0; i < numSkyReplace; i++)
+	for (uint32_t i = 0; i < numSkyReplace; i++)
 	{
 		SkyObjectReplace *replace = new SkyObjectReplace();
 		replace->UnPack(pReader);

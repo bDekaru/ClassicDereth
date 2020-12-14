@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "WeenieObject.h"
 #include "PhysicsObj.h"
 #include "Lifestone.h"
@@ -51,5 +51,6 @@ int CBaseLifestone::Use(CPlayerWeenie *pOther)
 int CBaseLifestone::DoUseResponse(CWeenieObject *player)
 {
 	player->m_Qualities.SetPosition(SANCTUARY_POSITION, player->m_Position);
-	return WERROR_NONE;
+	player->AdjustStamina(player->GetStamina() * -0.5);
+	return CWeenieObject::DoUseResponse(player);
 }

@@ -1,6 +1,10 @@
 
 #pragma once
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
 #include "StatTracker.h"
 #include "Config.h"
 
@@ -22,6 +26,8 @@ public:
 	CPhatACServerConfig &Config();
 	double GetStartupTime() { return m_fStartupTime; }
 
+	bool IsRunning() { return m_running; }
+
 private:
 
 	bool Init();
@@ -29,8 +35,8 @@ private:
 
 	void InitializeSocket(unsigned short port, in_addr address);
 
-	static DWORD WINAPI InternalThreadProcStatic(LPVOID lpThis);
-	DWORD InternalThreadProc();
+	static uint32_t WINAPI InternalThreadProcStatic(LPVOID lpThis);
+	uint32_t InternalThreadProc();
 
 	SOCKET m_sockets[10];
 	int m_socketCount;
@@ -41,8 +47,8 @@ private:
 	CStatTracker m_Stats;
 	CPhatACServerConfig m_Config;
 
-	HANDLE m_hQuitEvent = NULL;
-	HANDLE m_hServerThread = NULL;
+	bool m_running;
+	std::thread m_serverThread;
 
 	double m_fStartupTime;
 };

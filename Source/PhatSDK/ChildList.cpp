@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhysicsObj.h"
 #include "ChildList.h"
 
@@ -14,7 +14,7 @@ CHILDLIST::~CHILDLIST()
 
 BOOL CHILDLIST::FindChildIndex(CPhysicsObj *pObj, WORD *Index)
 {
-	for (DWORD i = 0; i < num_objects; i++)
+	for (uint32_t i = 0; i < num_objects; i++)
 	{
 		if (objects.array_data[i] == pObj)
 		{
@@ -26,11 +26,11 @@ BOOL CHILDLIST::FindChildIndex(CPhysicsObj *pObj, WORD *Index)
 	return FALSE;
 }
 
-void CHILDLIST::add_child(CPhysicsObj *pChild, Frame *pFrame, DWORD part_number, DWORD location_id)
+void CHILDLIST::add_child(CPhysicsObj *pChild, Frame *pFrame, uint32_t part_number, uint32_t location_id)
 {
 	if (num_objects >= objects.array_size)
 	{
-		DWORD new_size = objects.array_size + 4;
+		uint32_t new_size = objects.array_size + 4;
 
 		objects.grow(new_size);
 		frames.grow(new_size);
@@ -48,7 +48,7 @@ void CHILDLIST::add_child(CPhysicsObj *pChild, Frame *pFrame, DWORD part_number,
 
 void CHILDLIST::remove_child(CPhysicsObj *pChild)
 {
-	DWORD i;
+	uint32_t i;
 	for (i = 0; i < num_objects; i++)
 	{
 		if (objects.array_data[i] == pChild)
@@ -60,7 +60,7 @@ void CHILDLIST::remove_child(CPhysicsObj *pChild)
 	// Shift all children.
 	for (; i < num_objects; i++)
 	{
-		DWORD j = i + 1;
+		uint32_t j = i + 1;
 
 		objects.array_data[i] = objects.array_data[j];
 		frames.array_data[i] = frames.array_data[j];

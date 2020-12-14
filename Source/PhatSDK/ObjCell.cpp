@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ObjCell.h"
 #include "PartArray.h"
 #include "PhysicsObj.h"
@@ -46,9 +46,9 @@ CObjCell::~CObjCell()
 	}
 }
 
-CPhysicsObj *CObjCell::get_object(DWORD iid)
+CPhysicsObj *CObjCell::get_object(uint32_t iid)
 {
-	for (DWORD i = 0; i < num_objects; i++)
+	for (uint32_t i = 0; i < num_objects; i++)
 	{
 		CPhysicsObj *pObject = object_list.array_data[i];
 
@@ -76,22 +76,29 @@ void CObjCell::add_object(CPhysicsObj *pObject)
 
 				while (!it.EndReached())
 				{
-					DWORD voyeur_id = it.GetCurrent()->id;
-
-					if (voyeur_id != pObject->id && voyeur_id && !pObject->parent)
+					try
 					{
-						CPhysicsObj *pVoyeur = CPhysicsObj::GetObjectA(voyeur_id);
+						uint32_t voyeur_id = it.GetCurrent()->id;
 
-						if (pVoyeur)
+						if (voyeur_id != pObject->id && voyeur_id && !pObject->parent)
 						{
-							DetectionInfo info;
-							info.object_id = pObject->id;
-							info.object_status = EnteredDetection;
-							pVoyeur->receive_detection_update(&info);
-						}
-					}
+							CPhysicsObj *pVoyeur = CPhysicsObj::GetObject(voyeur_id);
 
-					it.Next();
+							if (pVoyeur)
+							{
+								DetectionInfo info;
+								info.object_id = pObject->id;
+								info.object_status = EnteredDetection;
+								pVoyeur->receive_detection_update(&info);
+							}
+						}
+
+						it.Next();
+					}
+					catch (...)
+					{
+						SERVER_ERROR << "Error in Add Object";
+					}
 				}
 			}
 		}
@@ -100,7 +107,7 @@ void CObjCell::add_object(CPhysicsObj *pObject)
 
 void CObjCell::remove_object(CPhysicsObj *pObject)
 {
-	for (DWORD i = 0; i < num_objects; i++)
+	for (uint32_t i = 0; i < num_objects; i++)
 	{
 		if (pObject == object_list.array_data[i])
 		{
@@ -128,7 +135,7 @@ void CObjCell::add_shadow_object(CShadowObj *_object, unsigned int num_shadow_ce
 
 void CObjCell::remove_shadow_object(CShadowObj *_object)
 {
-	for (DWORD i = 0; i < num_shadow_objects; i++)
+	for (uint32_t i = 0; i < num_shadow_objects; i++)
 	{
 		if (_object == shadow_object_list.array_data[i])
 		{
@@ -154,7 +161,7 @@ void CObjCell::add_light(LIGHTOBJ *Light)
 
 	light_list.array_data[num_lights++] = Light;
 
-	// DEBUGOUT("Adding light(Mem@%08X) on cell %08X.\r\n", (DWORD)Light, m_Position.objcell_id);
+	// DEBUGOUT("Adding light(Mem@%08X) on cell %08X.\r\n", (uint32_t)Light, m_Position.objcell_id);
 	Render::pLightManager->AddLight(Light, &pos);
 #endif
 }
@@ -162,7 +169,7 @@ void CObjCell::add_light(LIGHTOBJ *Light)
 void CObjCell::remove_light(LIGHTOBJ *Light)
 {
 #if PHATSDK_RENDER_AVAILABLE
-	for (DWORD i = 0; i < num_lights; i++)
+	for (uint32_t i = 0; i < num_lights; i++)
 	{
 		if (Light == light_list.array_data[i])
 		{
@@ -208,7 +215,7 @@ TransitionState CObjCell::find_obj_collisions(CTransition *transition)
 
 	if (transition->sphere_path.insert_type != SPHEREPATH::INITIAL_PLACEMENT_INSERT)
 	{
-		for (DWORD i = 0; i < num_shadow_objects; i++)
+		for (uint32_t i = 0; i < num_shadow_objects; i++)
 		{
 			CPhysicsObj *pobj = shadow_object_list.array_data[i]->physobj;
 
@@ -304,7 +311,7 @@ void CObjCell::find_cell_list(Position *p, const unsigned int num_sphere, CSpher
 	
 	if (pCell && num_sphere)
 	{
-		for (DWORD i = 0; i < cell_array->num_cells; i++)
+		for (uint32_t i = 0; i < cell_array->num_cells; i++)
 		{
 			CObjCell *otherCell = cell_array->cells.data[i].cell;
 			if (otherCell)
@@ -315,7 +322,7 @@ void CObjCell::find_cell_list(Position *p, const unsigned int num_sphere, CSpher
 		{
 			*curr_cell = NULL;
 
-			for (DWORD i = 0; i < cell_array->num_cells; i++)
+			for (uint32_t i = 0; i < cell_array->num_cells; i++)
 			{
 				CObjCell *otherCell = cell_array->cells.data[i].cell;
 				if (otherCell)
@@ -343,15 +350,15 @@ void CObjCell::find_cell_list(Position *p, const unsigned int num_sphere, CSpher
 		{
 			if ((p->objcell_id & 0xFFFF) >= 0x100)
 			{
-				for (DWORD i = 0; i < cell_array->num_cells; i++)
+				for (uint32_t i = 0; i < cell_array->num_cells; i++)
 				{
-					DWORD cellID = cell_array->cells.data[i].cell_id;
+					uint32_t cellID = cell_array->cells.data[i].cell_id;
 
 					if (pCell->id != cellID)
 						continue;
 
 					bool found = false;
-					for (DWORD j = 0; j < pCell->num_stabs; j++)
+					for (uint32_t j = 0; j < pCell->num_stabs; j++)
 					{
 						if (cellID == pCell->stab_list[j])
 						{
@@ -379,7 +386,7 @@ void CObjCell::find_cell_list(Position *p, unsigned int num_cylsphere, CCylSpher
 	if (num_cylsphere > 10)
 		num_cylsphere = 10;
 
-	for (DWORD i = 0; i < num_cylsphere; i++)
+	for (uint32_t i = 0; i < num_cylsphere; i++)
 	{
 		sphere[i].center = p->localtoglobal(*p, cylsphere[i].low_pt);
 		sphere[i].radius = cylsphere[i].radius;
@@ -403,12 +410,12 @@ void CObjCell::find_cell_list(CELLARRAY *cell_array, CObjCell **check_cell, SPHE
 	CObjCell::find_cell_list(&path->check_pos, path->num_sphere, path->global_sphere, cell_array, check_cell, path);
 }
 
-CObjCell *CObjCell::GetVisible(DWORD cell_id)
+CObjCell *CObjCell::GetVisible(uint32_t cell_id, bool bDoPostLoad)
 {
 	if (cell_id)
 	{
 		if ((WORD)cell_id >= 0x100)
-			return CEnvCell::GetVisible(cell_id);
+			return CEnvCell::GetVisible(cell_id, bDoPostLoad);
 		else
 			return CLandCell::Get(cell_id);
 	}
@@ -418,7 +425,7 @@ CObjCell *CObjCell::GetVisible(DWORD cell_id)
 
 int CObjCell::check_collisions(CPhysicsObj *object)
 {
-	for (DWORD i = 0; i < num_shadow_objects; i++)
+	for (uint32_t i = 0; i < num_shadow_objects; i++)
 	{
 		CPhysicsObj *pobj = shadow_object_list.data[i]->physobj;
 		if (!pobj->parent && pobj != object && pobj->check_collision(object))
@@ -437,25 +444,13 @@ void CObjCell::release_objects()
 
 		obj->physobj->remove_parts(this);
 	}
-	
-	if (num_objects)
+
+	while (num_objects)
 	{
-		//UNFINISHED
-		//if (CObjCell::obj_maint)
-		//	CObjectMaint::ReleaseObjCell(CObjCell::obj_maint, this);
-		// Instead of doing that.. do this for now
-
-		std::list<CPhysicsObj *> objs_to_leave;
-
-		for (DWORD i = 0; i < num_objects; i++)
-		{
-			objs_to_leave.push_back(object_list.data[i]);
-		}
-
-		for (auto toLeave : objs_to_leave)
-		{
-			toLeave->leave_visibility();
-		}
+		CPhysicsObj *obj = object_list.data[0];
+		obj->leave_world();
+		if (!obj->weenie_obj)
+			delete obj;
 	}
 }
 

@@ -15,20 +15,20 @@ public:
 	virtual bool InqJumpVelocity(float extent, float &vz) { vz = sqrt(MovementSystem::GetJumpHeight(1.0f, 100, 1.0f, 1.0f) * 19.6); return true; } // 0x30
 	virtual bool InqRunRate(float &rate) { return false; } // 0x34
 	virtual bool CanJump(float extent) { return true; }
-	virtual bool JumpStaminaCost(float, long &val) { val = 0; return true; } // 0x40
+	virtual bool JumpStaminaCost(float, int32_t &val) { val = 0; return true; } // 0x40
 
 	virtual int DoCollision(const class EnvCollisionProfile &prof) { return 0; }
 	virtual int DoCollision(const class ObjCollisionProfile &prof) { return 0; }
 	virtual int DoCollision(const class AtkCollisionProfile &prof) { return 0; }
-	virtual void DoCollisionEnd(DWORD object_id) { }
+	virtual void DoCollisionEnd(uint32_t object_id) { }
 
 	virtual int InqCollisionProfile(ObjCollisionProfile &prof) { return 0; } // 0x5C
 
 	virtual bool IsStorage() { return false; }
 	virtual bool IsCorpse() { return false; }
 
-	virtual DWORD GetPhysicsTargetID() { return 0; }
-	virtual void HandleMoveToDone(DWORD error) { }
+	virtual uint32_t GetPhysicsTargetID() { return 0; }
+	virtual void HandleMoveToDone(uint32_t error) { }
 
 	virtual void HitGround(float zv) { }
 };

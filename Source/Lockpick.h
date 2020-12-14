@@ -9,8 +9,8 @@ public:
 	CLockpickWeenie();
 	virtual ~CLockpickWeenie() override;
 
-	virtual CLockpickWeenie *AsLockpick() override { return this; }
+	virtual class CLockpickWeenie *AsLockpick() override { return this; }
 
-	virtual int UseWith(CPlayerWeenie *player, CWeenieObject *with) override;
+	virtual int UseWith(CPlayerWeenie * player, CWeenieObject *with) override;
 	virtual int DoUseWithResponse(CWeenieObject *player, CWeenieObject *with) override;
 };

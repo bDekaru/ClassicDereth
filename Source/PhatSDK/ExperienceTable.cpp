@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ExperienceTable.h"
 #include "ObjCache.h"
 
@@ -32,41 +32,41 @@ DEFINE_PACK(ExperienceTable)
 
 DEFINE_UNPACK(ExperienceTable)
 {
-	pReader->Read<DWORD>(); // file ID
+	pReader->Read<uint32_t>(); // file ID
 
-	_max_attribute_level = pReader->Read<DWORD>();
-	_max_attribute2nd_level = pReader->Read<DWORD>();
-	_max_trained_skill_level = pReader->Read<DWORD>();
-	_max_specialized_skill_level = pReader->Read<DWORD>();
-	_max_level = pReader->Read<DWORD>();
+	_max_attribute_level = pReader->Read<uint32_t>();
+	_max_attribute2nd_level = pReader->Read<uint32_t>();
+	_max_trained_skill_level = pReader->Read<uint32_t>();
+	_max_specialized_skill_level = pReader->Read<uint32_t>();
+	_max_level = pReader->Read<uint32_t>();
 
 	unsigned int numAttribute = _max_attribute_level + 1;
-	_attribute_table = new DWORD[numAttribute];
-	memcpy(_attribute_table, pReader->ReadArray(sizeof(DWORD) * numAttribute), sizeof(DWORD) * numAttribute);
+	_attribute_table = new uint32_t[numAttribute];
+	memcpy(_attribute_table, pReader->ReadArray(sizeof(uint32_t) * numAttribute), sizeof(uint32_t) * numAttribute);
 
 	unsigned int numAttribute2nd = _max_attribute2nd_level + 1;
-	_attribute2nd_table = new DWORD[numAttribute2nd];
-	memcpy(_attribute2nd_table, pReader->ReadArray(sizeof(DWORD) * numAttribute2nd), sizeof(DWORD) * numAttribute2nd);
+	_attribute2nd_table = new uint32_t[numAttribute2nd];
+	memcpy(_attribute2nd_table, pReader->ReadArray(sizeof(uint32_t) * numAttribute2nd), sizeof(uint32_t) * numAttribute2nd);
 
 	unsigned int numTrainedSkill = _max_trained_skill_level + 1;
-	_trained_skill_table = new DWORD[numTrainedSkill];
-	memcpy(_trained_skill_table, pReader->ReadArray(sizeof(DWORD) * numTrainedSkill), sizeof(DWORD) * numTrainedSkill);
+	_trained_skill_table = new uint32_t[numTrainedSkill];
+	memcpy(_trained_skill_table, pReader->ReadArray(sizeof(uint32_t) * numTrainedSkill), sizeof(uint32_t) * numTrainedSkill);
 
 	unsigned int numSpecializedSkill = _max_specialized_skill_level + 1;
-	_specialized_skill_table = new DWORD[numSpecializedSkill];
-	memcpy(_specialized_skill_table, pReader->ReadArray(sizeof(DWORD) * numSpecializedSkill), sizeof(DWORD) * numSpecializedSkill);
+	_specialized_skill_table = new uint32_t[numSpecializedSkill];
+	memcpy(_specialized_skill_table, pReader->ReadArray(sizeof(uint32_t) * numSpecializedSkill), sizeof(uint32_t) * numSpecializedSkill);
 
 	unsigned int numLevel = _max_level + 1;
-	_level_table = new unsigned __int64[numLevel];
-	memcpy(_level_table, pReader->ReadArray(sizeof(unsigned __int64) * numLevel), sizeof(unsigned __int64) * numLevel);
+	_level_table = new uint64_t[numLevel];
+	memcpy(_level_table, pReader->ReadArray(sizeof(uint64_t) * numLevel), sizeof(uint64_t) * numLevel);
 
-	_credit_table = new DWORD[numLevel];
-	memcpy(_credit_table, pReader->ReadArray(sizeof(DWORD) * numLevel), sizeof(DWORD) * numLevel);
+	_credit_table = new uint32_t[numLevel];
+	memcpy(_credit_table, pReader->ReadArray(sizeof(uint32_t) * numLevel), sizeof(uint32_t) * numLevel);
 
 	return true;
 }
 
-DWORD ExperienceTable::GetCreditsForLevel(unsigned int level) // custom
+uint32_t ExperienceTable::GetCreditsForLevel(unsigned int level) // custom
 {
 	if (level > _max_level)
 		return 0;
@@ -74,29 +74,29 @@ DWORD ExperienceTable::GetCreditsForLevel(unsigned int level) // custom
 	return _credit_table[level];
 }
 
-DWORD ExperienceTable::GetAttributeLevelForExperience(DWORD exp)
+uint32_t ExperienceTable::GetAttributeLevelForExperience(uint32_t exp)
 {
 	return GetLevelForExperience(Attribute_ExperienceType, exp);
 }
 
-DWORD ExperienceTable::GetAttribute2ndLevelForExperience(DWORD exp)
+uint32_t ExperienceTable::GetAttribute2ndLevelForExperience(uint32_t exp)
 {
 	return GetLevelForExperience(Attribute2nd_ExperienceType, exp);
 }
 
-DWORD ExperienceTable::GetTrainedSkillLevelForExperience(DWORD exp)
+uint32_t ExperienceTable::GetTrainedSkillLevelForExperience(uint32_t exp)
 {
 	return GetLevelForExperience(TrainedSkill_ExperienceType, exp);
 }
 
-DWORD ExperienceTable::GetSpecializedSkillLevelForExperience(DWORD exp)
+uint32_t ExperienceTable::GetSpecializedSkillLevelForExperience(uint32_t exp)
 {
 	return GetLevelForExperience(SpecializedSkill_ExperienceType, exp);
 }
 
-DWORD ExperienceTable::GetLevelForExperience(ExperienceType type, DWORD exp)
+uint32_t ExperienceTable::GetLevelForExperience(ExperienceType type, uint32_t exp)
 {
-	DWORD maxLevel = 0;
+	uint32_t maxLevel = 0;
 
 	switch (type)
 	{
@@ -118,20 +118,20 @@ DWORD ExperienceTable::GetLevelForExperience(ExperienceType type, DWORD exp)
 	}
 
 	// dear horrible code, you are horrible, yours truly.
-	DWORD middle = (DWORD)((maxLevel + 1.0) * 0.5);
-	DWORD lastHigh = maxLevel;
-	DWORD lastLow = 0;
+	uint32_t middle = (uint32_t)((maxLevel + 1.0) * 0.5);
+	uint32_t lastHigh = maxLevel;
+	uint32_t lastLow = 0;
 
 	for (int i = 1; i <= 16; i++)
 	{
-		DWORD levelLow = GetExperienceForLevel(type, middle);
-		DWORD levelHigh = GetExperienceForLevel(type, middle + 1);
+		uint32_t levelLow = GetExperienceForLevel(type, middle);
+		uint32_t levelHigh = GetExperienceForLevel(type, middle + 1);
 
 		if (exp >= levelHigh)
 		{
 			lastLow = middle;
 
-			DWORD newmiddle = (DWORD)(((lastHigh - middle) + 1.0) * 0.5);
+			uint32_t newmiddle = (uint32_t)(((lastHigh - middle) + 1.0) * 0.5);
 
 			if (!newmiddle)
 			{
@@ -148,7 +148,7 @@ DWORD ExperienceTable::GetLevelForExperience(ExperienceType type, DWORD exp)
 		{
 			lastHigh = middle;
 
-			DWORD newmiddle = (DWORD)(((middle - lastLow) + 1.0) * 0.5);
+			uint32_t newmiddle = (uint32_t)(((middle - lastLow) + 1.0) * 0.5);
 
 			if (!newmiddle)
 			{
@@ -170,14 +170,14 @@ UINT64 ExperienceTable::GetExperienceForLevel(unsigned int level)
 	return (_level_table ? _level_table[level] : 0);
 }
 
-DWORD ExperienceTable::GetMaxLevel()
+uint32_t ExperienceTable::GetMaxLevel()
 {
 	return _max_level;
 }
 
-DWORD ExperienceTable::GetExperienceForLevel(ExperienceType type, DWORD level)
+uint32_t ExperienceTable::GetExperienceForLevel(ExperienceType type, uint32_t level)
 {
-	DWORD *_table;
+	uint32_t *_table;
 
 	switch (type)
 	{
@@ -214,7 +214,7 @@ DWORD ExperienceTable::GetExperienceForLevel(ExperienceType type, DWORD level)
 	return _table[level];
 }
 
-DWORD ExperienceTable::GetExperienceForTrainedSkillLevel(DWORD level)
+uint32_t ExperienceTable::GetExperienceForTrainedSkillLevel(uint32_t level)
 {
 	if (level > _max_trained_skill_level)
 		return UINT_MAX;
@@ -222,7 +222,7 @@ DWORD ExperienceTable::GetExperienceForTrainedSkillLevel(DWORD level)
 	return _trained_skill_table[level];
 }
 
-DWORD ExperienceTable::GetExperienceForSpecializedSkillLevel(DWORD level)
+uint32_t ExperienceTable::GetExperienceForSpecializedSkillLevel(uint32_t level)
 {
 	if (level > _max_specialized_skill_level)
 		return UINT_MAX;
@@ -230,7 +230,7 @@ DWORD ExperienceTable::GetExperienceForSpecializedSkillLevel(DWORD level)
 	return _specialized_skill_table[level];
 }
 
-DWORD ExperienceSystem::AttributeLevelFromExperience(DWORD exp)
+uint32_t ExperienceSystem::AttributeLevelFromExperience(uint32_t exp)
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
@@ -240,7 +240,7 @@ DWORD ExperienceSystem::AttributeLevelFromExperience(DWORD exp)
 	return 0;
 }
 
-DWORD ExperienceSystem::Attribute2ndLevelFromExperience(DWORD exp)
+uint32_t ExperienceSystem::Attribute2ndLevelFromExperience(uint32_t exp)
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
@@ -250,7 +250,7 @@ DWORD ExperienceSystem::Attribute2ndLevelFromExperience(DWORD exp)
 	return 0;
 }
 
-DWORD ExperienceSystem::SkillLevelFromExperience(SKILL_ADVANCEMENT_CLASS sac, DWORD exp)
+uint32_t ExperienceSystem::SkillLevelFromExperience(SKILL_ADVANCEMENT_CLASS sac, uint32_t exp)
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
@@ -267,7 +267,7 @@ DWORD ExperienceSystem::SkillLevelFromExperience(SKILL_ADVANCEMENT_CLASS sac, DW
 	return 0;
 }
 
-DWORD ExperienceSystem::ExperienceToSkillLevel(SKILL_ADVANCEMENT_CLASS sac, DWORD level)
+uint32_t ExperienceSystem::ExperienceToSkillLevel(SKILL_ADVANCEMENT_CLASS sac, uint32_t level)
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
@@ -284,7 +284,28 @@ DWORD ExperienceSystem::ExperienceToSkillLevel(SKILL_ADVANCEMENT_CLASS sac, DWOR
 	return UINT_MAX;
 }
 
-DWORD ExperienceSystem::GetMaxTrainedSkillLevel()
+uint32_t ExperienceSystem::ExperienceToAttributeLevel(uint32_t level)
+{
+	if (ExperienceTable *pExpTable = GetExperienceTable())
+	{
+		return pExpTable->GetExperienceForLevel(ExperienceType::Attribute_ExperienceType, level);
+	}
+
+	return 0;
+}
+
+uint32_t ExperienceSystem::ExperienceToAttribute2ndLevel(uint32_t level)
+{
+	if (ExperienceTable *pExpTable = GetExperienceTable())
+	{
+		return pExpTable->GetExperienceForLevel(ExperienceType::Attribute2nd_ExperienceType, level);
+	}
+
+	return 0;
+}
+
+
+uint32_t ExperienceSystem::GetMaxTrainedSkillLevel()
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
@@ -294,7 +315,7 @@ DWORD ExperienceSystem::GetMaxTrainedSkillLevel()
 	return 0;
 }
 
-DWORD ExperienceSystem::GetMaxSpecializedSkillLevel()
+uint32_t ExperienceSystem::GetMaxSpecializedSkillLevel()
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
@@ -304,7 +325,28 @@ DWORD ExperienceSystem::GetMaxSpecializedSkillLevel()
 	return 0;
 }
 
-DWORD64 ExperienceSystem::ExperienceToLevel(unsigned int level)
+uint32_t ExperienceSystem::GetMaxAttributeLevel()
+{
+	if (ExperienceTable *pExpTable = GetExperienceTable())
+	{
+		return pExpTable->_max_attribute_level;
+	}
+
+	return 0;
+}
+
+uint32_t ExperienceSystem::GetMaxAttribute2ndLevel()
+{
+	if (ExperienceTable *pExpTable = GetExperienceTable())
+	{
+		return pExpTable->_max_attribute2nd_level;
+	}
+
+	return 0;
+}
+
+
+uint64_t ExperienceSystem::ExperienceToLevel(unsigned int level)
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
@@ -319,7 +361,7 @@ ExperienceTable *ExperienceSystem::GetExperienceTable()
 	return CachedExperienceTable;
 }
 
-DWORD ExperienceSystem::GetMaxLevel()
+uint32_t ExperienceSystem::GetMaxLevel()
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
@@ -329,7 +371,7 @@ DWORD ExperienceSystem::GetMaxLevel()
 	return 0;
 }
 
-DWORD64 ExperienceSystem::ExperienceToRaiseLevel(unsigned int current_level, unsigned int new_level)
+uint64_t ExperienceSystem::ExperienceToRaiseLevel(unsigned int current_level, unsigned int new_level)
 {
 	if (new_level > current_level)
 	{
@@ -339,7 +381,7 @@ DWORD64 ExperienceSystem::ExperienceToRaiseLevel(unsigned int current_level, uns
 	return 0;
 }
 
-DWORD ExperienceSystem::GetCreditsForLevel(unsigned int level) // custom
+uint32_t ExperienceSystem::GetCreditsForLevel(unsigned int level) // custom
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
@@ -349,3 +391,85 @@ DWORD ExperienceSystem::GetCreditsForLevel(unsigned int level) // custom
 	return 0;
 }
 
+int32_t ExperienceSystem::ItemTotalXpToLevel(uint64_t xp, uint64_t basexp, int32_t maxLevel, int32_t style)
+{
+	int32_t result = 0;
+	uint64_t levelxp = basexp;
+	uint64_t totalxp = basexp;
+
+	if (basexp <= 0)
+		return result;
+
+	switch (style)
+	{
+	case 1:	// straight division
+		result = (int32_t)(xp / basexp);
+		break;
+
+	case 2: // double-per-level
+		while (totalxp <= xp)
+		{
+			result++;
+			levelxp *= uint64_t(2);
+			totalxp += levelxp;
+		}
+		break;
+
+	case 3: // curve
+		while (totalxp <= xp)
+		{
+			result++;
+			levelxp += basexp;
+			totalxp += levelxp;
+		}
+		break;
+	}
+
+	if (result > maxLevel)
+		return maxLevel;
+
+	return result;
+}
+
+uint64_t ExperienceSystem::ItemLevelToTotalXp(int32_t level, uint64_t basexp, int32_t maxLevel, int32_t style)
+{
+	if (level < 1)
+		return 0;
+
+	if (basexp <= 0)
+		return 0;
+
+	if (level > maxLevel)
+		level = maxLevel;
+
+	uint64_t result = basexp;
+	uint64_t levelxp = basexp;
+	int32_t xplevel = 1;
+
+	switch (style)
+	{
+	case 1:	// straight division
+		result = (uint64_t)level * basexp;
+		break;
+
+	case 2: // double-per-level
+		while (xplevel < level)
+		{
+			xplevel++;
+			levelxp *= uint64_t(2);
+			result += levelxp;
+		}
+		break;
+
+	case 3: // curve
+		while (xplevel < level)
+		{
+			xplevel++;
+			levelxp += basexp;
+			result += levelxp;
+		}
+		break;
+	}
+
+	return result;
+}

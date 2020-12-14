@@ -1,19 +1,19 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "MotionTable.h"
 #include "PhysicsObj.h"
 #include "PartArray.h"
 #include "Movement.h"
 #include "MovementManager.h"
 
-MotionTableManager *MotionTableManager::Create(DWORD arg0)
+MotionTableManager *MotionTableManager::Create(uint32_t arg0)
 {
 	MotionTableManager *pMTManager = new MotionTableManager(arg0);
 
 	return pMTManager;
 }
 
-MotionTableManager::MotionTableManager(DWORD ID)
+MotionTableManager::MotionTableManager(uint32_t ID)
 {
 	physics_obj = NULL;
 	table = NULL;
@@ -54,12 +54,12 @@ void MotionTableManager::SetPhysicsObject(CPhysicsObj *pPhysicsObj)
 	physics_obj = pPhysicsObj;
 }
 
-DWORD MotionTableManager::GetMotionTableID()
+uint32_t MotionTableManager::GetMotionTableID()
 {
 	return (table ? table->GetID() : 0);
 }
 
-BOOL MotionTableManager::SetMotionTableID(DWORD ID)
+BOOL MotionTableManager::SetMotionTableID(uint32_t ID)
 {
 	CMotionTable::Release(table);
 
@@ -95,10 +95,10 @@ void MotionTableManager::AnimationDone(BOOL success)
 			if (pnode->num_anims > animation_counter)
 				break;
 
-			if (pnode->motion & 0x10000000)
+			if (pnode->motion & CM_Action)
 				state.remove_action_head();
 
-			DWORD motion_id = pnode->motion;
+			uint32_t motion_id = pnode->motion;
 			physics_obj->MotionDone(motion_id, success);
 			animation_counter -= pnode->num_anims;
 
@@ -123,14 +123,14 @@ void MotionTableManager::AnimationDone(BOOL success)
 
 void MotionTableManager::initialize_state(CSequence *seq)
 {
-	DWORD num_anims = 0;
+	uint32_t num_anims = 0;
 
 	if (table)
 	{
 		table->SetDefaultState(&state, seq, &num_anims);
 	}
 	
-	add_to_queue(0x41000003, num_anims, seq);
+	add_to_queue(Motion_Ready, num_anims, seq);
 }
 
 void MotionTableManager::remove_redundant_links(CSequence *seq)
@@ -141,9 +141,9 @@ void MotionTableManager::remove_redundant_links(CSequence *seq)
 	{
 		if (entry->num_anims)
 		{
-			if (!(entry->motion & 0x40000000) || (entry->motion & 0x20000000))
+			if (!(entry->motion & CM_SubState) || (entry->motion & CM_Modifier))
 			{
-				if (!(entry->motion & 0x80000000))
+				if (!(entry->motion & CM_Style))
 					return;
 
 				AnimNode *node2 = (AnimNode *)entry->dllist_prev;
@@ -193,7 +193,7 @@ void MotionTableManager::truncate_animation_list(AnimNode *node, CSequence *seq)
 
 	AnimNode *entry = (AnimNode *)pending_animations.tail_;
 
-	DWORD sum = 0;
+	uint32_t sum = 0;
 
 	while (entry != node)
 	{
@@ -209,7 +209,7 @@ void MotionTableManager::truncate_animation_list(AnimNode *node, CSequence *seq)
 	seq->remove_link_animations(sum);
 }
 
-void MotionTableManager::add_to_queue(DWORD motionid, DWORD counter, CSequence *psequence)
+void MotionTableManager::add_to_queue(uint32_t motionid, uint32_t counter, CSequence *psequence)
 {
 	AnimNode *node = new AnimNode;
 	node->motion = motionid;
@@ -219,41 +219,41 @@ void MotionTableManager::add_to_queue(DWORD motionid, DWORD counter, CSequence *
 	remove_redundant_links(psequence);
 }
 
-DWORD MotionTableManager::PerformMovement(const MovementStruct &ms, CSequence *seq)
+uint32_t MotionTableManager::PerformMovement(const MovementStruct &ms, CSequence *seq)
 {
 	if (!table)
-		return 7;
+		return WERROR_NO_ANIMATION_TABLE;
 
 	switch (ms.type)
 	{
 	case 2:
 		{
-			DWORD counter;
+			uint32_t counter;
 			if (!table->DoObjectMotion(ms.motion, &state, seq, ms.params->speed, &counter))
-				return 0x43;
+				return WERROR_NO_MTABLE_DATA;
 
 			add_to_queue(ms.motion, counter, seq);
-			return 0;
+			return WERROR_NONE;
 		}
 	case 4:
 		{
-			DWORD counter;
+			uint32_t counter;
 			if (!table->StopObjectMotion(ms.motion, ms.params->speed, &state, seq, &counter))
-				return 0x43;
+				return WERROR_NO_MTABLE_DATA;
 
-			add_to_queue(0x41000003, counter, seq);
-			return 0;
+			add_to_queue(Motion_Ready, counter, seq);
+			return WERROR_NONE;
 		}
 	case 5:
 		{
-			DWORD counter;
+			uint32_t counter;
 			table->StopObjectCompletely(&state, seq, &counter);
-			add_to_queue(0x41000003, counter, seq);
-			return 0;
+			add_to_queue(Motion_Ready, counter, seq);
+			return WERROR_NONE;
 		}
 
 	default:
-		return (DWORD)seq;
+		return WERROR_NO_MTABLE_DATA;  //(uint32_t)seq;
 	}
 }
 
@@ -266,10 +266,10 @@ void MotionTableManager::CheckForCompletedMotions()
 		if (pAnim->num_anims)
 			return;
 
-		if (pAnim->motion & 0x10000000)
+		if (pAnim->motion & CM_Action)
 			state.remove_action_head();
 
-		DWORD motion_id = pAnim->motion;
+		uint32_t motion_id = pAnim->motion;
 		physics_obj->MotionDone(motion_id, TRUE);
 
 		if (pending_animations.head_) // this can go bad; probably due to somewhere in MotionDone()
@@ -373,7 +373,7 @@ void MotionState::copy(MotionState *pstate)
 	}
 }
 
-void MotionState::add_action(DWORD action, float speed_mod)
+void MotionState::add_action(uint32_t action, float speed_mod)
 {
 	MotionList *new_action = new MotionList();
 
@@ -391,7 +391,7 @@ void MotionState::add_action(DWORD action, float speed_mod)
 	action_tail = new_action;
 }
 
-BOOL MotionState::add_modifier(DWORD modifier, float speed_mod)
+BOOL MotionState::add_modifier(uint32_t modifier, float speed_mod)
 {
 	MotionList *iterator = modifier_head;
 
@@ -410,7 +410,7 @@ BOOL MotionState::add_modifier(DWORD modifier, float speed_mod)
 	return TRUE;
 }
 
-void MotionState::add_modifier_no_check(DWORD value1, float value2)
+void MotionState::add_modifier_no_check(uint32_t value1, float value2)
 {
 	MotionList *modifier = new MotionList;
 
@@ -500,7 +500,7 @@ void CMotionTable::Destroyer(DBObj* pMotionTable)
 	delete ((CMotionTable *)pMotionTable);
 }
 
-CMotionTable *CMotionTable::Get(DWORD ID)
+CMotionTable *CMotionTable::Get(uint32_t ID)
 {
 	return (CMotionTable *)ObjCaches::MotionTables->Get(ID);
 }
@@ -514,7 +514,8 @@ void CMotionTable::Release(CMotionTable *pMotionTable)
 void CMotionTable::Destroy()
 {
 	cycles.destroy_contents();
-	modifiers.destroy_contents();
+	if (modifiers.GetBucketCount() > 0)
+		modifiers.destroy_contents();
 
 	// kinda assuming this is what the code did.
 	style_defaults.destroy_contents();
@@ -524,25 +525,32 @@ void CMotionTable::Destroy()
 
 	while (!iter.EndReached() && iter.GetCurrent())
 	{
-		auto current = iter.GetCurrent();
-
-		/*
-		HashBaseIter<MotionData> iter2(current->m_Data);
-		while (!iter2.EndReached() && iter2.GetCurrent())
+		try
 		{
-			auto current2 = iter2.GetCurrent();
-			delete current2;
+			auto current = iter.GetCurrent();
 
-			iter2.Next();
+			/*
+			HashBaseIter<MotionData> iter2(current->m_Data);
+			while (!iter2.EndReached() && iter2.GetCurrent())
+			{
+				auto current2 = iter2.GetCurrent();
+				delete current2;
+
+				iter2.Next();
+			}
+			*/
+
+			current->m_Data->destroy_contents();
+
+			delete current->m_Data;
+			current->m_Data = NULL;
+
+			iter.Next();
 		}
-		*/
-
-		current->m_Data->destroy_contents();
-
-		delete current->m_Data;
-		current->m_Data = NULL;
-
-		iter.Next();
+		catch (...)
+		{
+			SERVER_ERROR << "Error in CMotionTable Destroy";
+		}
 	}
 
 	links.destroy_contents();
@@ -568,19 +576,19 @@ void combine_motion(CSequence *psequence, MotionData *pmotiondata, float unknown
 	psequence->combine_physics(vec0C, vec18);
 }
 
-BOOL CMotionTable::StopSequenceMotion(DWORD motion, float speed, MotionState *curr_state, CSequence *sequence, DWORD *num_anims)
+BOOL CMotionTable::StopSequenceMotion(uint32_t motion, float speed, MotionState *curr_state, CSequence *sequence, uint32_t *num_anims)
 {
 	*num_anims = 0;
 
-	if ((motion & 0x40000000) && (curr_state->substate == motion))
+	if ((motion & CM_SubState) && (curr_state->substate == motion))
 	{
-		DWORD value;
+		uint32_t value;
 		style_defaults.lookup(curr_state->style, &value);
 		GetObjectSequence(value, curr_state, sequence, 1.0f, num_anims, 1);
 		return TRUE;
 	}
 
-	if (!(motion & 0x20000000))
+	if (!(motion & CM_Modifier))
 		return FALSE;
 
 	MotionList *pmod = curr_state->modifier_head;
@@ -590,7 +598,7 @@ BOOL CMotionTable::StopSequenceMotion(DWORD motion, float speed, MotionState *cu
 	{
 		if (pmod->motion == motion)
 		{
-			DWORD datakey = (pmod->motion << 16) | (motion & 0xFFFFFF);
+			uint32_t datakey = (pmod->motion << 16) | (motion & 0xFFFFFF);
 
 			MotionData *pmotiondata;
 			pmotiondata = modifiers.lookup(datakey);
@@ -613,7 +621,7 @@ BOOL CMotionTable::StopSequenceMotion(DWORD motion, float speed, MotionState *cu
 	return FALSE;
 }
 
-BOOL CMotionTable::StopObjectCompletely(MotionState *pstate, CSequence *psequence, DWORD *pcounter)
+BOOL CMotionTable::StopObjectCompletely(MotionState *pstate, CSequence *psequence, uint32_t *pcounter)
 {
 	BOOL unknown = 0;
 	float something;
@@ -653,13 +661,16 @@ void add_motion(CSequence *psequence, MotionData *pmotiondata, float speed)
 	psequence->set_velocity(pmotiondata->velocity * speed);
 	psequence->set_omega(pmotiondata->omega * speed);
 
-	for (DWORD i = 0; i < pmotiondata->num_anims; i++)
-		psequence->append_animation(&sub_445200(speed, pmotiondata->anims + i));
+	for (uint32_t i = 0; i < pmotiondata->num_anims; i++)
+	{
+		AnimData &&anim = sub_445200(speed, pmotiondata->anims + i);
+		psequence->append_animation(&anim);
+	}
 }
 
-BOOL CMotionTable::SetDefaultState(MotionState *pstate, CSequence *psequence, DWORD *num_anims)
+BOOL CMotionTable::SetDefaultState(MotionState *pstate, CSequence *psequence, uint32_t *num_anims)
 {
-	DWORD default_substate;
+	uint32_t default_substate;
 	style_defaults.lookup(default_style, &default_substate);
 
 	if (!default_substate)
@@ -670,7 +681,7 @@ BOOL CMotionTable::SetDefaultState(MotionState *pstate, CSequence *psequence, DW
 	pstate->clear_modifiers();
 	pstate->clear_actions();
 
-	DWORD datakey = (default_style << 16) | (default_substate & 0xFFFFFF);
+	uint32_t datakey = (default_style << 16) | (default_substate & 0xFFFFFF);
 
 	MotionData *pMotionData = cycles.lookup(datakey);
 
@@ -702,22 +713,22 @@ BOOL CMotionTable::UnPack(BYTE** ppData, ULONG iSize)
 	if (iSize < 12)
 		goto error_return;
 
-	UNPACK(DWORD, id);
-	UNPACK(DWORD, default_style);
+	UNPACK(uint32_t, id);
+	UNPACK(uint32_t, default_style);
 
-	DWORD Unk;
-	UNPACK(DWORD, Unk);
+	uint32_t Unk;
+	UNPACK(uint32_t, Unk);
 
 	// iSize -= 8;
 
-	for (DWORD i = 0; i < Unk; i++)
+	for (uint32_t i = 0; i < Unk; i++)
 	{
 		if (iSize < 8)
 			goto error_return;
 
-		DWORD Val1, Val2;
-		UNPACK(DWORD, Val1);
-		UNPACK(DWORD, Val2);
+		uint32_t Val1, Val2;
+		UNPACK(uint32_t, Val1);
+		UNPACK(uint32_t, Val2);
 		// iSize -=8;
 
 		style_defaults.add(Val2, Val1);
@@ -726,10 +737,10 @@ BOOL CMotionTable::UnPack(BYTE** ppData, ULONG iSize)
 	if (iSize < 4)
 		goto error_return;
 
-	DWORD Unk2;
-	UNPACK(DWORD, Unk2);
+	uint32_t Unk2;
+	UNPACK(uint32_t, Unk2);
 
-	for (DWORD i = 0; i < Unk2; i++)
+	for (uint32_t i = 0; i < Unk2; i++)
 	{
 		MotionData *pMotionData = new MotionData;
 
@@ -742,10 +753,10 @@ BOOL CMotionTable::UnPack(BYTE** ppData, ULONG iSize)
 		cycles.add(pMotionData);
 	}
 
-	DWORD var_18;
-	UNPACK(DWORD, var_18);
+	uint32_t var_18;
+	UNPACK(uint32_t, var_18);
 
-	for (DWORD i = 0; i < var_18; i++)
+	for (uint32_t i = 0; i < var_18; i++)
 	{
 		MotionData *pMotionData = new MotionData;
 
@@ -758,21 +769,21 @@ BOOL CMotionTable::UnPack(BYTE** ppData, ULONG iSize)
 		modifiers.add(pMotionData);
 	}
 
-	UNPACK(DWORD, var_18);
+	UNPACK(uint32_t, var_18);
 
-	for (DWORD i = 0; i < var_18; i++)
+	for (uint32_t i = 0; i < var_18; i++)
 	{
 		if (iSize < 8)
 			goto error_return;
 
-		DWORD var_10, var_8;
-		UNPACK(DWORD, var_10);
-		UNPACK(DWORD, var_8);
+		uint32_t var_10, var_8;
+		UNPACK(uint32_t, var_10);
+		UNPACK(uint32_t, var_8);
 		// iSize -= 8;
 
 		LongHash<MotionData> *pMotionDataTable = new LongHash<MotionData>(256);
 
-		for (DWORD j = 0; j < var_8; j++)
+		for (uint32_t j = 0; j < var_8; j++)
 		{
 			MotionData *pMotionData = new MotionData;
 
@@ -800,16 +811,16 @@ error_return:
 }
 
 MotionData *CMotionTable::get_link(
-	DWORD somekey, DWORD dwordvalue1, float floatvalue1, DWORD dwordvalue2, float floatvalue2)
+	uint32_t somekey, uint32_t uint32_tvalue1, float floatvalue1, uint32_t uint32_tvalue2, float floatvalue2)
 {
 	LongHash<MotionData> *arg_4;
 	MotionData *var_4 = 0;
 
 	if (floatvalue2 < 0.0 || floatvalue1 < 0.0)
 	{
-		if (links.lookup((somekey << 16) | (dwordvalue2 & 0xFFFFFF), &arg_4))
+		if (links.lookup((somekey << 16) | (uint32_tvalue2 & 0xFFFFFF), &arg_4))
 		{
-			var_4 = arg_4->lookup(dwordvalue1);
+			var_4 = arg_4->lookup(uint32_tvalue1);
 
 			if (var_4)
 				return var_4;
@@ -817,9 +828,9 @@ MotionData *CMotionTable::get_link(
 	}
 	else
 	{
-		if (links.lookup((somekey << 16) | (dwordvalue1 & 0xFFFFFF), &arg_4))
+		if (links.lookup((somekey << 16) | (uint32_tvalue1 & 0xFFFFFF), &arg_4))
 		{
-			var_4 = arg_4->lookup(dwordvalue2);
+			var_4 = arg_4->lookup(uint32_tvalue2);
 
 			if (var_4)
 				return var_4;
@@ -828,8 +839,8 @@ MotionData *CMotionTable::get_link(
 
 	if (floatvalue2 < 0.0 || floatvalue1 < 0.0)
 	{
-		DWORD value;
-		if (!style_defaults.lookup(somekey, &value) || !links.lookup((somekey << 16) | (dwordvalue1 & 0xFFFFFF), &arg_4))
+		uint32_t value;
+		if (!style_defaults.lookup(somekey, &value) || !links.lookup((somekey << 16) | (uint32_tvalue1 & 0xFFFFFF), &arg_4))
 			return 0;
 
 		return arg_4->lookup(value);
@@ -839,7 +850,7 @@ MotionData *CMotionTable::get_link(
 		if (!links.lookup((somekey << 16), &arg_4))
 			return 0;
 
-		return arg_4->lookup(dwordvalue2);
+		return arg_4->lookup(uint32_tvalue2);
 	}
 }
 
@@ -853,27 +864,27 @@ void CMotionTable::re_modify(CSequence *psequence, MotionState *pstate)
 	while (state.modifier_head)
 	{
 		float arg_4 = pstate->modifier_head->speed_mod;
-		DWORD _edi = pstate->modifier_head->motion;
+		uint32_t _edi = pstate->modifier_head->motion;
 
 		pstate->remove_modifier(pstate->modifier_head, 0);
 		state.remove_modifier(state.modifier_head, 0);
 
-		DWORD unused;
+		uint32_t unused;
 		GetObjectSequence(_edi, pstate, psequence, arg_4, &unused, 0);
 	}
 }
 
-BOOL CMotionTable::DoObjectMotion(DWORD motionid, MotionState *pstate, CSequence *psequence, float funknown, DWORD *pcounter)
+BOOL CMotionTable::DoObjectMotion(uint32_t motionid, MotionState *pstate, CSequence *psequence, float funknown, uint32_t *pcounter)
 {
 	return GetObjectSequence(motionid, pstate, psequence, funknown, pcounter, 0);
 }
 
-BOOL CMotionTable::StopObjectMotion(DWORD motionid, float funknown, MotionState *pstate, CSequence *psequence, DWORD *pcounter)
+BOOL CMotionTable::StopObjectMotion(uint32_t motionid, float funknown, MotionState *pstate, CSequence *psequence, uint32_t *pcounter)
 {
 	return StopSequenceMotion(motionid, funknown, pstate, psequence, pcounter);
 }
 
-BOOL CMotionTable::is_allowed(DWORD motionid, MotionData *pmotiondata, MotionState *pstate)
+BOOL CMotionTable::is_allowed(uint32_t motionid, MotionData *pmotiondata, MotionState *pstate)
 {
 	if (!pmotiondata)
 		return FALSE;
@@ -882,7 +893,7 @@ BOOL CMotionTable::is_allowed(DWORD motionid, MotionData *pmotiondata, MotionSta
 	{
 		if (motionid != pstate->substate)
 		{
-			DWORD value;
+			uint32_t value;
 			style_defaults.lookup(pstate->style, &value);
 
 			return ((value == pstate->substate) ? TRUE : FALSE);
@@ -923,7 +934,7 @@ void change_cycle_speed(CSequence *psequence, MotionData *pmotiondata, float unk
 		}
 }
 
-BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CSequence *sequence, float speed_mod, DWORD *num_anims, DWORD stop_modifiers)
+BOOL CMotionTable::GetObjectSequence(uint32_t motionid, MotionState *curr_state, CSequence *sequence, float speed_mod, uint32_t *num_anims, uint32_t stop_modifiers)
 {
 	*num_anims = 0;
 
@@ -933,15 +944,15 @@ BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CS
 	MotionData *var_10 = 0;
 	MotionData *var_4 = 0;
 
-	DWORD mtype2 = curr_state->substate;
+	uint32_t mtype2 = curr_state->substate;
 
-	DWORD new_substate;
+	uint32_t new_substate;
 	style_defaults.lookup(curr_state->style, &new_substate);
 
-	if (motionid == new_substate && !stop_modifiers && (mtype2 & 0x20000000))
+	if (motionid == new_substate && !stop_modifiers && (mtype2 & CM_Modifier))
 		return TRUE;
 
-	if (motionid & 0x80000000)
+	if (motionid & CM_Style)
 	{
 		//__asm int 3
 
@@ -953,7 +964,7 @@ BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CS
 		if (mtype2 != new_substate)
 			var_4 = get_link(curr_state->style, mtype2, curr_state->substate_mod, new_substate, speed_mod);
 
-		DWORD arg_14;
+		uint32_t arg_14;
 		if (style_defaults.lookup(curr_state->style, &arg_14))
 		{
 			MotionData *arg_4 = cycles.lookup((motionid << 16) | (arg_14 & 0xFFFFFF));
@@ -969,7 +980,7 @@ BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CS
 				{
 					arg_0 = get_link(curr_state->style, new_substate, 1.0f, default_style, 1.0f);
 
-					DWORD var_8;
+					uint32_t var_8;
 					style_defaults.lookup(default_style, &var_8);
 					var_10 = get_link(default_style, var_8, 1.0f, motionid, 1.0f);
 				}
@@ -988,19 +999,19 @@ BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CS
 
 				re_modify(sequence, curr_state);
 
-				DWORD someval1 = (var_4 ? var_4->num_anims : 0);
-				DWORD someval2 = (arg_0 ? arg_0->num_anims : 0);
-				DWORD someval3 = (var_10 ? var_10->num_anims : 0);
+				uint32_t someval1 = (var_4 ? var_4->num_anims : 0);
+				uint32_t someval2 = (arg_0 ? arg_0->num_anims : 0);
+				uint32_t someval3 = (var_10 ? var_10->num_anims : 0);
 
-				*num_anims = (((DWORD)arg_4->num_anims) + someval3 + someval2 + someval1) - 1;
+				*num_anims = (((uint32_t)arg_4->num_anims) + someval3 + someval2 + someval1) - 1;
 				return TRUE;
 			}
 		}
 	}
 
-	if (motionid & 0x40000000)
+	if (motionid & CM_SubState)
 	{
-		DWORD arg_0 = motionid & 0xFFFFFF;
+		uint32_t arg_0 = motionid & 0xFFFFFF;
 
 		MotionData *pmotiondata = cycles.lookup((curr_state->style << 16) | arg_0);
 
@@ -1025,7 +1036,7 @@ BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CS
 
 				if (!pmotiondata2 || !same_sign(speed_mod, curr_state->substate_mod))
 				{
-					DWORD arg_14;
+					uint32_t arg_14;
 					style_defaults.lookup(curr_state->style, &arg_14);
 					pmotiondata2 = get_link(curr_state->style, curr_state->substate, curr_state->substate_mod, arg_14, 1.0f);
 					var_10 = get_link(curr_state->style, arg_14, 1.0f, motionid, speed_mod);
@@ -1057,7 +1068,7 @@ BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CS
 
 				if ((curr_state->substate != motionid) && (curr_state->substate & 0x20000000))
 				{
-					DWORD arg_14;
+					uint32_t arg_14;
 					style_defaults.lookup(curr_state->style, &arg_14);
 
 					if (arg_14 != motionid)
@@ -1068,18 +1079,18 @@ BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CS
 				curr_state->substate = motionid;
 				re_modify(sequence, curr_state);
 
-				DWORD someval1 = (pmotiondata2 ? pmotiondata2->num_anims : 0);
-				DWORD someval2 = (var_10 ? var_10->num_anims : 0);
+				uint32_t someval1 = (pmotiondata2 ? pmotiondata2->num_anims : 0);
+				uint32_t someval2 = (var_10 ? var_10->num_anims : 0);
 
-				*num_anims = (((DWORD)pmotiondata->num_anims) + someval2 + someval1) - 1;
+				*num_anims = (((uint32_t)pmotiondata->num_anims) + someval2 + someval1) - 1;
 				return TRUE;
 			}
 		}
 	}
 
-	if (motionid & 0x10000000) // CM_Action
+	if (motionid & CM_Action) // CM_Action
 	{
-		DWORD theKey = (mtype2 & 0xFFFFFF) | (curr_state->style << 16);
+		uint32_t theKey = (mtype2 & 0xFFFFFF) | (curr_state->style << 16);
 
 		MotionData *pmotiondata = cycles.lookup(theKey);
 
@@ -1120,7 +1131,7 @@ BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CS
 							add_motion(sequence, linkc, curr_state->substate_mod);
 							re_modify(sequence, curr_state);
 
-							DWORD anim_count = motiond->num_anims + link2->num_anims;
+							uint32_t anim_count = motiond->num_anims + link2->num_anims;
 							if (pSomeLink)
 								anim_count += pSomeLink->num_anims;
 							*num_anims = anim_count;
@@ -1132,9 +1143,9 @@ BOOL CMotionTable::GetObjectSequence(DWORD motionid, MotionState *curr_state, CS
 		}
 	}
 
-	if (motionid & 0x20000000) // CM_Modifier
+	if (motionid & CM_Modifier) // CM_Modifier
 	{
-		DWORD theKey = curr_state->style << 16;
+		uint32_t theKey = curr_state->style << 16;
 		MotionData *v24 = cycles.lookup((curr_state->style << 16) | mtype2 & 0xFFFFFF);
 		if (v24)
 		{
@@ -1189,7 +1200,7 @@ BOOL MotionData::UnPack(BYTE** ppData, ULONG iSize)
 {
 	Destroy(); // custom
 
-	UNPACK(DWORD, id);
+	UNPACK(uint32_t, id);
 
 	UNPACK(BYTE, num_anims);
 	UNPACK(BYTE, bitfield);
@@ -1204,7 +1215,7 @@ BOOL MotionData::UnPack(BYTE** ppData, ULONG iSize)
 		anims = new AnimData[num_anims];
 	}
 
-	for (DWORD i = 0; i < num_anims; i++) {
+	for (uint32_t i = 0; i < num_anims; i++) {
 		UNPACK_OBJ(anims[i]);
 	}
 

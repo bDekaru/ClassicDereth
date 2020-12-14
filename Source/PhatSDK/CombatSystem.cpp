@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 
 CombatManeuver::CombatManeuver()
@@ -17,11 +17,11 @@ DEFINE_PACK(CombatManeuver)
 
 DEFINE_UNPACK(CombatManeuver)
 {
-	style = pReader->Read<DWORD>();
-	attack_height = (ATTACK_HEIGHT) pReader->Read<DWORD>();
-	attack_type = (AttackType)pReader->Read<DWORD>();
-	min_skill_level = pReader->Read<DWORD>();
-	motion = pReader->Read<DWORD>();
+	style = pReader->Read<uint32_t>();
+	attack_height = (ATTACK_HEIGHT) pReader->Read<uint32_t>();
+	attack_type = (AttackType)pReader->Read<uint32_t>();
+	min_skill_level = pReader->Read<uint32_t>();
+	motion = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -40,9 +40,9 @@ void CombatManeuverTable::Clear()
 	SafeDeleteArray(_cmt);
 }
 
-CombatManeuver *CombatManeuverTable::TryGetCombatManuever(DWORD style, AttackType at, ATTACK_HEIGHT height) // custom
+CombatManeuver *CombatManeuverTable::TryGetCombatManuever(uint32_t style, AttackType at, ATTACK_HEIGHT height) // custom
 {
-	for (DWORD i = 0; i < _num_combat_maneuvers; i++)
+	for (uint32_t i = 0; i < _num_combat_maneuvers; i++)
 	{
 		CombatManeuver *cm = &_cmt[i];
 
@@ -53,7 +53,7 @@ CombatManeuver *CombatManeuverTable::TryGetCombatManuever(DWORD style, AttackTyp
 	return NULL;
 }
 
-DWORD CombatManeuverTable::CombatStyleToMotion(CombatStyle style)
+uint32_t CombatManeuverTable::CombatStyleToMotion(CombatStyle style)
 {
 	UNFINISHED();
 	return 0;
@@ -77,17 +77,17 @@ DEFINE_UNPACK(CombatManeuverTable)
 {
 	Clear();
 
-	pReader->Read<DWORD>(); // file ID
+	pReader->Read<uint32_t>(); // file ID
 
-	_num_combat_maneuvers = pReader->Read<DWORD>();
+	_num_combat_maneuvers = pReader->Read<uint32_t>();
 	_cmt = new CombatManeuver[_num_combat_maneuvers];
-	for (DWORD i = 0; i < _num_combat_maneuvers; i++)
+	for (uint32_t i = 0; i < _num_combat_maneuvers; i++)
 		_cmt[i].UnPack(pReader);
 
 	return true;
 }
 
-BOOL CombatSystem::InqCombatHitAdjectives(DAMAGE_TYPE damage_type, const long double php, std::string &single_adj, std::string &plural_adj)
+BOOL CombatSystem::InqCombatHitAdjectives(DAMAGE_TYPE damage_type, const double php, std::string &single_adj, std::string &plural_adj)
 {
 	if (php < 0.0)
 		return FALSE;

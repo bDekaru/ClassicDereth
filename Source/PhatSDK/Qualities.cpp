@@ -1,5 +1,4 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Qualities.h"
 #include "BinaryWriter.h"
 #include "ExperienceTable.h"
@@ -7,11 +6,11 @@
 
 DEFINE_PACK(PageData)
 {
-	pWriter->Write<DWORD>(authorID);
+	pWriter->Write<uint32_t>(authorID);
 	pWriter->WriteString(authorName);
 	pWriter->WriteString(authorAccount);
 
-	pWriter->Write<DWORD>(0xFFFF0002);
+	pWriter->Write<uint32_t>(0xFFFF0002);
 	pWriter->Write<int>(textIncluded);
 	pWriter->Write<int>(ignoreAuthor);
 
@@ -33,22 +32,22 @@ DEFINE_PACK_JSON(PageData)
 
 void PageData::PackNoText(BinaryWriter *pWriter)
 {
-	pWriter->Write<DWORD>(authorID);
+	pWriter->Write<uint32_t>(authorID);
 	pWriter->WriteString(authorName);
 	pWriter->WriteString(authorAccount);
 
-	pWriter->Write<DWORD>(0xFFFF0002);
+	pWriter->Write<uint32_t>(0xFFFF0002);
 	pWriter->Write<int>(textIncluded);
 	pWriter->Write<int>(ignoreAuthor);
 }
 
 DEFINE_UNPACK(PageData)
 {
-	authorID = pReader->Read<DWORD>();
+	authorID = pReader->Read<uint32_t>();
 	authorName = pReader->ReadString();
 	authorAccount = pReader->ReadString();
 
-	DWORD version = pReader->Read<DWORD>();
+	uint32_t version = pReader->Read<uint32_t>();
 
 	if ((version >> 16) == 0xFFFF)
 	{
@@ -74,21 +73,13 @@ DEFINE_UNPACK(PageData)
 
 DEFINE_UNPACK_JSON(PageData)
 {
-	authorID = reader["authorID"];
-	authorName = reader["authorName"];
-	authorAccount = reader["authorAccount"];
-	ignoreAuthor = reader["ignoreAuthor"];
+	// TODO: identify failure conditions and return false
+	UnPackValue(reader, "authorID", authorID);
+	UnPackValue(reader, "authorName", authorName);
+	UnPackValue(reader, "authorAccount", authorAccount);
+	UnPackValue(reader, "ignoreAuthor", ignoreAuthor);
 
-	if (reader.find("pageText") != reader.end())
-	{
-		textIncluded = 1;
-		pageText = reader["pageText"];
-	}
-	else
-	{
-		textIncluded = 0;
-		pageText = "";
-	}
+	textIncluded = (int)UnPackValue(reader, "pageText", pageText);
 
 	return true;
 }
@@ -117,7 +108,7 @@ DEFINE_UNPACK(PageDataList)
 	maxNumCharsPerPage = pReader->Read<int>();
 	numPages = pReader->Read<int>();
 
-	for (DWORD i = 0; i < numPages; i++)
+	for (uint32_t i = 0; i < numPages; i++)
 	{
 		pages.emplace_back();
 		pages.back().UnPack(pReader);
@@ -145,20 +136,22 @@ DEFINE_PACK_JSON(PageDataList)
 
 DEFINE_UNPACK_JSON(PageDataList)
 {
+	// TODO: identify failure conditions and return false
 	Flush();
 
-	maxNumPages = reader["maxNumPages"];
-	maxNumCharsPerPage = reader["maxNumCharsPerPage"];
+	UnPackValue(reader, "maxNumPages", maxNumPages);
+	UnPackValue(reader, "maxNumCharsPerPage", maxNumCharsPerPage);
+	UnPackObjList(reader, "pages", std::back_inserter(pages));
+	numPages = pages.size();
 
-	const json &pagesEntry = reader["pages"];
+	//const json &pagesEntry = reader["pages"];
+	//numPages = (uint32_t) pagesEntry.size();
 
-	numPages = (DWORD) pagesEntry.size();
-
-	for (const json &pageEntry : pagesEntry)
-	{
-		pages.emplace_back();
-		pages.back().UnPackJson(pageEntry);
-	}
+	//for (const json &pageEntry : pagesEntry)
+	//{
+	//	pages.emplace_back();
+	//	pages.back().UnPackJson(pageEntry);
+	//}
 
 	return true;
 }
@@ -166,8 +159,8 @@ DEFINE_UNPACK_JSON(PageDataList)
 DEFINE_PACK(GeneratorProfile)
 {
 	pWriter->Write<float>(probability);
-	pWriter->Write<DWORD>(type);
-	pWriter->Write<long double>(delay);
+	pWriter->Write<uint32_t>(type);
+	pWriter->Write<double>(delay);
 	pWriter->Write<int>(initCreate);
 	pWriter->Write<int>(maxNum);
 	pWriter->Write<int>(whenCreate);
@@ -182,8 +175,8 @@ DEFINE_PACK(GeneratorProfile)
 DEFINE_UNPACK(GeneratorProfile)
 {
 	probability = pReader->Read<float>();
-	type = pReader->Read<DWORD>();
-	delay = pReader->Read<long double>();
+	type = pReader->Read<uint32_t>();
+	delay = pReader->Read<double>();
 	initCreate = pReader->Read<int>();
 	maxNum = pReader->Read<int>();
 	whenCreate = (RegenerationType)pReader->Read<int>();
@@ -196,7 +189,6 @@ DEFINE_UNPACK(GeneratorProfile)
 
 	return true;
 }
-
 
 DEFINE_PACK_JSON(GeneratorProfile)
 {
@@ -216,18 +208,32 @@ DEFINE_PACK_JSON(GeneratorProfile)
 
 DEFINE_UNPACK_JSON(GeneratorProfile)
 {
-	probability = reader["probability"];
-	type = reader["type"];
-	delay = reader["delay"];
-	initCreate = reader["initCreate"];
-	maxNum = reader["maxNum"];
-	whenCreate = (RegenerationType) (int) reader["whenCreate"];
-	whereCreate = (RegenLocationType) (int) reader["whereCreate"];
-	stackSize = reader["stackSize"];
-	ptid = reader["ptid"];
-	shade = reader["shade"];
+	// TODO: identify failure conditions and return false
+	UnPackValue(reader, "probability", probability);
+	UnPackValue(reader, "type", type);
+	UnPackValue(reader, "delay", delay);
+	UnPackValue(reader, "initCreate", initCreate);
+	UnPackValue(reader, "maxNum", maxNum);
+	UnPackValue(reader, "whenCreate", whenCreate);
+	UnPackValue(reader, "whereCreate", whereCreate);
+	UnPackValue(reader, "stackSize", stackSize);
+	UnPackValue(reader, "ptid", ptid);
+	UnPackValue(reader, "shade", shade);
+	UnPackValue(reader, "slot", slot);
 	pos_val.UnPackJson(reader);
-	slot = reader["slot"];
+
+	//probability = reader["probability"];
+	//type = reader["type"];
+	//delay = reader["delay"];
+	//initCreate = reader["initCreate"];
+	//maxNum = reader["maxNum"];
+	//whenCreate = (RegenerationType) (int) reader["whenCreate"];
+	//whereCreate = (RegenLocationType) (int) reader["whereCreate"];
+	//stackSize = reader["stackSize"];
+	//ptid = reader["ptid"];
+	//shade = reader["shade"];
+	//pos_val.UnPackJson(reader);
+	//slot = reader["slot"];
 
 	return true;
 }
@@ -301,8 +307,8 @@ std::list<GeneratorProfile> GeneratorTable::GetDeathGenerationList()
 
 DEFINE_PACK(GeneratorRegistryNode)
 {
-	pWriter->Write<DWORD>(m_wcidOrTtype);
-	pWriter->Write<long double>(ts);
+	pWriter->Write<uint32_t>(m_wcidOrTtype);
+	pWriter->Write<double>(ts);
 	pWriter->Write<int>(m_bTreasureType);
 	pWriter->Write<unsigned int>(slot);
 	pWriter->Write<int>(checkpointed);
@@ -312,8 +318,8 @@ DEFINE_PACK(GeneratorRegistryNode)
 
 DEFINE_UNPACK(GeneratorRegistryNode)
 {
-	m_wcidOrTtype = pReader->Read<DWORD>();
-	ts = pReader->Read<long double>();
+	m_wcidOrTtype = pReader->Read<uint32_t>();
+	ts = pReader->Read<double>();
 	m_bTreasureType = pReader->Read<int>();
 	slot = pReader->Read<unsigned int>();
 	checkpointed = pReader->Read<int>();
@@ -335,13 +341,16 @@ DEFINE_PACK_JSON(GeneratorRegistryNode)
 
 DEFINE_UNPACK_JSON(GeneratorRegistryNode)
 {
-	m_wcidOrTtype = reader["wcidOrTtype"];
-	ts = reader["ts"];
-	m_bTreasureType = reader["bTreasureType"];
-	slot = reader["slot"];
-	checkpointed = reader["checkpointed"];
-	shop = reader["shop"];
-	amount = reader["amount"];
+	// TODO: identify failure conditions and return false
+
+	UnPackValue(reader, "wcidOrTtype", m_wcidOrTtype);
+	UnPackValue(reader, "ts", ts);
+	UnPackValue(reader, "bTreasureType", m_bTreasureType);
+	UnPackValue(reader, "slot", slot);
+	UnPackValue(reader, "checkpointed", checkpointed);
+	UnPackValue(reader, "shop", shop);
+	UnPackValue(reader, "amount", amount);
+
 	return true;
 }
 
@@ -369,13 +378,13 @@ DEFINE_UNPACK_JSON(GeneratorRegistry)
 
 DEFINE_PACK(GeneratorQueueNode)
 {
-	pWriter->Write<DWORD>(slot);
+	pWriter->Write<uint32_t>(slot);
 	pWriter->Write<double>(when);
 }
 
 DEFINE_UNPACK(GeneratorQueueNode)
 {
-	slot = pReader->Read<DWORD>();
+	slot = pReader->Read<uint32_t>();
 	when = pReader->Read<double>();
 	return true;
 }
@@ -388,8 +397,11 @@ DEFINE_PACK_JSON(GeneratorQueueNode)
 
 DEFINE_UNPACK_JSON(GeneratorQueueNode)
 {
-	slot = reader["slot"];
-	when = reader["when"];
+	// TODO: identify failure conditions and return false
+
+	UnPackValue(reader, "slot", slot);
+	UnPackValue(reader, "when", when);
+
 	return true;
 }
 
@@ -600,9 +612,29 @@ const char *Emote::EmoteTypeToName(EmoteType type) // custom
 	return "Unknown";
 }
 
+const char *Skill::SkillSacToName(SKILL_ADVANCEMENT_CLASS type) // custom
+{
+	switch (type)
+	{
+#ifndef PUBLIC_BUILD
+	case 0: return "UNDEF";
+	case 1: return "UNTRAINED";
+	case 2: return "TRAINED";
+	case 3: return "SPECIALIZED";
+	case 4: return "NUM_SKILL";
+	case 5: return "FORCE_SKILL";
+
+#else
+	default: return "";
+#endif
+	}
+
+	return "Unknown";
+}
+
 DEFINE_PACK(Emote)
 {
-	pWriter->Write<DWORD>(type);
+	pWriter->Write<uint32_t>(type);
 	pWriter->Write<float>(delay);
 	pWriter->Write<float>(extent);
 
@@ -657,24 +689,24 @@ DEFINE_PACK(Emote)
 	case 0x6Cu:
 	case 0x6Du:
 		pWriter->WriteString(msg);
-		pWriter->Write<DWORD>(amount);
+		pWriter->Write<uint32_t>(amount);
 		break;
 
 	case SetIntStat_EmoteType:
 	case IncrementIntStat_EmoteType:
 	case DecrementIntStat_EmoteType:
 	case SetBoolStat_EmoteType:
-		pWriter->Write<DWORD>(stat);
-		pWriter->Write<DWORD>(amount);
+		pWriter->Write<uint32_t>(stat);
+		pWriter->Write<uint32_t>(amount);
 		break;
 
 	case SetInt64Stat_EmoteType:
-		pWriter->Write<DWORD>(stat);
-		pWriter->Write<DWORD64>(amount64);
+		pWriter->Write<uint32_t>(stat);
+		pWriter->Write<uint64_t>(amount64);
 		break;
 
 	case SetFloatStat_EmoteType:
-		pWriter->Write<DWORD>(stat);
+		pWriter->Write<uint32_t>(stat);
 		pWriter->Write<double>(percent);
 		break;
 
@@ -683,20 +715,20 @@ DEFINE_PACK(Emote)
 	case InqNumCharacterTitles_EmoteType:
 	case InqMyQuestSolves_EmoteType:
 		pWriter->WriteString(msg);
-		pWriter->Write<DWORD>(min);
-		pWriter->Write<DWORD>(max);
+		pWriter->Write<uint32_t>(min);
+		pWriter->Write<uint32_t>(max);
 		break;
 
 	case AwardXP_EmoteType:
 	case AwardNoShareXP_EmoteType:
-		pWriter->Write<DWORD64>(amount64);
-		pWriter->Write<DWORD64>(heroxp64);
+		pWriter->Write<uint64_t>(amount64);
+		pWriter->Write<uint64_t>(heroxp64);
 		break;
 
 	case 0x70:
 	case 0x71:
-		pWriter->Write<DWORD64>(amount64);
-		pWriter->Write<DWORD64>(heroxp64);
+		pWriter->Write<uint64_t>(amount64);
+		pWriter->Write<uint64_t>(heroxp64);
 		break;
 
 	case 0x22u:
@@ -705,14 +737,14 @@ DEFINE_PACK(Emote)
 	case 0x5Au:
 	case 0x77u:
 	case 0x78u:
-		pWriter->Write<DWORD>(amount);
+		pWriter->Write<uint32_t>(amount);
 		break;
 
 	case 0xEu:
 	case 0x13u:
 	case 0x1Bu:
 	case 0x49u:
-		pWriter->Write<DWORD>(spellid);
+		pWriter->Write<uint32_t>(spellid);
 		break;
 
 	case Give_EmoteType: // 3
@@ -726,14 +758,14 @@ DEFINE_PACK(Emote)
 		break;
 
 	case CreateTreasure_EmoteType:
-		pWriter->Write<DWORD>(wealth_rating);
-		pWriter->Write<DWORD>(treasure_class);
-		pWriter->Write<DWORD>(treasure_type);
+		pWriter->Write<uint32_t>(wealth_rating);
+		pWriter->Write<uint32_t>(treasure_class);
+		pWriter->Write<uint32_t>(treasure_type);
 		break;
 
 	case Motion_EmoteType:
 	case ForceMotion_EmoteType:
-		pWriter->Write<DWORD>(motion);
+		pWriter->Write<uint32_t>(motion);
 		break;
 
 	case MoveHome_EmoteType:
@@ -744,39 +776,39 @@ DEFINE_PACK(Emote)
 		break;
 
 	case PhysScript_EmoteType:
-		pWriter->Write<DWORD>(pscript);
+		pWriter->Write<uint32_t>(pscript);
 		break;
 
 	case Sound_EmoteType:
-		pWriter->Write<DWORD>(sound);
+		pWriter->Write<uint32_t>(sound);
 		break;
 
 	case AwardSkillXP_EmoteType:
 	case AwardSkillPoints_EmoteType:
-		pWriter->Write<DWORD>(amount);
-		pWriter->Write<DWORD>(stat);
+		pWriter->Write<uint32_t>(amount);
+		pWriter->Write<uint32_t>(stat);
 		break;
 
 	case UntrainSkill_EmoteType:
-		pWriter->Write<DWORD>(stat);
+		pWriter->Write<uint32_t>(stat);
 		break;
 
 	case SetAltRacialSkills_EmoteType:
-		pWriter->Write<DWORD>(amount);
+		pWriter->Write<uint32_t>(amount);
 		break;
 
 	case 0x23u:
 	case 0x2Du:
 	case 0x2Eu:
 		pWriter->WriteString(msg);
-		pWriter->Write<DWORD>(stat);
+		pWriter->Write<uint32_t>(stat);
 		break;
 
 	case InqStringStat_EmoteType:
 	case InqYesNo_EmoteType:
 		pWriter->WriteString(msg);
 		pWriter->WriteString(teststring);
-		pWriter->Write<DWORD>(stat);
+		pWriter->Write<uint32_t>(stat);
 		break;
 
 	case InqIntStat_EmoteType:
@@ -787,33 +819,33 @@ DEFINE_PACK(Emote)
 	case InqSkillStat_EmoteType:
 	case InqRawSkillStat_EmoteType:
 		pWriter->WriteString(msg);
-		pWriter->Write<DWORD>(min);
-		pWriter->Write<DWORD>(max);
-		pWriter->Write<DWORD>(stat);
+		pWriter->Write<uint32_t>(min);
+		pWriter->Write<uint32_t>(max);
+		pWriter->Write<uint32_t>(stat);
 		break;
 	case InqInt64Stat_EmoteType:
 		pWriter->WriteString(msg);
-		pWriter->Write<DWORD64>(min64);
-		pWriter->Write<DWORD64>(max64);
-		pWriter->Write<DWORD>(stat);
+		pWriter->Write<uint64_t>(min64);
+		pWriter->Write<uint64_t>(max64);
+		pWriter->Write<uint32_t>(stat);
 		break;
 	case InqFloatStat_EmoteType:
 		pWriter->WriteString(msg);
 		pWriter->Write<double>(fmin);
 		pWriter->Write<double>(fmax);
-		pWriter->Write<DWORD>(stat);
+		pWriter->Write<uint32_t>(stat);
 		break;
 	case AwardLevelProportionalXP_EmoteType:
 		pWriter->Write<double>(percent);
-		pWriter->Write<DWORD64>(min64);
-		pWriter->Write<DWORD64>(max64);
+		pWriter->Write<uint64_t>(min64);
+		pWriter->Write<uint64_t>(max64);
 		pWriter->Write<int>(display);
 		break;
 	case AwardLevelProportionalSkillXP_EmoteType:
-		pWriter->Write<DWORD>(stat);
+		pWriter->Write<uint32_t>(stat);
 		pWriter->Write<double>(percent);
-		pWriter->Write<DWORD>(min);
-		pWriter->Write<DWORD>(max);
+		pWriter->Write<uint32_t>(min);
+		pWriter->Write<uint32_t>(max);
 		pWriter->Write<int>(display);
 		break;
 	case SetSanctuaryPosition_EmoteType:
@@ -823,17 +855,21 @@ DEFINE_PACK(Emote)
 	case TeleportSelf_EmoteType:
 		mPosition.Pack(pWriter);
 		break;
+	case Generate_EmoteType:
+		pWriter->Write<uint32_t>(amount);
+		break;
+
 	}
 }
 
 DEFINE_UNPACK(Emote)
 {
-	type = (EmoteType) pReader->Read<DWORD>();
+	type = (EmoteType) pReader->Read<uint32_t>();
 	delay = pReader->Read<float>();
 	extent = pReader->Read<float>();
 
-	if (!type && !delay && !extent)
-		DebugBreak();
+	// if (!type && !delay && !extent)
+	// 	DebugBreak();
 
 	switch (type)
 	{
@@ -885,24 +921,24 @@ DEFINE_UNPACK(Emote)
 	case 0x6Cu:
 	case 0x6Du:
 		msg = pReader->ReadString();
-		amount = pReader->Read<DWORD>();
+		amount = pReader->Read<uint32_t>();
 		break;
 
 	case 0x35u:
 	case 0x36u:
 	case 0x37u:
 	case 0x45u:
-		stat = pReader->Read<DWORD>();
-		amount = pReader->Read<DWORD>();
+		stat = pReader->Read<uint32_t>();
+		amount = pReader->Read<uint32_t>();
 		break;
 
 	case 0x73:
-		stat = pReader->Read<DWORD>();
-		amount64 = pReader->Read<DWORD64>();
+		stat = pReader->Read<uint32_t>();
+		amount64 = pReader->Read<uint64_t>();
 		break;
 
 	case 0x76:
-		stat = pReader->Read<DWORD>();
+		stat = pReader->Read<uint32_t>();
 		percent = pReader->Read<double>();
 		break;
 
@@ -911,36 +947,36 @@ DEFINE_UNPACK(Emote)
 	case 0x47u:
 	case 0x52u:
 		msg = pReader->ReadString();
-		min = pReader->Read<DWORD>();
-		max = pReader->Read<DWORD>();
+		min = pReader->Read<uint32_t>();
+		max = pReader->Read<uint32_t>();
 		break;
 
 	case AwardXP_EmoteType: // 2
 	case AwardNoShareXP_EmoteType: // 62
 
 #ifdef PRE_TOD_DATA_FILES
-		amount = pReader->Read<DWORD>();
+		amount = pReader->Read<uint32_t>();
 
 		amount64 = amount;
 		heroxp64 = 0;
 #else
-		amount64 = pReader->Read<DWORD64>();
-		heroxp64 = pReader->Read<DWORD64>();
+		amount64 = pReader->Read<uint64_t>();
+		heroxp64 = pReader->Read<uint64_t>();
 #endif
 
 		break;
 
 	case 0x70:
 	case 0x71:
-		amount64 = pReader->Read<DWORD64>();
-		heroxp64 = pReader->Read<DWORD64>();
+		amount64 = pReader->Read<uint64_t>();
+		heroxp64 = pReader->Read<uint64_t>();
 		break;
 
 	case 0x22u:
 #ifdef PRE_TOD_DATA_FILES
 		msg = pReader->ReadString(); // was a string in DM, ChangeTitle
 #else
-		amount = pReader->Read<DWORD>(); // in ToD at some point, an integer AddCharacterTitle
+		amount = pReader->Read<uint32_t>(); // in ToD at some point, an integer AddCharacterTitle
 #endif
 		break;
 
@@ -949,14 +985,14 @@ DEFINE_UNPACK(Emote)
 	case 0x5Au:
 	case 0x77u:
 	case 0x78u:
-		amount = pReader->Read<DWORD>();
+		amount = pReader->Read<uint32_t>();
 		break;
 
 	case 0xEu:
 	case 0x13u:
 	case 0x1Bu:
 	case 0x49u:
-		spellid = pReader->Read<DWORD>();
+		spellid = pReader->Read<uint32_t>();
 		break;
 
 	case Give_EmoteType:
@@ -970,14 +1006,14 @@ DEFINE_UNPACK(Emote)
 		break;
 
 	case CreateTreasure_EmoteType:
-		wealth_rating = pReader->Read<DWORD>();
-		treasure_class = pReader->Read<DWORD>();
-		treasure_type = pReader->Read<DWORD>();
+		wealth_rating = pReader->Read<uint32_t>();
+		treasure_class = pReader->Read<uint32_t>();
+		treasure_type = pReader->Read<uint32_t>();
 		break;
 
 	case Motion_EmoteType:
 	case ForceMotion_EmoteType:
-		motion = pReader->Read<DWORD>();
+		motion = pReader->Read<uint32_t>();
 		break;
 
 	case 4u:
@@ -988,39 +1024,39 @@ DEFINE_UNPACK(Emote)
 		break;
 
 	case 7:
-		pscript = (PScriptType) pReader->Read<DWORD>();
+		pscript = (PScriptType) pReader->Read<uint32_t>();
 		break;
 
 	case 9:
-		sound = (SoundType) pReader->Read<DWORD>();
+		sound = (SoundType) pReader->Read<uint32_t>();
 		break;
 
 	case 0x1Cu:
 	case 0x1Du:
-		amount = pReader->Read<DWORD>();
-		stat = pReader->Read<DWORD>();
+		amount = pReader->Read<uint32_t>();
+		stat = pReader->Read<uint32_t>();
 		break;
 
 	case 0x6Eu:
-		stat = pReader->Read<DWORD>();
+		stat = pReader->Read<uint32_t>();
 		break;
 
 	case 0x6Fu:
-		amount = pReader->Read<DWORD>();
+		amount = pReader->Read<uint32_t>();
 		break;
 
 	case 0x23u:
 	case 0x2Du:
 	case 0x2Eu:
 		msg = pReader->ReadString();
-		stat = pReader->Read<DWORD>();
+		stat = pReader->Read<uint32_t>();
 		break;
 
 	case 0x26u:
 	case 0x4Bu:
 		msg = pReader->ReadString();
 		teststring = pReader->ReadString();
-		stat = pReader->Read<DWORD>();
+		stat = pReader->Read<uint32_t>();
 		break;
 
 	case 0x24u:
@@ -1031,40 +1067,40 @@ DEFINE_UNPACK(Emote)
 	case 0x2Bu:
 	case 0x2Cu:
 		msg = pReader->ReadString();
-		min = pReader->Read<DWORD>();
-		max = pReader->Read<DWORD>();
-		stat = pReader->Read<DWORD>();
+		min = pReader->Read<uint32_t>();
+		max = pReader->Read<uint32_t>();
+		stat = pReader->Read<uint32_t>();
 		break;
 	case 0x72:
 		msg = pReader->ReadString();
-		min64 = pReader->Read<DWORD64>();
-		max64 = pReader->Read<DWORD64>();
-		stat = pReader->Read<DWORD>();
+		min64 = pReader->Read<uint64_t>();
+		max64 = pReader->Read<uint64_t>();
+		stat = pReader->Read<uint32_t>();
 		break;
 	case 0x25:
 		msg = pReader->ReadString();
 		fmin = pReader->Read<double>();
 		fmax = pReader->Read<double>();
-		stat = pReader->Read<DWORD>();
+		stat = pReader->Read<uint32_t>();
 		break;
 	case 0x31:
 #ifdef PRE_TOD_DATA_FILES
 		percent = pReader->Read<double>();
-		min64 = min = pReader->Read<DWORD>();
-		max64 = max = pReader->Read<DWORD>();
+		min64 = min = pReader->Read<uint32_t>();
+		max64 = max = pReader->Read<uint32_t>();
 		display = pReader->Read<int>();
 #else
 		percent = pReader->Read<double>();
-		min64 = pReader->Read<DWORD64>();
-		max64 = pReader->Read<DWORD64>();
+		min64 = pReader->Read<uint64_t>();
+		max64 = pReader->Read<uint64_t>();
 		display = pReader->Read<int>();
 #endif
 		break;
 	case 0x32:
-		stat = pReader->Read<DWORD>();
+		stat = pReader->Read<uint32_t>();
 		percent = pReader->Read<double>();
-		min = pReader->Read<DWORD>();
-		max = pReader->Read<DWORD>();
+		min = pReader->Read<uint32_t>();
+		max = pReader->Read<uint32_t>();
 		display = pReader->Read<int>();
 		break;
 	case 0x3F:
@@ -1074,6 +1110,10 @@ DEFINE_UNPACK(Emote)
 	case 0x64:
 		mPosition.UnPack(pReader);
 		break;
+	case Generate_EmoteType:
+		amount = pReader->Read<uint32_t>();
+		break;
+
 	}
 
 	return true; // Emote::IsValid()
@@ -1229,7 +1269,7 @@ DEFINE_PACK_JSON(Emote)
 		break;
 
 	case 9:
-		writer["sound"] = (INT) sound;
+		writer["sound"] = (int32_t) sound;
 		break;
 
 	case 0x1Cu:
@@ -1304,14 +1344,20 @@ DEFINE_PACK_JSON(Emote)
 	case 0x64:
 		mPosition.PackJson(writer["mPosition"]);
 		break;
+	case Generate_EmoteType:
+		writer["amount"] = amount;
+		break;
+
 	}
 }
 
 DEFINE_UNPACK_JSON(Emote)
 {
-	type = (EmoteType) (int) reader["type"];
-	delay = reader["delay"];
-	extent = reader["extent"];
+	// TODO: identify failure conditions and return false
+
+	UnPackValue(reader, "type", type);
+	UnPackValue(reader, "delay", delay);
+	UnPackValue(reader, "extent", extent);
 
 	//if (!type && !delay && !extent)
 	//	DebugBreak();
@@ -1347,7 +1393,8 @@ DEFINE_UNPACK_JSON(Emote)
 	case 0x53u:
 	case 0x58u:
 	case 0x79u:
-		msg = reader["msg"];
+		UnPackValue(reader, "msg", msg);
+		//msg = reader["msg"];
 		break;
 
 	case 0x20u:
@@ -1365,51 +1412,67 @@ DEFINE_UNPACK_JSON(Emote)
 	case 0x6Bu:
 	case 0x6Cu:
 	case 0x6Du:
-		msg = reader["msg"];
-		amount = reader["amount"];
+		UnPackValue(reader, "msg", msg);
+		UnPackValue(reader, "amount", amount);
+		//msg = reader["msg"];
+		//amount = reader["amount"];
 		break;
 
 	case 0x35u:
 	case 0x36u:
 	case 0x37u:
 	case 0x45u:
-		stat = reader["stat"];
-		amount = reader["amount"];
+		UnPackValue(reader, "stat", stat);
+		UnPackValue(reader, "amount", amount);
+		//stat = reader["stat"];
+		//amount = reader["amount"];
 		break;
 
 	case 0x73:
-		stat = reader["stat"];;
-		amount64 = reader["amount64"];
+		UnPackValue(reader, "stat", stat);
+		UnPackValue(reader, "amount64", amount64);
+		//stat = reader["stat"];;
+		//amount64 = reader["amount64"];
 		break;
 
 	case 0x76:
-		stat = reader["stat"];
-		percent = reader["percent"];
+		UnPackValue(reader, "stat", stat);
+		UnPackValue(reader, "percent", percent);
+		//stat = reader["stat"];
+		//percent = reader["percent"];
 		break;
 
 	case 0x1Eu:
 	case 0x3Bu:
 	case 0x47u:
 	case 0x52u:
-		msg = reader["msg"];
-		min = reader["min"];
-		max = reader["max"];
+		UnPackValue(reader, "msg", msg);
+		UnPackValue(reader, "min", min);
+		UnPackValue(reader, "max", max);
+		//msg = reader["msg"];
+		//min = reader["min"];
+		//max = reader["max"];
 		break;
 
 	case AwardXP_EmoteType: // 2
 	case AwardNoShareXP_EmoteType: // 62
-		amount64 = reader["amount64"];
-		heroxp64 = reader["heroxp64"];
+		UnPackValue(reader, "amount64", amount64);
+		UnPackValue(reader, "heroxp64", heroxp64);
+		//amount64 = reader["amount64"];
+		//heroxp64 = reader["heroxp64"];
 		break;
 
 	case 0x70:
 	case 0x71:
-		amount64 = reader["amount64"];
-		heroxp64 = reader["heroxp64"];
+		UnPackValue(reader, "amount64", amount64);
+		UnPackValue(reader, "heroxp64", heroxp64);
+		//amount64 = reader["amount64"];
+		//heroxp64 = reader["heroxp64"];
 		break;
 
 	case 0x22u:
-		amount = reader["amount"]; // in ToD at some point, an integer AddCharacterTitle
+		UnPackValue(reader, "amount", amount);
+		//amount = reader["amount"]; // in ToD at some point, an integer AddCharacterTitle
 		break;
 
 	case 0x2Fu:
@@ -1417,78 +1480,99 @@ DEFINE_UNPACK_JSON(Emote)
 	case 0x5Au:
 	case 0x77u:
 	case 0x78u:
-		amount = reader["amount"];
+		UnPackValue(reader, "amount", amount);
+		//amount = reader["amount"];
 		break;
 
 	case 0xEu:
 	case 0x13u:
 	case 0x1Bu:
 	case 0x49u:
-		spellid = reader["spellid"];
+		UnPackValue(reader, "spellid", spellid);
+		//spellid = reader["spellid"];
 		break;
 
 	case Give_EmoteType:
 	case TakeItems_EmoteType:
-		cprof.UnPackJson(reader["cprof"]);
+		UnPackObjJson(reader, "cprof", cprof);
+		//cprof.UnPackJson(reader["cprof"]);
 		break;
 
 	case InqOwnsItems_EmoteType:
-		msg = reader["msg"];
-		cprof.UnPackJson(reader["cprof"]);
+		UnPackValue(reader, "msg", msg);
+		UnPackObjJson(reader, "cprof", cprof);
+		//msg = reader["msg"];
+		//cprof.UnPackJson(reader["cprof"]);
 		break;
 
 	case CreateTreasure_EmoteType:
-		wealth_rating = reader["wealth_rating"];
-		treasure_class = reader["treasure_class"];
-		treasure_type = reader["treasure_type"];
+		UnPackValue(reader, "wealth_rating", wealth_rating);
+		UnPackValue(reader, "treasure_class", treasure_class);
+		UnPackValue(reader, "treasure_type", treasure_type);
+		//wealth_rating = reader["wealth_rating"];
+		//treasure_class = reader["treasure_class"];
+		//treasure_type = reader["treasure_type"];
 		break;
 
 	case Motion_EmoteType:
 	case ForceMotion_EmoteType:
-		motion = reader["motion"];
+		UnPackValue(reader, "motion", motion);
+		//motion = reader["motion"];
 		break;
 
 	case 4u:
 	case 6u:
 	case 0xBu:
 	case 0x57u:
-		frame.UnPackJson(reader["frame"]);
+		UnPackObjJson(reader, "frame", frame);
+		//frame.UnPackJson(reader["frame"]);
 		break;
 
 	case 7:
-		pscript = (PScriptType)(int) reader["pscript"];
+		UnPackValue(reader, "pscript", pscript);
+		//pscript = (PScriptType)(int) reader["pscript"];
 		break;
 
 	case 9:
-		sound = (SoundType)(int)reader["sound"];
+		UnPackValue(reader, "sound", sound);
+		//sound = (SoundType)(int)reader["sound"];
 		break;
 
 	case 0x1Cu:
 	case 0x1Du:
-		amount = reader["amount"];
-		stat = reader["stat"];
+		UnPackValue(reader, "amount", amount);
+		UnPackValue(reader, "stat", stat);
+		//amount = reader["amount"];
+		//stat = reader["stat"];
 		break;
 
 	case 0x6Eu:
-		stat = reader["stat"];
+		UnPackValue(reader, "stat", stat);
+		//stat = reader["stat"];
 		break;
 
 	case 0x6Fu:
-		amount = reader["amount"];
+		UnPackValue(reader, "amount", amount);
+		//amount = reader["amount"];
 		break;
 
 	case 0x23u:
 	case 0x2Du:
 	case 0x2Eu:
-		msg = reader["msg"];
-		stat = reader["stat"];
+		UnPackValue(reader, "stat", stat);
+		UnPackValue(reader, "msg", msg);
+		//msg = reader["msg"];
+		//stat = reader["stat"];
 		break;
 
 	case 0x26u:
 	case 0x4Bu:
-		msg = reader["msg"];
-		teststring = reader["teststring"];
-		stat = reader["stat"];
+		UnPackValue(reader, "msg", msg);
+		UnPackValue(reader, "teststring", teststring);
+		UnPackValue(reader, "stat", stat);
+		//msg = reader["msg"];
+		//teststring = reader["teststring"];
+		//stat = reader["stat"];
 		break;
 
 	case 0x24u:
@@ -1498,43 +1582,71 @@ DEFINE_UNPACK_JSON(Emote)
 	case 0x2Au:
 	case 0x2Bu:
 	case 0x2Cu:
-		msg = reader["msg"];
-		min = reader["min"];
-		max = reader["max"];
-		stat = reader["stat"];
+		UnPackValue(reader, "msg", msg);
+		UnPackValue(reader, "min", min);
+		UnPackValue(reader, "max", max);
+		UnPackValue(reader, "stat", stat);
+		//msg = reader["msg"];
+		//min = reader["min"];
+		//max = reader["max"];
+		//stat = reader["stat"];
 		break;
 	case 0x72:
-		msg = reader["msg"];
-		min64 = reader["min64"];
-		max64 = reader["max64"];
-		stat = reader["stat"];
+		UnPackValue(reader, "msg", msg);
+		UnPackValue(reader, "min64", min64);
+		UnPackValue(reader, "max64", max64);
+		UnPackValue(reader, "stat", stat);
+		//msg = reader["msg"];
+		//min64 = reader["min64"];
+		//max64 = reader["max64"];
+		//stat = reader["stat"];
 		break;
 	case 0x25:
-		msg = reader["msg"];
-		fmin = reader["fmin"];
-		fmax = reader["fmax"];
-		stat = reader["stat"];
+		UnPackValue(reader, "msg", msg);
+		UnPackValue(reader, "fmin", fmin);
+		UnPackValue(reader, "fmax", fmax);
+		UnPackValue(reader, "stat", stat);
+		//msg = reader["msg"];
+		//fmin = reader["fmin"];
+		//fmax = reader["fmax"];
+		//stat = reader["stat"];
 		break;
 	case 0x31:
-		percent = reader["percent"];
-		min64 = reader["min64"];
-		max64 = reader["max64"];
-		display = reader["display"];
+		UnPackValue(reader, "percent", percent);
+		UnPackValue(reader, "min64", min64);
+		UnPackValue(reader, "max64", max64);
+		UnPackValue(reader, "display", display);
+		//percent = reader["percent"];
+		//min64 = reader["min64"];
+		//max64 = reader["max64"];
+		//display = reader["display"];
 		break;
 	case 0x32:
-		stat = reader["stat"];
-		percent = reader["percent"];
-		min = reader["min"];
-		max = reader["max"];
-		display = reader["display"];
+		UnPackValue(reader, "stat", stat);
+		UnPackValue(reader, "percent", percent);
+		UnPackValue(reader, "min", min);
+		UnPackValue(reader, "max", max);
+		UnPackValue(reader, "display", display);
+		//stat = reader["stat"];
+		//percent = reader["percent"];
+		//min = reader["min"];
+		//max = reader["max"];
+		//display = reader["display"];
 		break;
 	case 0x3F:
-		mPosition.UnPackJson(reader["mPosition"]);
+		UnPackObjJson(reader, "mPosition", mPosition);
+		//mPosition.UnPackJson(reader["mPosition"]);
 		break;
 	case 0x63:
 	case 0x64:
-		mPosition.UnPackJson(reader["mPosition"]);
+		UnPackObjJson(reader, "mPosition", mPosition);
+		//mPosition.UnPackJson(reader["mPosition"]);
 		break;
+	case Generate_EmoteType:
+		UnPackValue(reader, "amount", amount);
+		//amount = reader["amount"];
+		break;
+
 	}
 
 	return true; // Emote::IsValid()
@@ -1542,19 +1654,19 @@ DEFINE_UNPACK_JSON(Emote)
 
 DEFINE_PACK(EmoteSet)
 {
-	pWriter->Write<DWORD>(category);
+	pWriter->Write<uint32_t>(category);
 	pWriter->Write<float>(probability);
 
 	switch (category)
 	{
 	case Refuse_EmoteCategory:
 	case Give_EmoteCategory:
-		pWriter->Write<DWORD>(classID);
+		pWriter->Write<uint32_t>(classID);
 		break;
 
 	case HeartBeat_EmoteCategory:
-		pWriter->Write<DWORD>(style);
-		pWriter->Write<DWORD>(substyle);
+		pWriter->Write<uint32_t>(style);
+		pWriter->Write<uint32_t>(substyle);
 		break;
 
 	case QuestSuccess_EmoteCategory: // 12 0xC
@@ -1582,7 +1694,7 @@ DEFINE_PACK(EmoteSet)
 		// 3 = sell
 		// 4 = buy
 		// 5 = performs a motion 0x87 or 0x7d or 0x86 or 0x83
-		pWriter->Write<DWORD>(vendorType);
+		pWriter->Write<uint32_t>(vendorType);
 		break;
 
 	case WoundedTaunt_EmoteCategory:
@@ -1596,19 +1708,19 @@ DEFINE_PACK(EmoteSet)
 
 DEFINE_UNPACK(EmoteSet)
 {
-	category = (EmoteCategory) pReader->Read<DWORD>();
+	category = (EmoteCategory) pReader->Read<uint32_t>();
 	probability = pReader->Read<float>();
 
 	switch (category)
 	{
 	case Refuse_EmoteCategory:
 	case Give_EmoteCategory:
-		classID = pReader->Read<DWORD>();
+		classID = pReader->Read<uint32_t>();
 		break;
 
 	case HeartBeat_EmoteCategory:
-		style = pReader->Read<DWORD>();
-		substyle = pReader->Read<DWORD>();
+		style = pReader->Read<uint32_t>();
+		substyle = pReader->Read<uint32_t>();
 		break;
 
 	case QuestSuccess_EmoteCategory: // 12 0xC
@@ -1631,7 +1743,7 @@ DEFINE_UNPACK(EmoteSet)
 		break;
 
 	case Vendor_EmoteCategory:
-		vendorType = pReader->Read<DWORD>();
+		vendorType = pReader->Read<uint32_t>();
 		break;
 
 	case WoundedTaunt_EmoteCategory:
@@ -1701,6 +1813,8 @@ DEFINE_PACK_JSON(EmoteSet)
 
 DEFINE_UNPACK_JSON(EmoteSet)
 {
+	// TODO: identify failure conditions and return false
+
 	category = (EmoteCategory) (int) reader["category"];
 	probability = reader["probability"];
 
@@ -1732,7 +1846,7 @@ DEFINE_UNPACK_JSON(EmoteSet)
 	case NumCharacterTitlesFailure_EmoteCategory: // 36 0x24
 	case ReceiveLocalSignal_EmoteCategory: // 37 0x25
 	case ReceiveTalkDirect_EmoteCategory: // 38 0x26
-		quest = reader["quest"];
+		quest = reader["quest"].get<std::string>();
 		break;
 
 	case Vendor_EmoteCategory:
@@ -1784,7 +1898,7 @@ EventFilter::~EventFilter()
 DEFINE_PACK(EventFilter)
 {
 	pWriter->Write<unsigned int>(num_events);
-	for (DWORD i = 0; i < num_events; i++)
+	for (uint32_t i = 0; i < num_events; i++)
 		pWriter->Write<unsigned int>(event_filter[i]);
 }
 
@@ -1795,7 +1909,7 @@ DEFINE_UNPACK(EventFilter)
 	num_events = pReader->Read<unsigned int>();
 
 	event_filter = new unsigned int[num_events];
-	for (DWORD i = 0; i < num_events; i++)
+	for (uint32_t i = 0; i < num_events; i++)
 		event_filter[i] = pReader->Read<unsigned int>();
 
 	return true;
@@ -1803,8 +1917,10 @@ DEFINE_UNPACK(EventFilter)
 
 DEFINE_PACK_JSON(EventFilter)
 {
+	// TODO: identify failure conditions and return false
+
 	json events;
-	for (DWORD i = 0; i < num_events; i++)
+	for (uint32_t i = 0; i < num_events; i++)
 	{
 		events.push_back(event_filter[i]);
 	}
@@ -1814,6 +1930,8 @@ DEFINE_PACK_JSON(EventFilter)
 
 DEFINE_UNPACK_JSON(EventFilter)
 {
+	// TODO: identify failure conditions and return false
+
 	SafeDeleteArray(event_filter);
 
 	const json &events = reader["events"];
@@ -1821,7 +1939,7 @@ DEFINE_UNPACK_JSON(EventFilter)
 	num_events = (unsigned int) events.size();
 
 	event_filter = new unsigned int[num_events];
-	for (DWORD i = 0; i < num_events; i++)
+	for (uint32_t i = 0; i < num_events; i++)
 		event_filter[i] = events.at(i);
 
 	return true;
@@ -1851,6 +1969,8 @@ DEFINE_PACK_JSON(StatMod)
 
 DEFINE_UNPACK_JSON(StatMod)
 {
+	// TODO: identify failure conditions and return false
+
 	type = reader["type"];
 	key = reader["key"];
 	val = reader["val"];
@@ -1862,12 +1982,12 @@ DEFINE_PACK(Enchantment)
 	pWriter->Write<unsigned int>(_id);
 	pWriter->Write<unsigned int>((_spell_category & 0xFFFF) | 0x10000);
 	pWriter->Write<int>(_power_level);
-	pWriter->Write<long double>(_start_time - Timer::cur_time);
-	pWriter->Write<long double>(_duration);
+	pWriter->Write<double>(_start_time - Timer::cur_time);
+	pWriter->Write<double>(_duration);
 	pWriter->Write<unsigned int>(_caster);
 	pWriter->Write<float>(_degrade_modifier);
 	pWriter->Write<float>(_degrade_limit);
-	pWriter->Write<long double>(_last_time_degraded - Timer::cur_time);
+	pWriter->Write<double>(_last_time_degraded - Timer::cur_time);
 	_smod.Pack(pWriter);
 	pWriter->Write<unsigned int>(m_SpellSetID);
 }
@@ -1876,15 +1996,15 @@ DEFINE_UNPACK(Enchantment)
 {
 	_id = pReader->Read<unsigned int>();
 
-	DWORD spellCategory = pReader->Read<unsigned int>();
+	uint32_t spellCategory = pReader->Read<unsigned int>();
 	_spell_category = spellCategory & 0xFFFF;
 	_power_level = pReader->Read<int>();
-	_start_time = pReader->Read<long double>() + Timer::cur_time;
-	_duration = pReader->Read<long double>();
+	_start_time = pReader->Read<double>() + Timer::cur_time;
+	_duration = pReader->Read<double>();
 	_caster = pReader->Read<unsigned int>();
 	_degrade_modifier = pReader->Read<float>();
 	_degrade_limit = pReader->Read<float>();
-	_last_time_degraded = pReader->Read<long double>() + Timer::cur_time;
+	_last_time_degraded = pReader->Read<double>() + Timer::cur_time;
 	_smod.UnPack(pReader);
 
 	if (spellCategory >> 16)
@@ -1892,7 +2012,6 @@ DEFINE_UNPACK(Enchantment)
 
 	return true;
 }
-
 
 DEFINE_PACK_JSON(Enchantment)
 {
@@ -1911,15 +2030,17 @@ DEFINE_PACK_JSON(Enchantment)
 
 DEFINE_UNPACK_JSON(Enchantment)
 {
+	// TODO: identify failure conditions and return false
+
 	_id = reader["id"];
 	_spell_category = reader["spell_category"];
 	_power_level = reader["power_level"];
-	_start_time = reader["start_time"] + Timer::cur_time;
+	_start_time = (double)reader["start_time"] + Timer::cur_time;
 	_duration = reader["duration"];
 	_caster = reader["caster"];
 	_degrade_modifier = reader["degrade_modifier"];
 	_degrade_limit = reader["degrade_limit"];
-	_last_time_degraded = reader["last_time_degraded"] + Timer::cur_time;
+	_last_time_degraded = (double)reader["last_time_degraded"] + Timer::cur_time;
 	_smod.UnPackJson(reader["smod"]);
 	m_SpellSetID = reader["spellset_id"];
 
@@ -1928,9 +2049,9 @@ DEFINE_UNPACK_JSON(Enchantment)
 
 BOOL Enchantment::Enchant(float *value)
 {
-	if (!(_smod.type & 0x8000))
+	if (!(_smod.type & Additive_EnchantmentType))
 	{
-		if (_smod.type & 0x4000)
+		if (_smod.type & Multiplicative_EnchantmentType)
 		{
 			*value = _smod.val * *value;
 			return TRUE;
@@ -1976,7 +2097,7 @@ void CEnchantmentRegistry::Clear()
 
 DEFINE_PACK(CEnchantmentRegistry)
 {
-	DWORD header = 0;
+	uint32_t header = 0;
 
 	if (_mult_list)
 		header |= 1;
@@ -1987,7 +2108,7 @@ DEFINE_PACK(CEnchantmentRegistry)
 	if (_vitae)
 		header |= 4;
 
-	pWriter->Write<DWORD>(header);
+	pWriter->Write<uint32_t>(header);
 
 	if (_mult_list)
 		_mult_list->Pack(pWriter);
@@ -2001,7 +2122,7 @@ DEFINE_PACK(CEnchantmentRegistry)
 
 DEFINE_UNPACK(CEnchantmentRegistry)
 {
-	DWORD header = pReader->Read<DWORD>();
+	uint32_t header = pReader->Read<uint32_t>();
 
 	if (header & 1)
 	{
@@ -2074,6 +2195,8 @@ DEFINE_PACK_JSON(CEnchantmentRegistry)
 
 DEFINE_UNPACK_JSON(CEnchantmentRegistry)
 {
+	// TODO: identify failure conditions and return false
+
 	if (reader.find("mult_list") != reader.end())
 	{
 		if (!_mult_list)
@@ -2345,11 +2468,11 @@ BOOL CEnchantmentRegistry::IsEnchanted(const unsigned int spell)
 	if (spell == 666)
 		return _vitae != NULL;
 
-	if (CEnchantmentRegistry::IsEnchantmentInList(spell, _cooldown_list))
+	if (_cooldown_list && CEnchantmentRegistry::IsEnchantmentInList(spell, _cooldown_list))
 		return TRUE;	
-	if (CEnchantmentRegistry::IsEnchantmentInList(spell, _mult_list))
+	if (_mult_list && CEnchantmentRegistry::IsEnchantmentInList(spell, _mult_list))
 		return TRUE;
-	if (CEnchantmentRegistry::IsEnchantmentInList(spell, _add_list))
+	if (_add_list && CEnchantmentRegistry::IsEnchantmentInList(spell, _add_list))
 		return TRUE;
 
 	return FALSE;
@@ -2421,7 +2544,7 @@ BOOL CEnchantmentRegistry::UpdateVitae(Enchantment *vitae)
 
 BOOL CEnchantmentRegistry::UpdateEnchantment(Enchantment *to_update)
 {
-	DWORD what = to_update->_smod.type ^ ((to_update->_smod.type ^ (to_update->_smod.type >> 9)) >> 1);
+	uint32_t what = to_update->_smod.type ^ ((to_update->_smod.type ^ (to_update->_smod.type >> 9)) >> 1);
 	if (!(what & 0x4000))
 		return FALSE;
 
@@ -2578,10 +2701,10 @@ BOOL CEnchantmentRegistry::Duel(Enchantment *challenger, PackableListWithJson<En
 	return TRUE;
 }
 
-BOOL CEnchantmentRegistry::RemoveEnchantments(PackableListWithJson<DWORD> *to_remove)
+BOOL CEnchantmentRegistry::RemoveEnchantments(PackableListWithJson<uint32_t> *to_remove)
 {
 	BOOL bRemoved = FALSE;
-	for (PackableListWithJson<DWORD>::iterator i = to_remove->begin(); i != to_remove->end(); i++)
+	for (PackableListWithJson<uint32_t>::iterator i = to_remove->begin(); i != to_remove->end(); i++)
 	{
 		bRemoved = RemoveEnchantment(*i);
 	}
@@ -2594,7 +2717,7 @@ BOOL CEnchantmentRegistry::PurgeEnchantmentList(PackableListWithJson<Enchantment
 	if (!list)
 		return FALSE;
 
-	PackableListWithJson<DWORD> toRemove;
+	PackableListWithJson<uint32_t> toRemove;
 
 	for (PackableListWithJson<Enchantment>::iterator i = list->begin(); i != list->end(); i++)
 	{
@@ -2612,7 +2735,7 @@ BOOL CEnchantmentRegistry::PurgeBadEnchantmentList(PackableListWithJson<Enchantm
 	if (!list)
 		return FALSE;
 
-	PackableListWithJson<DWORD> toRemove;
+	PackableListWithJson<uint32_t> toRemove;
 
 	for (PackableListWithJson<Enchantment>::iterator i = list->begin(); i != list->end(); i++)
 	{
@@ -2635,7 +2758,7 @@ BOOL CEnchantmentRegistry::PurgeBadEnchantments()
 	return PurgeBadEnchantmentList(_mult_list) || PurgeBadEnchantmentList(_add_list);
 }
 
-void CEnchantmentRegistry::GetExpiredEnchantments(PackableListWithJson<Enchantment> *list, PackableListWithJson<DWORD> *expired)
+void CEnchantmentRegistry::GetExpiredEnchantments(PackableListWithJson<Enchantment> *list, PackableListWithJson<uint32_t> *expired)
 {
 	if (!list)
 		return;
@@ -2647,7 +2770,7 @@ void CEnchantmentRegistry::GetExpiredEnchantments(PackableListWithJson<Enchantme
 	}
 }
 
-void CEnchantmentRegistry::GetExpiredEnchantments(PackableListWithJson<DWORD> *expired)
+void CEnchantmentRegistry::GetExpiredEnchantments(PackableListWithJson<uint32_t> *expired)
 {
 	GetExpiredEnchantments(_mult_list, expired);
 	GetExpiredEnchantments(_add_list, expired);
@@ -2655,6 +2778,35 @@ void CEnchantmentRegistry::GetExpiredEnchantments(PackableListWithJson<DWORD> *e
 
 	if (_vitae && _vitae->HasExpired())
 		expired->push_back(_vitae->_id);
+}
+
+Enchantment* CEnchantmentRegistry::GetHighestEnchantOfCategory(unsigned int category, unsigned int smod_type)
+{
+	PackableListWithJson<Enchantment>* list;
+	Enchantment* highest = nullptr;
+	int highest_power = 0;
+	if (smod_type & Additive_EnchantmentType)
+		list = _add_list;
+	else if (smod_type & Multiplicative_EnchantmentType)
+		list = _mult_list;
+	else
+		list = _cooldown_list;
+
+	if (list)
+	{
+		for (auto &entry : *list)
+		{
+			if (category == entry._spell_category && entry._power_level > highest_power) // a more powerful enchant exists
+			{
+				highest_power = entry._power_level;
+				highest = &entry;
+			}
+		}
+		//if (highest) // if we've gotten a result from this loop, no need to go further
+			//return highest;
+	}
+
+	return highest;
 }
 
 BOOL CACQualities::PurgeEnchantments()
@@ -2710,21 +2862,21 @@ double CACQualities::GetVitaeValue()
 
 DEFINE_PACK(CreationProfile)
 {
-	pWriter->Write<DWORD>(wcid);
-	pWriter->Write<DWORD>(palette);
+	pWriter->Write<uint32_t>(wcid);
+	pWriter->Write<uint32_t>(palette);
 	pWriter->Write<float>(shade);
 	pWriter->Write<int>(destination);
-	pWriter->Write<long>(stack_size);
+	pWriter->Write<int32_t>(stack_size);
 	pWriter->Write<int>(try_to_bond);
 }
 
 DEFINE_UNPACK(CreationProfile)
 {
-	wcid = pReader->Read<DWORD>();
-	palette = pReader->Read<DWORD>();
+	wcid = pReader->Read<uint32_t>();
+	palette = pReader->Read<uint32_t>();
 	shade = pReader->Read<float>();
 	destination = pReader->Read<int>();
-	stack_size = pReader->Read<long>();
+	stack_size = pReader->Read<int32_t>();
 	try_to_bond = pReader->Read<int>();
 	return true;
 }
@@ -2741,12 +2893,12 @@ DEFINE_PACK_JSON(CreationProfile)
 
 DEFINE_UNPACK_JSON(CreationProfile)
 {
-	wcid = reader["wcid"];
-	palette = reader["palette"];
-	shade = reader["shade"];
-	destination = reader["destination"];
-	stack_size = reader["stack_size"];
-	try_to_bond = reader["try_to_bond"];
+	UnPackValue(reader, "wcid", wcid);
+	UnPackValue(reader, "palette", palette);
+	UnPackValue(reader, "shade", shade, 0.0f);
+	UnPackValue(reader, "destination", destination, 0);
+	UnPackValue(reader, "stack_size", stack_size, 0);
+	UnPackValue(reader, "try_to_bond", try_to_bond, 0);
 	return true;
 }
 
@@ -2913,11 +3065,11 @@ BodyPart &BodyPart::operator=(BodyPart const &other)
 DEFINE_PACK(BodyPart)
 {
 	pWriter->Write<int>(_bpsd ? 1 : 0);
-	pWriter->Write<DWORD>(_dtype);
+	pWriter->Write<uint32_t>(_dtype);
 	pWriter->Write<int>(_dval);
 	pWriter->Write<float>(_dvar);
 	_acache.Pack(pWriter);
-	pWriter->Write<DWORD>(_bh);
+	pWriter->Write<uint32_t>(_bh);
 	if (_bpsd)
 		_bpsd->Pack(pWriter);
 }
@@ -2926,11 +3078,11 @@ DEFINE_UNPACK(BodyPart)
 {
 	int hasBPSD = pReader->Read<int>();
 
-	_dtype = (DAMAGE_TYPE) pReader->Read<DWORD>();
+	_dtype = (DAMAGE_TYPE) pReader->Read<uint32_t>();
 	_dval = pReader->Read<int>();
 	_dvar = pReader->Read<float>();
 	_acache.UnPack(pReader);
-	_bh = (BODY_HEIGHT)pReader->Read<DWORD>();
+	_bh = (BODY_HEIGHT)pReader->Read<uint32_t>();
 
 	SafeDelete (_bpsd);
 	if (hasBPSD)
@@ -2944,11 +3096,11 @@ DEFINE_UNPACK(BodyPart)
 
 DEFINE_PACK_JSON(BodyPart)
 {
-	writer["dtype"] = (DWORD) _dtype;
+	writer["dtype"] = (uint32_t) _dtype;
 	writer["dval"] = _dval;
 	writer["dvar"] = _dvar;
 	_acache.PackJson(writer["acache"]);
-	writer["bh"] = (DWORD) _bh;
+	writer["bh"] = (uint32_t) _bh;
 
 	if (_bpsd)
 	{
@@ -2958,11 +3110,11 @@ DEFINE_PACK_JSON(BodyPart)
 
 DEFINE_UNPACK_JSON(BodyPart)
 {
-	_dtype = (DAMAGE_TYPE) (DWORD) reader["dtype"];
+	_dtype = (DAMAGE_TYPE) (uint32_t) reader["dtype"];
 	_dval = reader["dval"];
 	_dvar = reader["dvar"];
 	_acache.UnPackJson(reader["acache"]);
-	_bh = (BODY_HEIGHT) (DWORD) reader["bh"];
+	_bh = (BODY_HEIGHT) (uint32_t) reader["bh"];
 
 	SafeDelete(_bpsd);
 
@@ -3011,17 +3163,17 @@ Attribute::~Attribute()
 
 DEFINE_UNPACK(Attribute)
 {
-	_level_from_cp = pReader->Read<DWORD>();
-	_init_level = pReader->Read<DWORD>();
-	_cp_spent = pReader->Read<DWORD>();
+	_level_from_cp = pReader->Read<uint32_t>();
+	_init_level = pReader->Read<uint32_t>();
+	_cp_spent = pReader->Read<uint32_t>();
 	return true;
 }
 
 DEFINE_PACK(Attribute)
 {
-	pWriter->Write<DWORD>(_level_from_cp);
-	pWriter->Write<DWORD>(_init_level);
-	pWriter->Write<DWORD>(_cp_spent);
+	pWriter->Write<uint32_t>(_level_from_cp);
+	pWriter->Write<uint32_t>(_init_level);
+	pWriter->Write<uint32_t>(_cp_spent);
 }
 
 DEFINE_UNPACK_JSON(Attribute)
@@ -3053,6 +3205,28 @@ const char *Attribute::GetAttributeName(STypeAttribute key) // custom
 	}
 }
 
+uint32_t Attribute::GetMaxXp()
+{
+	return ExperienceSystem::ExperienceToAttributeLevel(ExperienceSystem::GetMaxAttributeLevel());
+}
+
+uint32_t Attribute::GetXpNeededForMaxXp()
+{
+	const uint32_t currentAttrXp = _cp_spent;
+
+	// This uses the virtual method, so this method works for both Attribute and SecondaryAttribute
+	const uint32_t maxAttrXp = GetMaxXp();
+
+	const uint32_t amountNeededForMaxXp = maxAttrXp - currentAttrXp;
+
+	return amountNeededForMaxXp;
+}
+
+uint32_t SecondaryAttribute::GetMaxXp()
+{
+	return ExperienceSystem::ExperienceToAttribute2ndLevel(ExperienceSystem::GetMaxAttribute2ndLevel());
+}
+
 SecondaryAttribute::SecondaryAttribute()
 {
 	_current = 0;
@@ -3065,7 +3239,7 @@ SecondaryAttribute::~SecondaryAttribute()
 DEFINE_UNPACK(SecondaryAttribute)
 {
 	Attribute::UnPack(pReader);
-	_current = pReader->Read<DWORD>();
+	_current = pReader->Read<uint32_t>();
 
 	return true;
 }
@@ -3073,7 +3247,7 @@ DEFINE_UNPACK(SecondaryAttribute)
 DEFINE_PACK(SecondaryAttribute)
 {
 	Attribute::Pack(pWriter);
-	pWriter->Write<DWORD>(_current);
+	pWriter->Write<uint32_t>(_current);
 }
 
 DEFINE_UNPACK_JSON(SecondaryAttribute)
@@ -3098,7 +3272,7 @@ DEFINE_PACK(Attribute2ndTable)
 
 DEFINE_UNPACK(Attribute2ndTable)
 {
-	pReader->Read<DWORD>(); // skip file ID
+	pReader->Read<uint32_t>(); // skip file ID
 	_max_health.UnPack(pReader);
 	_max_stamina.UnPack(pReader);
 	_max_mana.UnPack(pReader);
@@ -3129,7 +3303,7 @@ void AttributeCache::Clear()
 
 DEFINE_UNPACK(AttributeCache)
 {
-	DWORD contentFlags = pReader->Read<DWORD>();
+	uint32_t contentFlags = pReader->Read<uint32_t>();
 
 	if (contentFlags & 1)
 	{
@@ -3193,7 +3367,7 @@ DEFINE_UNPACK(AttributeCache)
 DEFINE_PACK(AttributeCache)
 {
 	BinaryWriter content;
-	DWORD contentFlags = 0;
+	uint32_t contentFlags = 0;
 
 	if (_strength)
 	{
@@ -3241,7 +3415,7 @@ DEFINE_PACK(AttributeCache)
 		content.Write(_mana);
 	}
 
-	pWriter->Write<DWORD>(contentFlags);
+	pWriter->Write<uint32_t>(contentFlags);
 	pWriter->Write(&content);
 }
 
@@ -3347,7 +3521,7 @@ DEFINE_PACK_JSON(AttributeCache)
 	}
 }
 
-BOOL AttributeCache::SetAttribute(STypeAttribute key, DWORD val)
+BOOL AttributeCache::SetAttribute(STypeAttribute key, uint32_t val)
 {
 	switch (key)
 	{
@@ -3498,7 +3672,7 @@ BOOL AttributeCache::InqAttribute(STypeAttribute index, Attribute &value)
 	return FALSE;
 }
 
-BOOL AttributeCache::InqAttribute(STypeAttribute index, DWORD &value)
+BOOL AttributeCache::InqAttribute(STypeAttribute index, uint32_t &value)
 {
 	switch (index)
 	{
@@ -3586,7 +3760,7 @@ BOOL AttributeCache::InqAttribute2nd(STypeAttribute2nd key, SecondaryAttribute &
 	return FALSE;
 }
 
-BOOL AttributeCache::InqAttribute2nd(STypeAttribute2nd key, DWORD &value)
+BOOL AttributeCache::InqAttribute2nd(STypeAttribute2nd key, uint32_t &value)
 {
 	switch (key)
 	{
@@ -3664,7 +3838,7 @@ BOOL AttributeCache::SetAttribute2nd(STypeAttribute2nd key, const SecondaryAttri
 	return FALSE;
 }
 
-BOOL AttributeCache::SetAttribute2nd(STypeAttribute2nd key, DWORD value)
+BOOL AttributeCache::SetAttribute2nd(STypeAttribute2nd key, uint32_t value)
 {
 	switch (key)
 	{
@@ -3723,13 +3897,13 @@ BOOL AttributeCache::SetAttribute2nd(STypeAttribute2nd key, DWORD value)
 
 DEFINE_UNPACK(Skill)
 {
-	DWORD ppFlag = pReader->Read<DWORD>();
+	uint32_t ppFlag = pReader->Read<uint32_t>();
 	_level_from_pp = ppFlag & 0xFFFF;
 
 	_sac = (SKILL_ADVANCEMENT_CLASS) pReader->Read<int>();
-	_pp = pReader->Read<DWORD>();
-	_init_level = pReader->Read<DWORD>();
-	_resistance_of_last_check = pReader->Read<long>();
+	_pp = pReader->Read<uint32_t>();
+	_init_level = pReader->Read<uint32_t>();
+	_resistance_of_last_check = pReader->Read<int32_t>();
 	_last_used_time = Timer::cur_time - pReader->Read<double>(); // this doesn't seem right
 
 	return true;
@@ -3737,11 +3911,11 @@ DEFINE_UNPACK(Skill)
 
 DEFINE_PACK(Skill)
 {
-	pWriter->Write<DWORD>(0x10000 | (_level_from_pp & 0xFFFF));
+	pWriter->Write<uint32_t>(0x10000 | (_level_from_pp & 0xFFFF));
 	pWriter->Write<int>(_sac);
-	pWriter->Write<DWORD>(_pp);
-	pWriter->Write<DWORD>(_init_level);
-	pWriter->Write<long>(_resistance_of_last_check);
+	pWriter->Write<uint32_t>(_pp);
+	pWriter->Write<uint32_t>(_init_level);
+	pWriter->Write<int32_t>(_resistance_of_last_check);
 	pWriter->Write<double>(Timer::cur_time - _last_used_time); // this doesn't seem right
 }
 
@@ -3752,7 +3926,7 @@ DEFINE_UNPACK_JSON(Skill)
 	_pp = reader["pp"];
 	_init_level = reader["init_level"];
 	_resistance_of_last_check = reader["resistance_of_last_check"];
-	_last_used_time = Timer::cur_time - reader["last_used_time"];
+	_last_used_time = Timer::cur_time - (double)reader["last_used_time"];
 	return true;
 }
 
@@ -3770,6 +3944,55 @@ void Skill::SetSkillAdvancementClass(SKILL_ADVANCEMENT_CLASS val)
 {
 	_sac = val;
 	_level_from_pp = ExperienceSystem::SkillLevelFromExperience(val, _pp);
+}
+
+bool Skill::IsMaxed()
+{
+	// Skill is trained and at max level for trained skills. >= is just in case something (like a bug) could make _level_from_pp above expected max.
+	if (_sac == TRAINED_SKILL_ADVANCEMENT_CLASS && _level_from_pp >= ExperienceSystem::GetMaxTrainedSkillLevel())
+	{
+		return true;
+	}
+
+	// Skill is specialized and at max level for specialized skills
+	if (_sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS && _level_from_pp >= ExperienceSystem::GetMaxSpecializedSkillLevel())
+	{
+		return true;
+	}
+
+	// Is untrained/undef, or otherwise not maxed in level
+	return false;
+}
+
+uint32_t Skill::GetMaxXP()
+{
+	uint32_t maxSkillLevel = 0;
+
+	if (_sac == TRAINED_SKILL_ADVANCEMENT_CLASS)
+	{
+		maxSkillLevel = ExperienceSystem::GetMaxTrainedSkillLevel();
+	}
+	else if (_sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
+	{
+		maxSkillLevel = ExperienceSystem::GetMaxSpecializedSkillLevel();
+	}
+	else
+	{
+		return UINT_MAX;
+	}
+
+	return ExperienceSystem::ExperienceToSkillLevel(_sac, maxSkillLevel);
+}
+
+uint32_t Skill::GetXpNeededForMaxXp()
+{
+	const uint32_t currentSkillXp = _pp;
+
+	const uint32_t maxSkillXp = GetMaxXP();
+
+	const uint32_t amountNeededForMaxXp = maxSkillXp - currentSkillXp;
+
+	return amountNeededForMaxXp;
 }
 
 DEFINE_UNPACK(SpellBookPage)
@@ -3816,7 +4039,7 @@ DEFINE_PACK_JSON(CSpellBook)
 	_spellbook.PackJson(writer);
 }
 
-void CSpellBook::TranscribeSpells(const std::list<DWORD> &spells)
+void CSpellBook::TranscribeSpells(const std::list<uint32_t> &spells)
 {
 }
 
@@ -3825,17 +4048,17 @@ void CSpellBook::Prune()
 	UNFINISHED();
 }
 
-bool CSpellBook::Exists(DWORD spellid)
+bool CSpellBook::Exists(uint32_t spellid)
 {
 	return _spellbook.lookup(spellid) != NULL;
 }
 
-void CSpellBook::AddSpell(DWORD spellid, const SpellBookPage &spell)
+void CSpellBook::AddSpell(uint32_t spellid, const SpellBookPage &spell)
 {
 	_spellbook[spellid] = spell;
 }
 
-void CSpellBook::RemoveSpell(DWORD spellid)
+void CSpellBook::RemoveSpell(uint32_t spellid)
 {
 	_spellbook.remove(spellid);
 }
@@ -3847,6 +4070,15 @@ void CSpellBook::ClearSpells()
 
 CBaseQualities::CBaseQualities()
 {
+	// Initialise - might prevent some crashes?
+	m_IntStats = new PackableHashTableWithJson<STypeInt, int>();
+	m_Int64Stats = new PackableHashTableWithJson<STypeInt64, int64_t>();
+	m_BoolStats = new PackableHashTableWithJson<STypeBool, BOOL>();
+	m_FloatStats = new PackableHashTableWithJson<STypeFloat, double>();
+	m_StringStats = new PackableHashTableWithJson<STypeString, std::string>();
+	m_DIDStats = new PackableHashTableWithJson<STypeDID, uint32_t>();
+	m_IIDStats = new PackableHashTableWithJson<STypeIID, uint32_t>();
+	m_PositionStats = new PackableHashTableWithJson<STypePosition, Position>();
 }
 
 CBaseQualities::~CBaseQualities()
@@ -3870,7 +4102,7 @@ DEFINE_UNPACK(CBaseQualities)
 {
 	Clear();
 
-	DWORD contentFlags = pReader->Read<DWORD>();
+	uint32_t contentFlags = pReader->Read<uint32_t>();
 	m_WeenieType = (ITEM_TYPE) pReader->Read<int>();
 
 	if (contentFlags & 1)
@@ -3891,7 +4123,7 @@ DEFINE_UNPACK(CBaseQualities)
 	{
 		if (!m_Int64Stats)
 		{
-			m_Int64Stats = new PackableHashTableWithJson<STypeInt64, long long>();
+			m_Int64Stats = new PackableHashTableWithJson<STypeInt64, int64_t>();
 		}
 
 		m_Int64Stats->UnPack(pReader);
@@ -3947,7 +4179,7 @@ DEFINE_UNPACK(CBaseQualities)
 	{
 		if (!m_DIDStats)
 		{
-			m_DIDStats = new PackableHashTableWithJson<STypeDID, DWORD>();
+			m_DIDStats = new PackableHashTableWithJson<STypeDID, uint32_t>();
 		}
 
 		m_DIDStats->UnPack(pReader);
@@ -3961,7 +4193,7 @@ DEFINE_UNPACK(CBaseQualities)
 	{
 		if (!m_IIDStats)
 		{
-			m_IIDStats = new PackableHashTableWithJson<STypeIID, DWORD>();
+			m_IIDStats = new PackableHashTableWithJson<STypeIID, uint32_t>();
 		}
 
 		m_IIDStats->UnPack(pReader);
@@ -3991,7 +4223,7 @@ DEFINE_UNPACK(CBaseQualities)
 DEFINE_PACK(CBaseQualities)
 {
 	BinaryWriter content;
-	DWORD contentFlags = 0;
+	uint32_t contentFlags = 0;
 
 	if (m_IntStats)
 	{
@@ -4034,7 +4266,7 @@ DEFINE_PACK(CBaseQualities)
 		content.Write(m_PositionStats);
 	}
 
-	pWriter->Write<DWORD>(contentFlags);
+	pWriter->Write<uint32_t>(contentFlags);
 	pWriter->Write<int>((int)m_WeenieType);
 	pWriter->Write(&content);
 }
@@ -4063,7 +4295,7 @@ DEFINE_UNPACK_JSON(CBaseQualities)
 	{
 		if (!m_Int64Stats)
 		{
-			m_Int64Stats = new PackableHashTableWithJson<STypeInt64, long long>();
+			m_Int64Stats = new PackableHashTableWithJson<STypeInt64, int64_t>();
 		}
 
 		m_Int64Stats->UnPackJson(reader["int64Stats"]);
@@ -4119,7 +4351,7 @@ DEFINE_UNPACK_JSON(CBaseQualities)
 	{
 		if (!m_DIDStats)
 		{
-			m_DIDStats = new PackableHashTableWithJson<STypeDID, DWORD>();
+			m_DIDStats = new PackableHashTableWithJson<STypeDID, uint32_t>();
 		}
 
 		m_DIDStats->UnPackJson(reader["didStats"]);
@@ -4133,7 +4365,7 @@ DEFINE_UNPACK_JSON(CBaseQualities)
 	{
 		if (!m_IIDStats)
 		{
-			m_IIDStats = new PackableHashTableWithJson<STypeIID, DWORD>();
+			m_IIDStats = new PackableHashTableWithJson<STypeIID, uint32_t>();
 		}
 
 		m_IIDStats->UnPackJson(reader["iidStats"]);
@@ -4236,21 +4468,41 @@ void CBaseQualities::RemoveInt(STypeInt key)
 	}
 }
 
-void CBaseQualities::SetInt64(STypeInt64 key, __int64 value)
+void CBaseQualities::AdjInt(STypeInt key, int value, int & newvalue)
+{
+	AdjInt(key, value);
+	newvalue = GetInt(key, 0);
+}
+
+void CBaseQualities::AdjInt(STypeInt key, int value)
+{
+
+	int exist;
+	if (InqInt(key, exist, true))
+	{
+		int newValue = max(0, exist + value);
+		exist = newValue;
+	}
+
+	SetInt(key, exist);
+}
+
+
+void CBaseQualities::SetInt64(STypeInt64 key, int64_t value)
 {
 	if (!m_Int64Stats)
 	{
-		m_Int64Stats = new PackableHashTableWithJson<STypeInt64, __int64>();
+		m_Int64Stats = new PackableHashTableWithJson<STypeInt64, int64_t>();
 	}
 
 	m_Int64Stats->operator[](key) = value;
 }
 
-BOOL CBaseQualities::InqInt64(STypeInt64 key, __int64 &value)
+BOOL CBaseQualities::InqInt64(STypeInt64 key, int64_t &value)
 {
 	if (m_Int64Stats)
 	{
-		const __int64 *pValue = m_Int64Stats->lookup(key);
+		const int64_t *pValue = m_Int64Stats->lookup(key);
 
 		if (pValue)
 		{
@@ -4269,6 +4521,7 @@ void CBaseQualities::RemoveInt64(STypeInt64 key)
 		m_Int64Stats->remove(key);
 	}
 }
+
 
 void CBaseQualities::SetFloat(STypeFloat key, double value)
 {
@@ -4379,21 +4632,21 @@ void CBaseQualities::RemoveString(STypeString key)
 }
 
 
-void CBaseQualities::SetDataID(STypeDID key, DWORD value)
+void CBaseQualities::SetDataID(STypeDID key, uint32_t value)
 {
 	if (!m_DIDStats)
 	{
-		m_DIDStats = new PackableHashTableWithJson<STypeDID, DWORD>();
+		m_DIDStats = new PackableHashTableWithJson<STypeDID, uint32_t>();
 	}
 
 	m_DIDStats->operator[](key) = value;
 }
 
-BOOL CBaseQualities::InqDataID(STypeDID key, DWORD &value)
+BOOL CBaseQualities::InqDataID(STypeDID key, uint32_t &value)
 {
 	if (m_DIDStats)
 	{
-		const DWORD *pValue = m_DIDStats->lookup(key);
+		const uint32_t *pValue = m_DIDStats->lookup(key);
 
 		if (pValue)
 		{
@@ -4414,21 +4667,26 @@ void CBaseQualities::RemoveDataID(STypeDID key)
 }
 
 
-void CBaseQualities::SetInstanceID(STypeIID key, DWORD value)
+void CBaseQualities::SetInstanceID(STypeIID key, uint32_t value)
 {
 	if (!m_IIDStats)
 	{
-		m_IIDStats = new PackableHashTableWithJson<STypeIID, DWORD>();
+		m_IIDStats = new PackableHashTableWithJson<STypeIID, uint32_t>();
 	}
 
 	m_IIDStats->operator[](key) = value;
 }
 
-BOOL CBaseQualities::InqInstanceID(STypeIID key, DWORD &value)
+BOOL CBaseQualities::InqInstanceID(STypeIID key, uint32_t &value)
 {
+	if (!m_IIDStats)
+	{
+		return FALSE;
+	}
+
 	if (m_IIDStats)
 	{
-		const DWORD *pValue = m_IIDStats->lookup(key);
+		const uint32_t *pValue = m_IIDStats->lookup(key);
 
 		if (pValue)
 		{
@@ -4447,6 +4705,7 @@ void CBaseQualities::RemoveInstanceID(STypeIID key)
 		m_IIDStats->remove(key);
 	}
 }
+
 
 void CBaseQualities::SetPosition(STypePosition key, const Position &value)
 {
@@ -4482,6 +4741,7 @@ void CBaseQualities::RemovePosition(STypePosition key)
 	}
 }
 
+
 int CBaseQualities::GetInt(STypeInt key, int defaultValue)
 {
 	int value = defaultValue;
@@ -4489,9 +4749,9 @@ int CBaseQualities::GetInt(STypeInt key, int defaultValue)
 	return value;
 }
 
-long long CBaseQualities::GetInt64(STypeInt64 key, long long defaultValue)
+int64_t CBaseQualities::GetInt64(STypeInt64 key, int64_t defaultValue)
 {
-	long long value = defaultValue;
+	int64_t value = defaultValue;
 	InqInt64(key, value);
 	return value;
 }
@@ -4517,16 +4777,16 @@ std::string CBaseQualities::GetString(STypeString key, std::string defaultValue)
 	return value;
 }
 
-DWORD CBaseQualities::GetDID(STypeDID key, DWORD defaultValue)
+uint32_t CBaseQualities::GetDID(STypeDID key, uint32_t defaultValue)
 {
-	DWORD value = defaultValue;
+	uint32_t value = defaultValue;
 	InqDataID(key, value);
 	return value;
 }
 
-DWORD CBaseQualities::GetIID(STypeIID key, DWORD defaultValue)
+uint32_t CBaseQualities::GetIID(STypeIID key, uint32_t defaultValue)
 {
-	DWORD value = defaultValue;
+	uint32_t value = defaultValue;
 	InqInstanceID(key, value);
 	return value;
 }
@@ -4537,6 +4797,7 @@ Position CBaseQualities::GetPosition(STypePosition key, const Position &defaultV
 	InqPosition(key, value);
 	return value;
 }
+
 
 CACQualities::CACQualities()
 {
@@ -4554,9 +4815,9 @@ DEFINE_UNPACK(CACQualities)
 	if (!CBaseQualities::UnPack(pReader))
 		return false;
 
-	DWORD contentFlags = pReader->Read<DWORD>();
+	uint32_t contentFlags = pReader->Read<uint32_t>();
 	
-	SetID(pReader->Read<DWORD>()); // WCID
+	SetID(pReader->Read<uint32_t>()); // WCID
 
 	if (contentFlags & 1)
 	{
@@ -4734,7 +4995,7 @@ DEFINE_PACK(CACQualities)
 	CBaseQualities::Pack(pWriter);
 
 	BinaryWriter content;
-	DWORD contentFlags = 0;
+	uint32_t contentFlags = 0;
 
 	if (_attribCache)
 	{
@@ -4797,8 +5058,8 @@ DEFINE_PACK(CACQualities)
 		content.Write(_generator_queue);
 	}
 
-	pWriter->Write<DWORD>(contentFlags);
-	pWriter->Write<DWORD>(GetID());
+	pWriter->Write<uint32_t>(contentFlags);
+	pWriter->Write<uint32_t>(GetID());
 	pWriter->Write(&content);
 }
 
@@ -5081,7 +5342,7 @@ BOOL CACQualities::EnchantFloat(STypeFloat key, double &value)
 	return FALSE;
 }
 
-BOOL CACQualities::EnchantAttribute(STypeAttribute key, DWORD &value)
+BOOL CACQualities::EnchantAttribute(STypeAttribute key, uint32_t &value)
 {
 	if (_enchantment_reg)
 		return _enchantment_reg->EnchantAttribute(key, (unsigned int *)&value);
@@ -5097,7 +5358,7 @@ BOOL CACQualities::EnchantBodyArmorValue(unsigned int part, DAMAGE_TYPE dt, int 
 	return FALSE;
 }
 
-BOOL CACQualities::SetAttribute(STypeAttribute key, DWORD initialValue)
+BOOL CACQualities::SetAttribute(STypeAttribute key, uint32_t initialValue)
 {
 	if (!_attribCache)
 	{
@@ -5127,7 +5388,7 @@ BOOL CACQualities::InqAttribute(STypeAttribute key, Attribute &pvalue)
 	return FALSE;
 }
 
-BOOL CACQualities::InqAttribute(STypeAttribute key, DWORD &value, BOOL raw)
+BOOL CACQualities::InqAttribute(STypeAttribute key, uint32_t &value, BOOL raw)
 {
 	if (_attribCache)
 	{
@@ -5143,7 +5404,7 @@ BOOL CACQualities::InqAttribute(STypeAttribute key, DWORD &value, BOOL raw)
 	return FALSE;
 }
 
-BOOL CACQualities::BoundsCheck(STypeAttribute2nd key, DWORD &val, DWORD &max)
+BOOL CACQualities::BoundsCheck(STypeAttribute2nd key, uint32_t &val, uint32_t &max)
 {
 	switch (key)
 	{
@@ -5172,7 +5433,7 @@ BOOL CACQualities::BoundsCheck(STypeAttribute2nd key, DWORD &val, DWORD &max)
 	return TRUE;
 }
 
-BOOL CACQualities::SetAttribute2nd(STypeAttribute2nd key, DWORD value, DWORD &result, DWORD &max)
+BOOL CACQualities::SetAttribute2nd(STypeAttribute2nd key, uint32_t value, uint32_t &result, uint32_t &max)
 {
 	if (!_attribCache)
 	{
@@ -5187,15 +5448,15 @@ BOOL CACQualities::SetAttribute2nd(STypeAttribute2nd key, DWORD value, DWORD &re
 	return TRUE;
 }
 
-BOOL CACQualities::SetAttribute2nd(STypeAttribute2nd key, DWORD value)
+BOOL CACQualities::SetAttribute2nd(STypeAttribute2nd key, uint32_t value)
 {
 	if (!_attribCache)
 	{
 		_attribCache = new AttributeCache();
 	}
 
-	DWORD resultValue;
-	DWORD maxValue;
+	uint32_t resultValue;
+	uint32_t maxValue;
 	return SetAttribute2nd(key, value, resultValue, maxValue);
 }
 
@@ -5214,7 +5475,7 @@ BOOL CACQualities::SetAttribute2nd(STypeAttribute2nd key, const SecondaryAttribu
 	case STAMINA_ATTRIBUTE_2ND:
 	case MANA_ATTRIBUTE_2ND:
 
-		DWORD maxValue = 0;
+		uint32_t maxValue = 0;
 		if (!_attribCache->InqAttribute2nd((STypeAttribute2nd)((int)key - 1), maxValue))
 			return FALSE;
 
@@ -5237,7 +5498,7 @@ BOOL CACQualities::InqAttribute2nd(STypeAttribute2nd key, SecondaryAttribute &va
 	return FALSE;
 }
 
-BOOL CACQualities::InqAttribute2ndBaseLevel(STypeAttribute2nd key, DWORD &value, BOOL raw)
+BOOL CACQualities::InqAttribute2ndBaseLevel(STypeAttribute2nd key, uint32_t &value, BOOL raw)
 {
 	Attribute2ndTable *pTable = CachedAttribute2ndTable; // Attribute2ndTable::Get(0x0E000003);
 	
@@ -5260,8 +5521,8 @@ BOOL CACQualities::InqAttribute2ndBaseLevel(STypeAttribute2nd key, DWORD &value,
 		return FALSE;
 	}
 
-	DWORD attr1val = 0;
-	DWORD attr2val = 0;
+	uint32_t attr1val = 0;
+	uint32_t attr2val = 0;
 
 	if (base->_formula._attr1 != 0)
 		InqAttribute((STypeAttribute)base->_formula._attr1, attr1val, raw);
@@ -5274,9 +5535,9 @@ BOOL CACQualities::InqAttribute2ndBaseLevel(STypeAttribute2nd key, DWORD &value,
 	return TRUE;
 }
 
-BOOL CACQualities::InqAttribute2nd(STypeAttribute2nd key, DWORD &value, BOOL raw)
+BOOL CACQualities::InqAttribute2nd(STypeAttribute2nd key, uint32_t &value, BOOL raw)
 {
-	DWORD baseLevel = 0;
+	uint32_t baseLevel = 0;
 
 	switch (key)
 	{
@@ -5318,7 +5579,7 @@ BOOL CACQualities::InqAttribute2nd(STypeAttribute2nd key, DWORD &value, BOOL raw
 	return TRUE;
 }
 
-BOOL CACQualities::EnchantAttribute2nd(STypeAttribute2nd key, DWORD &value)
+BOOL CACQualities::EnchantAttribute2nd(STypeAttribute2nd key, uint32_t &value)
 {
 	if (_enchantment_reg)
 		return _enchantment_reg->EnchantAttribute2nd(key, (unsigned int *)&value);
@@ -5326,7 +5587,7 @@ BOOL CACQualities::EnchantAttribute2nd(STypeAttribute2nd key, DWORD &value)
 	return FALSE;
 }
 
-BOOL CACQualities::EnchantSkill(STypeSkill key, DWORD &value)
+BOOL CACQualities::EnchantSkill(STypeSkill key, uint32_t &value)
 {
 	if (_enchantment_reg)
 		return _enchantment_reg->EnchantSkill(key, (int *)&value);
@@ -5334,7 +5595,7 @@ BOOL CACQualities::EnchantSkill(STypeSkill key, DWORD &value)
 	return FALSE;
 }
 
-BOOL CACQualities::InqSkill(STypeSkill key, DWORD &value, BOOL raw)
+BOOL CACQualities::InqSkill(STypeSkill key, uint32_t &value, BOOL raw)
 {
 	if (!InqSkillBaseLevel(key, value, raw))
 		return FALSE;
@@ -5385,25 +5646,25 @@ BOOL CACQualities::InqSkill(STypeSkill key, DWORD &value, BOOL raw)
 	if (augmentType > 0)
 		value += 10;
 
+	int lum_aug = 0;
+	InqInt(LUM_AUG_SKILLED_SPEC_INT, lum_aug, 0, 0);
+	if (lum_aug > 0)
+	{
+		if (_skillStatsTable)
+		{
+			const Skill *skill = _skillStatsTable->lookup(key);
+			if (skill && skill->_sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
+				value += lum_aug;
+		}
+	}
+
 	if (!raw)
 	{
-		EnchantSkill(key, value);
-
 		int valCheck = 0;
 		if (InqInt(AUGMENTATION_JACK_OF_ALL_TRADES_INT, valCheck, 0, 0) && valCheck > 0)
 			value += 5;
 
-		int lum_aug = 0;
-		InqInt(LUM_AUG_SKILLED_SPEC_INT, lum_aug, 0, 0);
-		if (lum_aug > 0)
-		{
-			if (_skillStatsTable)
-			{
-				const Skill *skill = _skillStatsTable->lookup(key);
-				if (skill && skill->_sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
-					value += 2 * lum_aug;
-			}
-		}
+		EnchantSkill(key, value);
 	}
 
 	return TRUE;
@@ -5451,7 +5712,7 @@ void CACQualities::SetSkill(STypeSkill key, const Skill &val)
 	_skillStatsTable->operator[](key) = val;
 }
 
-void CACQualities::SetSkillLevel(STypeSkill key, DWORD val)
+void CACQualities::SetSkillLevel(STypeSkill key, uint32_t val)
 {
 	if (!_skillStatsTable)
 	{
@@ -5471,7 +5732,7 @@ void CACQualities::SetSkillAdvancementClass(STypeSkill key, SKILL_ADVANCEMENT_CL
 	_skillStatsTable->operator[](key).SetSkillAdvancementClass(val);
 }
 
-BOOL CACQualities::InqSkillLevel(STypeSkill key, DWORD &value)
+BOOL CACQualities::InqSkillLevel(STypeSkill key, uint32_t &value)
 {
 	if (_skillStatsTable)
 	{
@@ -5487,7 +5748,7 @@ BOOL CACQualities::InqSkillLevel(STypeSkill key, DWORD &value)
 	return FALSE;
 }
 
-BOOL CACQualities::InqSkillBaseLevel(STypeSkill key, DWORD &value, BOOL raw)
+BOOL CACQualities::InqSkillBaseLevel(STypeSkill key, uint32_t &value, BOOL raw)
 {
 	SkillTable *pSkillTable = SkillSystem::GetSkillTable();
 
@@ -5518,7 +5779,7 @@ BOOL CACQualities::InqSkillBaseLevel(STypeSkill key, DWORD &value, BOOL raw)
 		return TRUE;
 	}
 
-	DWORD attr1value = 0, attr2value = 0;
+	uint32_t attr1value = 0, attr2value = 0;
 
 	if (pSkillBase->_formula._attr1)
 	{
@@ -5684,7 +5945,7 @@ BOOL CACQualities::InqBodyArmorValue(unsigned int part, DAMAGE_TYPE dt, int &val
 	return FALSE;
 }
 
-void CACQualities::AddSpell(DWORD spellid)
+void CACQualities::AddSpell(uint32_t spellid)
 {
 	if (!_spell_book)
 	{
@@ -5696,9 +5957,16 @@ void CACQualities::AddSpell(DWORD spellid)
 	_spell_book->AddSpell(spellid, page);
 }
 
+void CACQualities::RemoveSpell(uint32_t spellid)
+{
+	if (!_spell_book) return;
+	_spell_book->RemoveSpell(spellid);
+}
+
+
 BOOL CACQualities::InqLoad(float &burden)
 {
-	DWORD strength = 10;
+	uint32_t strength = 10;
 	InqAttribute(STRENGTH_ATTRIBUTE, strength, FALSE);
 
 	int encumb_augmentations = 0;
@@ -5722,15 +5990,15 @@ BOOL CACQualities::InqJumpVelocity(float extent, float &v_z)
 	if (!InqLoad(load))
 		return FALSE;
 
-	DWORD jumpskill = 1;
-	DWORD stamina = 0;
+	uint32_t jumpskill = 1;
+	uint32_t stamina = 0;
 	if (_attribCache && _attribCache->InqAttribute2nd(STAMINA_ATTRIBUTE_2ND, stamina))
 	{
 		EnchantAttribute2nd(STAMINA_ATTRIBUTE_2ND, stamina);
 
 		if (InqSkillBaseLevel(JUMP_SKILL, jumpskill, FALSE))
 		{
-			DWORD increase = 0;
+			uint32_t increase = 0;
 			if (InqSkillLevel(JUMP_SKILL, increase))
 				jumpskill += increase;
 
@@ -5779,13 +6047,13 @@ BOOL CACQualities::InqRunRate(float &rate)
 	if (!_attribCache)
 		return FALSE;
 
-	DWORD stamina;
+	uint32_t stamina;
 	if (!_attribCache->InqAttribute2nd(STAMINA_ATTRIBUTE_2ND, stamina))
 		return FALSE;
 
 	EnchantAttribute2nd(STAMINA_ATTRIBUTE_2ND, stamina);
 
-	DWORD runskill;
+	uint32_t runskill;
 	if (!InqSkill(RUN_SKILL, runskill, FALSE))
 		return FALSE;
 
@@ -5804,7 +6072,7 @@ BOOL CACQualities::CanJump(float extent)
 	return TRUE;
 }
 
-BOOL CACQualities::JumpStaminaCost(float extent, long & cost)
+BOOL CACQualities::JumpStaminaCost(float extent, int32_t & cost)
 {
 	float load = 0.0f;
 	if (!InqLoad(load))
@@ -5841,6 +6109,25 @@ BOOL  CACQualities::UpdateEnchantment(Enchantment *to_update)
 {
 	if (!_enchantment_reg)
 		_enchantment_reg = new CEnchantmentRegistry();
+
+	if(to_update->_smod.type & Int_EnchantmentType)
+	{
+		int hasKey;
+		if (!InqInt((STypeInt)to_update->_smod.key, hasKey))
+		{
+			SetInt((STypeInt)to_update->_smod.key, 0);
+		}
+	}
+
+	if(to_update->_smod.type & Float_EnchantmentType)
+	{
+		double hasKey = 0.0;
+		if (!InqFloat((STypeFloat)to_update->_smod.key, hasKey))
+		{
+			SetFloat((STypeFloat)to_update->_smod.key, 0.0);
+		}
+	}
+
 
 	return _enchantment_reg->UpdateEnchantment(to_update);
 }
@@ -5938,7 +6225,7 @@ std::string IntStatKeyEnumPacker(const STypeInt &key)
 void CBaseQualities::CopyFrom(CBaseQualities *pOther)
 {
 	Clear();
-
+	
 	m_WeenieType = pOther->m_WeenieType;
 
 	if (pOther->m_IntStats)
@@ -5949,7 +6236,7 @@ void CBaseQualities::CopyFrom(CBaseQualities *pOther)
 	}
 	if (pOther->m_Int64Stats)
 	{
-		m_Int64Stats = new PackableHashTableWithJson<STypeInt64, long long>();
+		m_Int64Stats = new PackableHashTableWithJson<STypeInt64, int64_t>();
 		*m_Int64Stats = *pOther->m_Int64Stats;
 	}
 	if (pOther->m_BoolStats)
@@ -5969,12 +6256,12 @@ void CBaseQualities::CopyFrom(CBaseQualities *pOther)
 	}	
 	if (pOther->m_DIDStats)
 	{
-		m_DIDStats = new PackableHashTableWithJson<STypeDID, DWORD>();
+		m_DIDStats = new PackableHashTableWithJson<STypeDID, uint32_t>();
 		*m_DIDStats = *pOther->m_DIDStats;
 	}
 	if (pOther->m_IIDStats)
 	{
-		m_IIDStats = new PackableHashTableWithJson<STypeIID, DWORD>();
+		m_IIDStats = new PackableHashTableWithJson<STypeIID, uint32_t>();
 		*m_IIDStats = *pOther->m_IIDStats;
 	}
 	if (pOther->m_PositionStats)
@@ -6046,6 +6333,22 @@ void CACQualities::CopyFrom(CACQualities *pOther)
 		_generator_queue = new GeneratorQueue();
 		*_generator_queue = *pOther->_generator_queue;
 	}
+}
+
+Enchantment* CACQualities::AddCooldown(uint32_t cooldownId, double duration)
+{
+	if (!_enchantment_reg)
+		_enchantment_reg = new CEnchantmentRegistry();
+
+	return _enchantment_reg->AddCooldown(cooldownId, duration, GetID());
+}
+
+BOOL CACQualities::InqCooldown(uint32_t cooldownId)
+{
+	if (!_enchantment_reg)
+		_enchantment_reg = new CEnchantmentRegistry();
+
+	return _enchantment_reg->InqCooldown(cooldownId);
 }
 
 BOOL Enchantment::Enchant(EnchantedQualityDetails *value)
@@ -6146,7 +6449,7 @@ BOOL CACQualities::GetBodyArmorEnchantmentDetails(unsigned int part, DAMAGE_TYPE
 		tryEnchanting = true;
 
 	int baseArmor1 = 0;
-	if(tryEnchanting)
+	if (tryEnchanting)
 		_enchantment_reg->GetBodyArmorEnchantmentDetails(part, DAMAGE_TYPE::UNDEF_DAMAGE_TYPE, val);
 
 	if (!_body)
@@ -6220,7 +6523,6 @@ BOOL CACQualities::GetBodyArmorEnchantmentDetails(unsigned int part, DAMAGE_TYPE
 				val->rawValue = pPart->_acache._armor_vs_pierce;
 				if (tryEnchanting)
 					_enchantment_reg->GetBodyArmorEnchantmentDetails(part, dt, val);
-
 				if (bAddBaseArmor)
 					val->rawValue += baseArmor;
 
@@ -6293,6 +6595,44 @@ BOOL CACQualities::GetBodyArmorEnchantmentDetails(unsigned int part, DAMAGE_TYPE
 	return FALSE;
 }
 
+float CACQualities::GetAddRating(STypeInt rating, bool raw)
+{
+	if (!rating)
+		return 0.0f;
+
+	int ratingVal;
+
+	if (!InqInt(rating, ratingVal, raw))
+		return 0.0f;
+
+	return (float)ratingVal / 100.0f;
+}
+
+float CACQualities::GetPositiveRating(STypeInt rating, bool raw)
+{
+	if (!rating)
+		return 1.0f;
+
+	int ratingVal;
+
+	if (!InqInt(rating, ratingVal, raw))
+		return 1.0f;
+
+	return (100.0f + (float)ratingVal) / 100.0f;
+}
+
+float CACQualities::GetNegativeRating(STypeInt rating, bool raw)
+{
+	if (!rating)
+		return 1.0f;
+
+	int ratingVal;
+
+	if (!InqInt(rating, ratingVal, raw))
+		return 1.0f;
+
+	return 100.0f/(100.0f + (float)ratingVal);
+}
 BOOL CACQualities::GetIntEnchantmentDetails(unsigned int stype, EnchantedQualityDetails *val) // custom, implied
 {
 	if (_enchantment_reg)
@@ -6311,4 +6651,42 @@ BOOL CACQualities::GetFloatEnchantmentDetails(unsigned int stype, EnchantedQuali
 	}
 
 	return FALSE;
+}
+
+Enchantment* CEnchantmentRegistry::AddCooldown(uint32_t cooldownId, double duration, uint32_t caster)
+{
+	Enchantment cd;
+	cd._id = cooldownId | 0x8000; //eSpellCategory::weaponSkillMastery ;
+	cd._spell_category = 0x8000;
+	cd._smod.type = Cooldown_EnchantmentType;
+	cd._start_time = Timer::cur_time;
+	cd._duration = duration;
+	cd._degrade_limit = -666.0f;
+	cd.m_SpellSetID = 1;
+	cd._caster = caster;
+	
+	if (AddEnchantmentToList(&cd, &_cooldown_list))
+	{
+		return &_cooldown_list->front();
+	}
+
+	return nullptr;
+}
+
+BOOL CEnchantmentRegistry::InqCooldown(uint32_t cooldownId)
+{
+	return IsEnchantmentInList(cooldownId | 0x8000, _cooldown_list);
+
+	//if (!_cooldown_list)
+	//	return FALSE;
+
+	//using enchantment_list_t = PackableListWithJson<Enchantment>;
+
+	//for (enchantment_list_t::iterator itr = _cooldown_list->begin(); itr != _cooldown_list->end(); itr++)
+	//{
+	//	if (itr->_id == cooldownId && !itr->HasExpired())
+	//		return TRUE;
+	//}
+
+	//return FALSE;
 }

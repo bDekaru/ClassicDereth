@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "GfxObj.h"
 #include "Setup.h"
 
@@ -11,9 +11,9 @@ PlacementType::~PlacementType()
 {
 }
 
-BOOL PlacementType::UnPack(DWORD ObjCount, BYTE **ppData, ULONG iSize)
+BOOL PlacementType::UnPack(uint32_t ObjCount, BYTE **ppData, ULONG iSize)
 {
-	UNPACK(DWORD, id);
+	UNPACK(uint32_t, id);
 	m_AnimFrame.UnPack(ObjCount, ppData, iSize);
 
 	return TRUE;
@@ -30,8 +30,8 @@ LocationType::~LocationType()
 
 BOOL LocationType::UnPack(BYTE **ppData, ULONG iSize)
 {
-	UNPACK(DWORD, id);
-	UNPACK(DWORD, part_id);
+	UNPACK(uint32_t, id);
+	UNPACK(uint32_t, part_id);
 	UNPACK_OBJ(frame);
 
 	return TRUE;
@@ -118,7 +118,7 @@ void CSetup::Destroyer(DBObj *pSetup)
 	delete ((CSetup *)pSetup);
 }
 
-CSetup *CSetup::Get(DWORD ID)
+CSetup *CSetup::Get(uint32_t ID)
 {
 	return (CSetup *)ObjCaches::Setups->Get(ID);
 }
@@ -198,7 +198,7 @@ void CSetup::Destroy()
 	default_phstable_id = 0;
 }
 
-CSetup *CSetup::makeParticleSetup(DWORD ObjCount, CSphere *bounding_sphere)
+CSetup *CSetup::makeParticleSetup(uint32_t ObjCount, CSphere *bounding_sphere)
 {
 	CSetup *pSetup = new CSetup();
 
@@ -213,7 +213,7 @@ CSetup *CSetup::makeParticleSetup(DWORD ObjCount, CSphere *bounding_sphere)
 	return pSetup;
 }
 
-CSetup *CSetup::makeSimpleSetup(DWORD GfxObjID)
+CSetup *CSetup::makeSimpleSetup(uint32_t GfxObjID)
 {
 	CSetup *pSetup = new CSetup();
 
@@ -223,7 +223,7 @@ CSetup *CSetup::makeSimpleSetup(DWORD GfxObjID)
 	pSetup->id = 0;
 	pSetup->m_lLinks = 0;
 
-	if (!(pSetup->parts = new DWORD[1]))
+	if (!(pSetup->parts = new uint32_t[1]))
 	{
 		delete pSetup;
 		return NULL;
@@ -270,26 +270,26 @@ BOOL CSetup::UnPack(BYTE **ppData, ULONG iSize)
 
 	BYTE bTypeID;
 
-	UNPACK(DWORD, id);
-	UNPACK(DWORD, bTypeID);
+	UNPACK(uint32_t, id);
+	UNPACK(uint32_t, bTypeID);
 
 	allow_free_heading = (bTypeID & 4) ? TRUE : FALSE;
 	has_physics_bsp = (bTypeID & 8) ? TRUE : FALSE;
 
-	UNPACK(DWORD, num_parts);
+	UNPACK(uint32_t, num_parts);
 
 	if (num_parts)
 	{
-		parts = new DWORD[num_parts];
-		for (DWORD i = 0; i < num_parts; i++)
-			UNPACK(DWORD, parts[i]);
+		parts = new uint32_t[num_parts];
+		for (uint32_t i = 0; i < num_parts; i++)
+			UNPACK(uint32_t, parts[i]);
 	}
 
 	if (bTypeID & 1)
 	{
-		parent_index = new DWORD[num_parts];
-		for (DWORD i = 0; i < num_parts; i++)
-			UNPACK(DWORD, parent_index[i]);
+		parent_index = new uint32_t[num_parts];
+		for (uint32_t i = 0; i < num_parts; i++)
+			UNPACK(uint32_t, parent_index[i]);
 	}
 
 	if (bTypeID & 2)
@@ -299,14 +299,14 @@ BOOL CSetup::UnPack(BYTE **ppData, ULONG iSize)
 			UNPACK_OBJ(default_scale[i]);
 	}
 
-	DWORD LT94Count;
-	UNPACK(DWORD, LT94Count);
+	uint32_t LT94Count;
+	UNPACK(uint32_t, LT94Count);
 
 	if (LT94Count > 0)
 	{
 		holding_locations = new LongHash< LocationType >(4);
 
-		for (DWORD i = 0; i < LT94Count; i++)
+		for (uint32_t i = 0; i < LT94Count; i++)
 		{
 			LocationType *pLocation = new LocationType;
 			UNPACK_POBJ(pLocation);
@@ -315,14 +315,14 @@ BOOL CSetup::UnPack(BYTE **ppData, ULONG iSize)
 		}
 	}
 
-	DWORD LT98Count;
-	UNPACK(DWORD, LT98Count);
+	uint32_t LT98Count;
+	UNPACK(uint32_t, LT98Count);
 
 	if (LT98Count > 0)
 	{
 		connection_points = new LongHash< LocationType >(4);
 
-		for (DWORD i = 0; i < LT98Count; i++)
+		for (uint32_t i = 0; i < LT98Count; i++)
 		{
 			LocationType *pLocation = new LocationType;
 			UNPACK_POBJ(pLocation);
@@ -331,12 +331,12 @@ BOOL CSetup::UnPack(BYTE **ppData, ULONG iSize)
 		}
 	}
 
-	DWORD PT9CCount;
-	UNPACK(DWORD, PT9CCount);
+	uint32_t PT9CCount;
+	UNPACK(uint32_t, PT9CCount);
 
 	if (PT9CCount > 0)
 	{
-		for (DWORD i = 0; i < PT9CCount; i++)
+		for (uint32_t i = 0; i < PT9CCount; i++)
 		{
 			PlacementType *pPlacement = new PlacementType;
 			pPlacement->UnPack(num_parts, ppData, iSize);
@@ -345,7 +345,7 @@ BOOL CSetup::UnPack(BYTE **ppData, ULONG iSize)
 		}
 	}
 
-	UNPACK(DWORD, num_cylsphere);
+	UNPACK(uint32_t, num_cylsphere);
 
 	if (num_cylsphere > 0)
 	{
@@ -355,7 +355,7 @@ BOOL CSetup::UnPack(BYTE **ppData, ULONG iSize)
 			UNPACK_OBJ(cylsphere[i]);
 	}
 
-	UNPACK(DWORD, num_sphere);
+	UNPACK(uint32_t, num_sphere);
 
 	if (num_sphere > 0)
 	{
@@ -379,7 +379,7 @@ BOOL CSetup::UnPack(BYTE **ppData, ULONG iSize)
 	dummy.UnPack(ppData, iSize);
 #endif
 
-	UNPACK(DWORD, num_lights);
+	UNPACK(uint32_t, num_lights);
 
 	if (num_lights > 0)
 	{
@@ -389,11 +389,11 @@ BOOL CSetup::UnPack(BYTE **ppData, ULONG iSize)
 			UNPACK_OBJ(lights[i]);
 	}
 
-	UNPACK(DWORD, default_anim_id);
-	UNPACK(DWORD, default_script_id);
-	UNPACK(DWORD, default_mtable_id);
-	UNPACK(DWORD, default_stable_id);
-	UNPACK(DWORD, default_phstable_id);
+	UNPACK(uint32_t, default_anim_id);
+	UNPACK(uint32_t, default_script_id);
+	UNPACK(uint32_t, default_mtable_id);
+	UNPACK(uint32_t, default_stable_id);
+	UNPACK(uint32_t, default_phstable_id);
 
 #ifdef PRE_TOD
 	PACK_ALIGN();
@@ -404,7 +404,7 @@ BOOL CSetup::UnPack(BYTE **ppData, ULONG iSize)
 	return TRUE;
 }
 
-LocationType *CSetup::GetHoldingLocation(DWORD location_id)
+LocationType *CSetup::GetHoldingLocation(uint32_t location_id)
 {
 	if (!holding_locations)
 		return NULL;

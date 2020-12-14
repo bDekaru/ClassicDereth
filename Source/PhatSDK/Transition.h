@@ -25,7 +25,7 @@ public:
 		if (hasContact)
 			_bitfield |= MyContact_ECPB;
 		else
-			_bitfield &= ~((DWORD)MyContact_ECPB);
+			_bitfield &= ~((uint32_t)MyContact_ECPB);
 	}
 };
 
@@ -105,7 +105,7 @@ struct SPHEREPATH
 	void set_walkable(CSphere *sphere, CPolygon *poly, Vector *zaxis, Position *local_pos, float scale);
 	void set_neg_poly_hit(int step_up, Vector *collision_normal);
 
-	void adjust_check_pos(DWORD cell_id);
+	void adjust_check_pos(uint32_t cell_id);
 	Position get_walkable_pos();
 	void set_walkable_check_pos(CSphere *sphere);
 

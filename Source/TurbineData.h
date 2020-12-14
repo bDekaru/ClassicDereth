@@ -10,11 +10,11 @@ typedef TurbineFile	TURBINEFILE;
 
 typedef struct FileInfo
 {
-	DWORD dwPosition;
-	DWORD dwLength;
+	uint32_t dwPosition;
+	uint32_t dwLength;
 } FILEINFO;
 
-typedef	std::map<DWORD, FILEINFO> FILEMAP;
+typedef	std::map<uint32_t, FILEINFO> FILEMAP;
 
 #include "TurbineFile.h"
 
@@ -24,13 +24,15 @@ public:
 	TurbineData();
 	virtual ~TurbineData();
 	
-	DWORD GetVersion();
-	DWORD GetFileCount();
+	uint32_t GetVersion();
+	uint32_t GetFileCount();
 
 	FILEMAP *GetFiles();
-	TURBINEFILE *GetFile(DWORD dwID);
+	TURBINEFILE *GetFile(uint32_t dwID);
 
-	BOOL FileExists(DWORD dwID);
+	BOOL FileExists(uint32_t dwID);
+
+	int CompareIteration(BYTE *data);
 
 protected:
 	void LoadFile(const char* szFile);
@@ -40,10 +42,12 @@ protected:
 	std::string	m_strPath;
 	std::string	m_strFile;
 
-	static void FileFoundCallback(void *This, DWORD dwFileID, BTEntry *pEntry);
-	void FileFoundCallbackInternal(DWORD dwFileID, BTEntry *pEntry);
+	static void FileFoundCallback(void *This, uint32_t dwFileID, BTEntry *pEntry);
+	void FileFoundCallbackInternal(uint32_t dwFileID, BTEntry *pEntry);
 
 	DATDisk *m_pDATDisk;
-	DWORD m_dwVersion;
+	uint32_t m_dwVersion;
 	FILEMAP	m_mFileInfo;
+
+	std::unique_ptr<TurbineFile> m_iterFile;
 };

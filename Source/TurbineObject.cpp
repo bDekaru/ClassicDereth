@@ -1,9 +1,9 @@
 
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "TurbineObject.h"
 
-TurbineObject::TurbineObject(DWORD dwID)
+TurbineObject::TurbineObject(uint32_t dwID)
 {
 	m_dwID = dwID;
 }
@@ -12,11 +12,11 @@ TurbineObject::~TurbineObject()
 {
 }
 
-void TurbineObject::Initialize(BYTE *pbData, DWORD dwLength)
+void TurbineObject::Initialize(BYTE *pbData, uint32_t dwLength)
 {
 }
 
-DWORD TurbineObject::GetID()
+uint32_t TurbineObject::GetID()
 {
 	return m_dwID;
 }

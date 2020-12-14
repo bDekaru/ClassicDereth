@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "SoundDesc.h"
 
 CSoundDesc::CSoundDesc()
@@ -26,11 +26,11 @@ DEFINE_PACK(CSoundDesc)
 
 DEFINE_UNPACK(CSoundDesc)
 {
-	DWORD numAmbientSTB = pReader->Read<DWORD>();
+	uint32_t numAmbientSTB = pReader->Read<uint32_t>();
 	stb_desc.grow(numAmbientSTB);
 
 	Destroy();
-	for (DWORD i = 0; i < numAmbientSTB; i++)
+	for (uint32_t i = 0; i < numAmbientSTB; i++)
 	{
 		AmbientSTBDesc *ambient = new AmbientSTBDesc();
 		ambient->UnPack(pReader);
@@ -64,12 +64,12 @@ DEFINE_PACK(AmbientSTBDesc)
 
 DEFINE_UNPACK(AmbientSTBDesc)
 {
-	stb_id = pReader->Read<DWORD>();
+	stb_id = pReader->Read<uint32_t>();
 
-	DWORD num_sounds = pReader->Read<DWORD>();
+	uint32_t num_sounds = pReader->Read<uint32_t>();
 	ambient_sounds.grow(num_sounds);
 
-	for (DWORD i = 0; i < num_sounds; i++)
+	for (uint32_t i = 0; i < num_sounds; i++)
 	{
 		AmbientSoundDesc *sound = new AmbientSoundDesc();
 		sound->stype = (SoundType) pReader->Read<int>();

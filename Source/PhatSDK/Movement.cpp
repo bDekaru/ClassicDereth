@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Movement.h"
 
 int EncumbranceSystem::EncumbranceCapacity(const int strength, const int encumb_augmentations)
@@ -64,7 +64,7 @@ float MovementSystem::GetRunRate(const float load, const int runskill, const flo
 		return ((loadMod * (fRunSkill / (fRunSkill + 200.0) * 11.0) + 4.0) / scaling) / 4.0;
 }
 
-float MovementSystem::GetJumpHeight(float load, long jumpskill, float _power, float scaling)
+float MovementSystem::GetJumpHeight(float load, int32_t jumpskill, float _power, float scaling)
 {
 	if (_power <= 1.0)
 	{
@@ -85,12 +85,12 @@ float MovementSystem::GetJumpHeight(float load, long jumpskill, float _power, fl
 	return result;
 }
 
-long MovementSystem::JumpStaminaCost(float power, float load, int bPK)
+int32_t MovementSystem::JumpStaminaCost(float power, float load, int bPK)
 {
 	if (bPK)
-		return (long)((power + 1.0) * 100.0);
+		return (int32_t)((power + 1.0) * 100.0);
 
-	return (long)ceil((load + 0.5) * power * 8.0 + 2.0);
+	return (int32_t)ceil((load + 0.5) * power * 8.0 + 2.0);
 }
 
 const float DEFAULT_MIN_DISTANCE = 0.0f;
@@ -110,7 +110,7 @@ MovementParameters::MovementParameters()
 	hold_key_to_apply = HoldKey_Invalid;
 	action_stamp = 0;
 	
-	bitfield = 0x1EE0F; // this is actually a bug in the code, but I believe this is the value they intended
+	bitfield = 0x1F09EE0F; // changed to match bitfield from retail pcaps.
 	/*
 	equivalent to this maybe
 	stop_completely = 1;
@@ -138,7 +138,7 @@ void MovementParameters::PackNet(MovementTypes type, BinaryWriter *pWriter)
 	{
 	case MovementTypes::MoveToObject:
 	case MovementTypes::MoveToPosition:
-		pWriter->Write<DWORD>(bitfield);
+		pWriter->Write<uint32_t>(bitfield);
 		pWriter->Write<float>(distance_to_object);
 		pWriter->Write<float>(min_distance);
 		pWriter->Write<float>(fail_distance);
@@ -149,7 +149,7 @@ void MovementParameters::PackNet(MovementTypes type, BinaryWriter *pWriter)
 
 	case MovementTypes::TurnToObject:
 	case MovementTypes::TurnToHeading:
-		pWriter->Write<DWORD>(bitfield);
+		pWriter->Write<uint32_t>(bitfield);
 		pWriter->Write<float>(speed);
 		pWriter->Write<float>(desired_heading);
 		break;
@@ -158,16 +158,16 @@ void MovementParameters::PackNet(MovementTypes type, BinaryWriter *pWriter)
 
 bool MovementParameters::UnPack(BinaryReader *pReader)
 {
-	bitfield = pReader->Read<DWORD>();
+	bitfield = pReader->Read<uint32_t>();
 	distance_to_object = pReader->Read<float>();
 	min_distance = pReader->Read<float>();
 	fail_distance = pReader->Read<float>();
 	desired_heading = pReader->Read<float>();
 	speed = pReader->Read<float>();
 	walk_run_threshhold = pReader->Read<float>();
-	context_id = pReader->Read<DWORD>();
+	context_id = pReader->Read<uint32_t>();
 	hold_key_to_apply = (HoldKey)pReader->Read<int>();
-	action_stamp = pReader->Read<DWORD>();
+	action_stamp = pReader->Read<uint32_t>();
 	return true;
 }
 
@@ -177,7 +177,7 @@ bool MovementParameters::UnPackNet(MovementTypes type, BinaryReader *pReader)
 	{
 	case MovementTypes::MoveToObject:
 	case MovementTypes::MoveToPosition:
-		bitfield = pReader->Read<DWORD>();
+		bitfield = pReader->Read<uint32_t>();
 		distance_to_object = pReader->Read<float>();
 		min_distance = pReader->Read<float>();
 		fail_distance = pReader->Read<float>();
@@ -188,7 +188,7 @@ bool MovementParameters::UnPackNet(MovementTypes type, BinaryReader *pReader)
 
 	case MovementTypes::TurnToObject:
 	case MovementTypes::TurnToHeading:
-		bitfield = pReader->Read<DWORD>();
+		bitfield = pReader->Read<uint32_t>();
 		speed = pReader->Read<float>();
 		desired_heading = pReader->Read<float>();
 		return true;
@@ -202,12 +202,12 @@ void MovementParameters::towards_and_away(float curr_distance, float curr_headin
 {
 	if (curr_distance > distance_to_object)
 	{
-		*command = 0x45000005;
+		*command = Motion_WalkForward;
 		*moving_away = FALSE;
 	}
 	else if ((curr_distance - min_distance) < F_EPSILON)
 	{
-		*command = 0x45000006;
+		*command = Motion_WalkBackwards;
 		*moving_away = TRUE;
 	}
 	else
@@ -223,10 +223,10 @@ void MovementParameters::get_command(float curr_distance, float curr_heading, un
 		else
 		{
 			if (curr_distance <= distance_to_object)
-				*command = 0;
+				*command = Command_Invalid;
 			else
 			{
-				*command = 0x45000005;
+				*command = Motion_WalkForward;
 				*moving_away = FALSE;
 			}
 		}
@@ -234,20 +234,20 @@ void MovementParameters::get_command(float curr_distance, float curr_heading, un
 	else if (move_away)
 	{
 		if (curr_distance >= min_distance)
-			*command = 0;
+			*command = Command_Invalid;
 		else
 		{
-			*command = 0x45000005;
+			*command = Motion_WalkForward;
 			*moving_away = TRUE;
 		}
 	}
 	else
 	{
 		if (curr_distance <= distance_to_object)
-			*command = 0;
+			*command = Command_Invalid;
 		else
 		{
-			*command = 0x45000005;
+			*command = Motion_WalkForward;
 			*moving_away = FALSE;
 		}
 	}
@@ -258,23 +258,23 @@ void MovementParameters::get_command(float curr_distance, float curr_heading, un
 		*key = HoldKey_None;
 }
 
-float MovementParameters::get_desired_heading(DWORD command, BOOL moving_away)
+float MovementParameters::get_desired_heading(uint32_t command, BOOL moving_away)
 {
 	float heading = 0;
 
 	switch (command)
 	{
-	case 0x44000007:
-	case 0x45000005:
+	case Motion_RunForward:
+	case Motion_WalkForward:
 		return (moving_away ? ((float)180.0) : ((float)0.0));
-	case 0x45000006:
+	case Motion_WalkBackwards:
 		return (moving_away ? ((float)0.0) : ((float)180.0));
 	default:
 		return ((float)0);
 	}
 }
 
-const DWORD command_ids[] =
+const uint32_t command_ids[] =
 {
 	0x80000000,
 	0x85000001,
@@ -690,9 +690,9 @@ const DWORD command_ids[] =
 	0x1000019B,
 };
 
-const DWORD NUM_COMMAND_IDS = sizeof(command_ids) / sizeof(DWORD); // 408 entries
+const uint32_t NUM_COMMAND_IDS = sizeof(command_ids) / sizeof(uint32_t); // 408 entries
 
-DWORD GetCommandID(WORD index)
+uint32_t GetCommandID(WORD index)
 {
 	if (index >= NUM_COMMAND_IDS)
 		return command_ids[0];
@@ -700,7 +700,7 @@ DWORD GetCommandID(WORD index)
 	return command_ids[index];
 }
 
-DWORD OldToNewCommandID(DWORD command_id)
+uint32_t OldToNewCommandID(uint32_t command_id)
 {
 	WORD index = (WORD)(command_id & 0xFFFF);
 
@@ -756,22 +756,22 @@ void RawMotionState::Pack(BinaryWriter *pWriter)
 	if (current_holdkey)
 	{
 		flags.current_holdkey = 1;
-		content.Write<DWORD>(current_holdkey);
+		content.Write<uint32_t>(current_holdkey);
 	}
-	if (current_style != 0x8000003D)
+	if (current_style != Motion_NonCombat)
 	{
 		flags.current_style = 1;
-		content.Write<DWORD>(current_style);
+		content.Write<uint32_t>(current_style);
 	}
-	if (forward_command != 0x41000003)
+	if (forward_command != Motion_Ready)
 	{
 		flags.forward_command = 1;
-		content.Write<DWORD>(forward_command);
+		content.Write<uint32_t>(forward_command);
 	}
 	if (forward_holdkey)
 	{
 		flags.forward_holdkey = 1;
-		content.Write<DWORD>(forward_holdkey);
+		content.Write<uint32_t>(forward_holdkey);
 	}
 	if (forward_speed != 1.0f)
 	{
@@ -781,12 +781,12 @@ void RawMotionState::Pack(BinaryWriter *pWriter)
 	if (sidestep_command)
 	{
 		flags.sidestep_command = 1;
-		content.Write<DWORD>(sidestep_command);
+		content.Write<uint32_t>(sidestep_command);
 	}
 	if (sidestep_holdkey)
 	{
 		flags.sidestep_holdkey = 1;
-		content.Write<DWORD>(sidestep_holdkey);
+		content.Write<uint32_t>(sidestep_holdkey);
 	}
 	if (sidestep_speed)
 	{
@@ -796,12 +796,12 @@ void RawMotionState::Pack(BinaryWriter *pWriter)
 	if (turn_command)
 	{
 		flags.turn_command = 1;
-		content.Write<DWORD>(turn_command);
+		content.Write<uint32_t>(turn_command);
 	}
 	if (turn_holdkey)
 	{
 		flags.turn_holdkey = 1;
-		content.Write<DWORD>(turn_holdkey);
+		content.Write<uint32_t>(turn_holdkey);
 	}
 	if (turn_speed)
 	{
@@ -821,7 +821,7 @@ void RawMotionState::Pack(BinaryWriter *pWriter)
 		numActions--;
 	}
 
-	pWriter->Write<DWORD>(flags.bitfield);
+	pWriter->Write<uint32_t>(flags.bitfield);
 	pWriter->Write(&content);
 }
 
@@ -830,25 +830,25 @@ bool RawMotionState::UnPack(BinaryReader *pReader)
 	Destroy();
 
 	RawMotionState::PackBitfield flags;
-	flags.bitfield = pReader->Read<DWORD>();
+	flags.bitfield = pReader->Read<uint32_t>();
 
 	if (flags.current_holdkey)
-		current_holdkey = (HoldKey)pReader->Read<DWORD>();
+		current_holdkey = (HoldKey)pReader->Read<uint32_t>();
 	else
 		current_holdkey = HoldKey_None;
 
 	if (flags.current_style)
-		current_style = pReader->Read<DWORD>();
+		current_style = pReader->Read<uint32_t>();
 	else
-		current_style = 0x8000003D;
+		current_style = Motion_NonCombat;
 
 	if (flags.forward_command)
-		forward_command = pReader->Read<DWORD>();
+		forward_command = pReader->Read<uint32_t>();
 	else
-		forward_command = 0x41000003;
+		forward_command = Motion_Ready;
 
 	if (flags.forward_holdkey)
-		forward_holdkey = (HoldKey)pReader->Read<DWORD>();
+		forward_holdkey = (HoldKey)pReader->Read<uint32_t>();
 	else
 		forward_holdkey = HoldKey_Invalid;
 
@@ -858,12 +858,12 @@ bool RawMotionState::UnPack(BinaryReader *pReader)
 		forward_speed = 1.0f;
 
 	if (flags.sidestep_command)
-		sidestep_command = pReader->Read<DWORD>();
+		sidestep_command = pReader->Read<uint32_t>();
 	else
 		sidestep_command = 0;
 
 	if (flags.sidestep_holdkey)
-		sidestep_holdkey = (HoldKey)pReader->Read<DWORD>();
+		sidestep_holdkey = (HoldKey)pReader->Read<uint32_t>();
 	else
 		sidestep_holdkey = HoldKey_Invalid;
 
@@ -873,12 +873,12 @@ bool RawMotionState::UnPack(BinaryReader *pReader)
 		sidestep_speed = 1.0f;
 
 	if (flags.turn_command)
-		turn_command = pReader->Read<DWORD>();
+		turn_command = pReader->Read<uint32_t>();
 	else
 		turn_command = 0;
 
 	if (flags.turn_holdkey)
-		turn_holdkey = (HoldKey)pReader->Read<DWORD>();
+		turn_holdkey = (HoldKey)pReader->Read<uint32_t>();
 	else
 		turn_holdkey = HoldKey_Invalid;
 
@@ -902,13 +902,13 @@ void RawMotionState::AddAction(const ActionNode &node)
 	actions.push_back(node);
 }
 
-DWORD RawMotionState::RemoveAction()
+uint32_t RawMotionState::RemoveAction()
 {
 	std::list<ActionNode>::iterator i = actions.begin();
 
 	if (i != actions.end())
 	{
-		DWORD action = i->action;
+		uint32_t action = i->action;
 		actions.erase(i);
 
 		return action;
@@ -917,12 +917,12 @@ DWORD RawMotionState::RemoveAction()
 	return 0;
 }
 
-void RawMotionState::ApplyMotion(DWORD motion, MovementParameters *params)
+void RawMotionState::ApplyMotion(uint32_t motion, MovementParameters *params)
 {
 	switch (motion)
 	{
-	case 0x6500000D:
-	case 0x6500000E:
+	case Motion_TurnRight:
+	case Motion_TurnLeft:
 		turn_command = motion;
 
 		if (params->set_hold_key)
@@ -938,8 +938,8 @@ void RawMotionState::ApplyMotion(DWORD motion, MovementParameters *params)
 
 		break;
 
-	case 0x6500000F:
-	case 0x65000010:
+	case Motion_SideStepRight:
+	case Motion_SideStepLeft:
 		sidestep_command = motion;
 
 		if (params->set_hold_key)
@@ -956,9 +956,9 @@ void RawMotionState::ApplyMotion(DWORD motion, MovementParameters *params)
 		break;
 
 	default:
-		if (motion & 0x40000000)
+		if (motion & CM_SubState)
 		{
-			if (motion != 0x44000007)
+			if (motion != Motion_RunForward)
 			{
 				forward_command = motion;
 
@@ -974,15 +974,15 @@ void RawMotionState::ApplyMotion(DWORD motion, MovementParameters *params)
 				}
 			}
 		}
-		else if (motion & 0x80000000)
+		else if (motion & CM_Style)
 		{
 			if (current_style != motion)
 			{
-				forward_command = 0x41000003;
+				forward_command = Motion_Ready;
 				current_style = motion;
 			}
 		}
-		else if (motion & 0x10000000)
+		else if (motion & CM_Action)
 		{
 			AddAction(ActionNode(motion, params->speed, params->action_stamp, params->autonomous));
 		}
@@ -991,34 +991,34 @@ void RawMotionState::ApplyMotion(DWORD motion, MovementParameters *params)
 	}
 }
 
-void RawMotionState::RemoveMotion(DWORD motion)
+void RawMotionState::RemoveMotion(uint32_t motion)
 {
 	switch (motion)
 	{
-	case 0x6500000D:
-	case 0x6500000E:
+	case Motion_TurnRight:
+	case Motion_TurnLeft:
 		turn_command = 0;
 		break;
 
-	case 0x6500000F:
-	case 0x65000010:
+	case Motion_SideStepRight:
+	case Motion_SideStepLeft:
 		sidestep_command = 0;
 		break;
 
 	default:
-		if (motion & 0x40000000)
+		if (motion & CM_SubState)
 		{
 			if (motion == forward_command)
 			{
-				forward_command = 0x41000003;
+				forward_command = Motion_Ready;
 				forward_speed = 1.0f;
 			}
 		}
-		else if (motion & 0x80000000)
+		else if (motion & CM_Style)
 		{
 			if (motion == current_style)
 			{
-				current_style = 0x8000003D;
+				current_style = Motion_NonCombat;
 			}
 		}
 
@@ -1029,8 +1029,8 @@ void RawMotionState::RemoveMotion(DWORD motion)
 
 InterpretedMotionState::InterpretedMotionState()
 {
-	current_style = 0x8000003D;
-	forward_command = 0x41000003;
+	current_style = Motion_NonCombat;
+	forward_command = Motion_Ready;
 	forward_speed = 1.0f;
 	sidestep_command = 0;
 	sidestep_speed = 1.0f;
@@ -1061,32 +1061,32 @@ void InterpretedMotionState::copy_movement_from(const InterpretedMotionState &ot
 	// doesn't copy actions
 }
 
-void InterpretedMotionState::ApplyMotion(DWORD motion, MovementParameters *params)
+void InterpretedMotionState::ApplyMotion(uint32_t motion, MovementParameters *params)
 {
 	switch (motion)
 	{
-	case 0x6500000D:
-		turn_command = 0x6500000D;
+	case Motion_TurnRight:
+		turn_command = Motion_TurnRight;
 		turn_speed = params->speed;
 		break;
 
-	case 0x6500000F:
-		sidestep_command = 0x6500000F;
+	case Motion_SideStepRight:
+		sidestep_command = Motion_SideStepRight;
 		sidestep_speed = params->speed;
 		break;
 
 	default:
-		if (motion & 0x40000000) // CM_SubState
+		if (motion & CM_SubState) // CM_SubState
 		{
 			forward_command = motion;
 			forward_speed = params->speed;
 		}
-		else if (motion & 0x80000000) // CM_Style
+		else if (motion & CM_Style) // CM_Style
 		{
-			forward_command = 0x41000003;
+			forward_command = Motion_Ready;
 			current_style = motion;
 		}
-		else if (motion & 0x10000000)
+		else if (motion & CM_Action)
 		{
 			AddAction(ActionNode(motion, params->speed, params->action_stamp, params->autonomous));
 		}
@@ -1095,32 +1095,32 @@ void InterpretedMotionState::ApplyMotion(DWORD motion, MovementParameters *param
 	}
 }
 
-void InterpretedMotionState::RemoveMotion(DWORD motion)
+void InterpretedMotionState::RemoveMotion(uint32_t motion)
 {
 	switch (motion)
 	{
-	case 0x6500000D:
+	case Motion_TurnRight:
 		turn_command = 0;
 		break;
-	case 0x6500000F:
+	case Motion_SideStepRight:
 		sidestep_command = 0;
 		break;
 
 	default:
 
-		if (motion & 0x40000000)
+		if (motion & CM_SubState)
 		{
 			if (forward_command == motion)
 			{
-				forward_command = 0x41000003;
+				forward_command = Motion_Ready;
 				forward_speed = 1.0f;
 			}
 		}
-		else if (motion & 0x80000000)
+		else if (motion & CM_Style)
 		{
 			if (current_style == motion)
 			{
-				current_style = 0x8000003D;
+				current_style = Motion_NonCombat;
 			}
 		}
 
@@ -1128,9 +1128,9 @@ void InterpretedMotionState::RemoveMotion(DWORD motion)
 	}
 }
 
-DWORD InterpretedMotionState::GetNumActions()
+uint32_t InterpretedMotionState::GetNumActions()
 {
-	return (DWORD) actions.size();
+	return (uint32_t) actions.size();
 }
 
 void InterpretedMotionState::AddAction(const ActionNode &action)
@@ -1138,13 +1138,13 @@ void InterpretedMotionState::AddAction(const ActionNode &action)
 	actions.push_back(action);
 }
 
-DWORD InterpretedMotionState::RemoveAction()
+uint32_t InterpretedMotionState::RemoveAction()
 {
 	std::list<ActionNode>::iterator i = actions.begin();
 
 	if (i != actions.end())
 	{
-		DWORD action = i->action;
+		uint32_t action = i->action;
 		actions.erase(i);
 
 		return action;
@@ -1159,13 +1159,13 @@ void InterpretedMotionState::Pack(BinaryWriter *pWriter)
 	PackBitfield flags;
 	flags.bitfield = 0;
 
-	if (current_style != 0x8000003D)
+	if (current_style != Motion_NonCombat)
 	{
 		flags.current_style = 1;
 		content.Write<WORD>((WORD)(current_style & 0xFFFF));
 	}
 
-	if (forward_command != 0x41000003)
+	if (forward_command != Motion_Ready)
 	{
 		flags.forward_command = 1;
 		content.Write<WORD>((WORD)(forward_command & 0xFFFF));
@@ -1213,7 +1213,7 @@ void InterpretedMotionState::Pack(BinaryWriter *pWriter)
 		numActions--;
 	}
 
-	pWriter->Write<DWORD>(flags.bitfield);
+	pWriter->Write<uint32_t>(flags.bitfield);
 	pWriter->Write(&content);
 	pWriter->Align();
 }
@@ -1223,17 +1223,17 @@ bool InterpretedMotionState::UnPack(BinaryReader *pReader)
 	Destroy();
 
 	PackBitfield flags;
-	flags.bitfield = pReader->Read<DWORD>();
+	flags.bitfield = pReader->Read<uint32_t>();
 
 	if (flags.current_style)
 		current_style = GetCommandID(pReader->Read<WORD>());
 	else
-		current_style = 0x8000003D;
+		current_style = Motion_NonCombat;
 
 	if (flags.forward_command)
 		forward_command = GetCommandID(pReader->Read<WORD>());
 	else
-		forward_command = 0x41000003;
+		forward_command = Motion_Ready;
 
 	if (flags.sidestep_command)
 		sidestep_command = GetCommandID(pReader->Read<WORD>());

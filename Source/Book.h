@@ -8,7 +8,7 @@ public:
 	CBookWeenie();
 	virtual ~CBookWeenie() override;
 
-	virtual class CBookWeenie *AsBook() { return this; }
+	virtual class CBookWeenie *AsBook() override { return this; }
 
 	virtual void ApplyQualityOverrides() override;
 	virtual int Use(CPlayerWeenie *) override;

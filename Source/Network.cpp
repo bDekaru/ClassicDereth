@@ -1,180 +1,140 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 
 #include "Network.h"
 #include "Client.h"
 #include "ClientEvents.h"
 #include "World.h"
-#include "Database.h"
-#include "Database2.h"
-#include "DatabaseIO.h"
-#include "CRC.h"
+#include "crc.h"
 #include "BinaryWriter.h"
 #include "BinaryReader.h"
 #include "PacketController.h"
 #include "Server.h"
 #include "Config.h"
+#include "SHA512.h"
 
 // NOTE: A client can easily perform denial of service attacks by issuing a large number of connection requests if there ever comes a time this matters to fix
 
-CNetwork::CNetwork(CPhatServer *server, SOCKET *sockets, int socketCount)
+CNetwork::CNetwork(class CPhatServer *server, in_addr address, WORD port)
 {
 	m_server = server;
-	m_sockets = sockets;
-	m_socketCount = socketCount;
+	m_port = port;
+	m_addr = address;
 	m_ServerID = 11; // arbitrary
-
-	m_ClientArray = new CClient *[m_MaxClients];
-	memset(m_ClientArray, 0, sizeof(CClient *) * m_MaxClients);
-
-	m_ClientSlots = new CClient *[m_MaxClients + 1];
-	memset(m_ClientSlots, 0, sizeof(CClient *) * (m_MaxClients + 1));
-
-	for (DWORD i = 1; i <= m_MaxClients; i++)
-	{
-		m_OpenSlots.push_back(i);
-	}
 
 	LoadBans();
 
-	InitializeCriticalSection(&_incomingLock);
-	InitializeCriticalSection(&_outgoingLock);
+	Init();
 
-	m_hNetEvent = new HANDLE[socketCount];
-	for (int i = 0; i < m_socketCount; i++)
-	{
-		m_hNetEvent[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
-		::WSAEventSelect(m_sockets[i], m_hNetEvent[i], FD_READ|FD_WRITE);
-	}
-
-	m_hMakeTick = CreateEvent(NULL, FALSE, FALSE, NULL);
-	m_hQuitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-
-	m_hPumpThread = CreateThread(NULL, 0, InternalThreadProcStatic, this, 0, NULL);
+	m_running = true;
+	m_incomingThread = std::thread([&]() { IncomingThreadProc(); });
+	m_outgoingThread = std::thread([&]() { OutgoingThreadProc(); });
 }
 
 CNetwork::~CNetwork()
 {
-	for (int i = 0; i < m_NumClients; i++)
-	{
-		SafeDelete(m_ClientArray[i]);
-	}
+	m_running = false;
 
-	SetEvent(m_hQuitEvent);
+	if (m_outgoingThread.joinable())
+		m_outgoingThread.join();
 
-	if (m_hPumpThread)
-	{
-		WaitForSingleObject(m_hPumpThread, 60000);
-		CloseHandle(m_hPumpThread);
-		m_hPumpThread = NULL;
-	}
+	if (m_incomingThread.joinable())
+		m_incomingThread.join();
 
-	if (m_hMakeTick)
-	{
-		CloseHandle(m_hMakeTick);
-		m_hMakeTick = NULL;
-	}
+	Shutdown();
 
-	for (int i = 0; i < m_socketCount; i++)
-	{
-		if (m_hNetEvent[i])
-		{
-			::WSAEventSelect(m_sockets[i], m_hNetEvent[i], 0);
-			CloseHandle(m_hNetEvent[i]);
-			m_hNetEvent[i] = NULL;
-		}
-	}
-	SafeDeleteArray(m_hNetEvent);
-
-	if (m_hQuitEvent)
-	{
-		CloseHandle(m_hQuitEvent);
-		m_hQuitEvent = NULL;
-	}
-
-	DeleteCriticalSection(&_incomingLock);
-	DeleteCriticalSection(&_outgoingLock);
-
-	for (auto &qp : _queuedIncoming)
-	{
-		delete [] qp.data;
-	}
 	_queuedIncoming.clear();
-
-	for (auto &qp : _queuedOutgoing)
-	{
-		delete [] qp.data;
-	}
 	_queuedOutgoing.clear();
-
-	SafeDeleteArray(m_ClientSlots);
-	SafeDeleteArray(m_ClientArray);
 }
 
 void CNetwork::Init()
 {
+	srand((unsigned int)time(NULL));
+
+	xsocket::socket_init();
+
+	WINLOG(Temp, Normal, "Binding to addr %s\n", inet_ntoa(m_addr));
+	if (m_read_sock.bind(m_addr, m_port))
+	{
+		WINLOG(Temp, Normal, "Failed bind on recv port %u!\n", m_port);
+		SERVER_ERROR << "Failed bind on recv port:" << m_port;		
+	}
+
+	if (m_write_sock.bind(m_addr, m_port + 1))
+	{
+		WINLOG(Temp, Normal, "Failed bind on send port %u!\n",  m_port + 1);
+		SERVER_ERROR << "Failed bind on send port:" <<  m_port + 1;		
+	}
+
+	// configure for non-blocking
+	int buffsize = g_pConfig->NetBufferSize();
+
+	m_read_sock.blocking(false);
+	m_read_sock.buffer_size(&buffsize, &buffsize);
+	m_write_sock.blocking(false);
+	m_write_sock.buffer_size(&buffsize, &buffsize);
 }
 
 void CNetwork::Shutdown()
 {
+	SaveBans();
+
+	m_read_sock.close();
+	m_write_sock.close();
+
+	xsocket::socket_shutdown();	
 }
 
-DWORD WINAPI CNetwork::InternalThreadProcStatic(LPVOID lpThis)
+void CNetwork::IncomingThreadProc()
 {
-	return ((CNetwork *)lpThis)->InternalThreadProc();
-}
+	xsocket::socket_wait wait;
 
-DWORD CNetwork::InternalThreadProc()
-{
-	WSADATA	wsaData;
-	USHORT wVersionRequested = 0x0202;
-	WSAStartup(wVersionRequested, &wsaData);
-
-	srand((unsigned int)time(NULL));
-
-	DWORD numEvents = (DWORD)(m_socketCount + 2);
-	HANDLE *hEvents = new HANDLE[numEvents];
-
-	hEvents[0] = m_hMakeTick;
-	hEvents[1] = m_hQuitEvent;
-	memcpy(&hEvents[2], m_hNetEvent, sizeof(HANDLE) * m_socketCount);
-
-	bool bRun = true;
-
-	while (bRun)
+	while (m_running)
 	{
-		EnterCriticalSection(&_outgoingLock);
-		bool bIsSendQueueEmpty = _queuedOutgoing.empty();
-		LeaveCriticalSection(&_outgoingLock);
-		
-		switch (::WaitForMultipleObjects(numEvents, hEvents, FALSE, bIsSendQueueEmpty ? 500 : 0))
+		wait.reset();
+		wait.set(m_read_sock);
+		wait.set(m_write_sock);
+
+		int result = wait.wait();
+
+		if (result > 0)
 		{
-		case (WAIT_OBJECT_0 + 0): // Make Think Event
-			break;
-
-		case (WAIT_OBJECT_0 + 1): // Quit Event
-			bRun = false;
-			break;
-
-		default:
-		case (WAIT_OBJECT_0 + 2): // Net Event or Timeout
-			break;
+			if (wait.isset(m_read_sock))
+				QueueIncomingOnSocket(m_read_sock);
+			if (wait.isset(m_write_sock))
+				QueueIncomingOnSocket(m_write_sock);
 		}
-
-		for (int i = 0; i < m_socketCount; i++)
-		{
-			QueueIncomingOnSocket(m_sockets[i]);
-		}
-		SendQueuedOutgoing();
+		std::this_thread::yield();
 	}
-	
-	delete [] hEvents;
+}
 
-	Shutdown();
+void CNetwork::OutgoingThreadProc()
+{
+	while (m_running)
+	{
+		{
+			std::unique_lock sigLock(m_sigOutgoingLock);
+			m_sigOutgoing.wait_for(sigLock, std::chrono::seconds(1));
+		}
 
-	WSACleanup();
+		while (!_queuedOutgoing.empty())
+		{
+			std::scoped_lock lock(m_outgoingLock);
 
-	return 0;
+			auto entry = _queuedOutgoing.begin();
+			if (entry != _queuedOutgoing.end())
+			{
+				CQueuedPacket& queued = *entry;
+				//if (SendPacket(queued.useReadStream ? m_read_sock : m_write_sock, &queued.addr, queued.data.get(), queued.len))
+				SendPacket(queued.useReadStream ? m_read_sock : m_read_sock, &queued.addr, queued.data.get(), queued.len);
+				_queuedOutgoing.erase(entry);
+
+				std::this_thread::yield();
+			}
+		}
+
+		std::this_thread::yield();
+	}
 }
 
 WORD CNetwork::GetServerID(void)
@@ -182,7 +142,7 @@ WORD CNetwork::GetServerID(void)
 	return m_ServerID;
 }
 
-void CNetwork::SendConnectlessBlob(SOCKADDR_IN *peer, BlobPacket_s *blob, DWORD dwFlags, DWORD dwSequence = 0, WORD wTime = 0)
+void CNetwork::SendConnectlessBlob(SOCKADDR_IN *peer, BlobPacket_s *blob, uint32_t dwFlags, uint32_t dwSequence, WORD wTime, bool useReadStream)
 {
 	BlobHeader_s *header = &blob->header;
 
@@ -195,20 +155,22 @@ void CNetwork::SendConnectlessBlob(SOCKADDR_IN *peer, BlobPacket_s *blob, DWORD 
 
 	GenericCRC(blob);
 
-	QueuePacket(peer, blob, BLOBLEN(blob));
+	QueuePacket(peer, blob, BLOBLEN(blob), useReadStream);
 }
 
-bool CNetwork::SendPacket(SOCKADDR_IN *peer, void *data, DWORD len)
+bool CNetwork::SendPacket(xsocket::socket_udp socket, sockaddr_in *peer, void *data, uint32_t len)
 {
-	SOCKET socket = m_sockets[0];
-
-	if (socket == INVALID_SOCKET)
+	if (!socket.valid())
 	{
+		NETWORK_LOG << "Invalid socket:" << inet_ntoa(peer->sin_addr) << ":" << peer->sin_port;
 		return false;
 	}
 
-	int bytesSent = sendto(socket, (char *)data, len, 0, (sockaddr *)peer, sizeof(SOCKADDR_IN));
-	bool success = (SOCKET_ERROR != bytesSent);
+	//WINLOG(Temp, Normal, "Sending to %s:%d\n", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
+
+	int bytesSent = socket.sendto((uint8_t*)data, len, peer);
+
+	bool success = (bytesSent > 0);
 
 	if (success)
 	{
@@ -229,64 +191,33 @@ bool CNetwork::SendPacket(SOCKADDR_IN *peer, void *data, DWORD len)
 		g_pGlobals->PacketSent(len);
 		*/
 	}
+	else
+	{
+		NETWORK_LOG << "Failed send:" << inet_ntoa(peer->sin_addr) << ":" << peer->sin_port << " - " << bytesSent << "bytes sent" << " - " << xsocket::socket_error_text(xsocket::socket_error());
+	}
 
 	return success;
 }
 
-void CNetwork::QueuePacket(SOCKADDR_IN *peer, void *data, DWORD len)
+void CNetwork::QueuePacket(SOCKADDR_IN *peer, void *data, uint32_t len, bool useReadStream)
 {
 	CQueuedPacket qp;
 	qp.addr = *peer;
-	qp.data = new BYTE[len];
-	memcpy(qp.data, data, len);
+	qp.data = std::make_unique<BYTE[]>(len);
+	memcpy(qp.data.get(), data, len);
 	qp.len = len;
+	qp.useReadStream = useReadStream;
 
-	EnterCriticalSection(&_outgoingLock);
-	_queuedOutgoing.push_back(qp);
-	LeaveCriticalSection(&_outgoingLock);
-
-	SetEvent(m_hMakeTick);
-}
-
-void CNetwork::SendQueuedOutgoing()
-{
-	EnterCriticalSection(&_outgoingLock);
-
-	auto entry = _queuedOutgoing.begin();
-
-	while (entry != _queuedOutgoing.end())
 	{
-		// copy it locally
-		CQueuedPacket queued = *entry;
-		// remove
-		_queuedOutgoing.erase(entry);
-
-		// unlock while we send it
-		LeaveCriticalSection(&_outgoingLock);
-
-		if (!SendPacket(&queued.addr, queued.data, queued.len))
-		{
-			// failed to send
-			EnterCriticalSection(&_outgoingLock);
-
-			// queue it back
-			_queuedOutgoing.push_front(queued);
-			break;
-		}
-
-		// delete now that the packet is sent
-		delete[] queued.data;
-
-		EnterCriticalSection(&_outgoingLock);
-		entry = _queuedOutgoing.begin();
+		std::scoped_lock lock(m_outgoingLock);
+		_queuedOutgoing.push_back(std::move(qp));
 	}
-
-	LeaveCriticalSection(&_outgoingLock);
+	m_sigOutgoing.notify_all();
 }
 
-void CNetwork::QueueIncomingOnSocket(SOCKET socket)
+void CNetwork::QueueIncomingOnSocket(xsocket::socket_udp socket)
 {
-	if (socket == INVALID_SOCKET)
+	if (!socket.valid())
 	{
 		return;
 	}
@@ -299,16 +230,16 @@ void CNetwork::QueueIncomingOnSocket(SOCKET socket)
 		sockaddr_in clientaddr;
 
 		// Doing it similar to AC..
-		int bloblen = recvfrom(socket, (char *)buffer, 0x1E4, NULL, (sockaddr *)&clientaddr, &clientaddrlen);
+		int bloblen = socket.recvfrom(buffer, sizeof(buffer), &clientaddr);
 
-		if (bloblen == SOCKET_ERROR)
+		if (bloblen <= 0)
 		{
-			DWORD dwCode = WSAGetLastError();
+			// uint32_t dwCode = WSAGetLastError();
 
-			if (dwCode != 10035)
-			{
-				// LOG(Temp, Normal, "Winsock Error %lu\n", dwCode);
-			}
+			// if (dwCode != 10035)
+			// {
+			// 	// LOG(Temp, Normal, "Winsock Error %lu\n", dwCode);
+			// }
 
 			break;
 		}
@@ -331,19 +262,24 @@ void CNetwork::QueueIncomingOnSocket(SOCKET socket)
 		if ((bloblen - sizeof(BlobHeader_s)) != wSize)
 			continue;
 
+		if (wRecID == 0)
+		{
+			ProcessConnectionless(&clientaddr, blob);
+			continue;
+		}
+
 		CQueuedPacket qp;
 		memcpy(&qp.addr, &clientaddr, sizeof(sockaddr_in));
-		qp.data = new BYTE[bloblen];
-		memcpy(qp.data, buffer, bloblen);
+		qp.data = std::make_unique<BYTE[]>(bloblen);
+		memcpy(qp.data.get(), buffer, bloblen);
 		qp.len = bloblen;
-		qp.recvTime = g_pGlobals->UpdateTime();
+		qp.recvTime = g_pGlobals->Time();
 
-		EnterCriticalSection(&_incomingLock);
-		_queuedIncoming.push_back(qp);
-		LeaveCriticalSection(&_incomingLock);
+		{
+			std::scoped_lock lock(m_incomingLock);
+			_queuedIncoming.push_back(std::move(qp));
+		}
 
-		// blob->header.dwCRC -= CalcTransportCRC((DWORD *)blob);
-		
 		/*
 #ifdef _DEBUG
 		SOCKADDR_IN addr;
@@ -363,94 +299,61 @@ void CNetwork::QueueIncomingOnSocket(SOCKET socket)
 		}
 #endif
 */
-
-		/*
-		if (!wRecID)
-		{
-			ProcessConnectionless(&clientaddr, blob);
-		}
-		else
-		{
-			CClient *client = ValidateClient(wRecID, &clientaddr);
-			if (client)
-				client->IncomingBlob(blob);
-		}
-		*/
 	}
 
 }
 
 void CNetwork::ProcessQueuedIncoming()
 {
-	CQueuedPacket qp;
-	bool bHasQueued;
-
-	do 
+	while (!_queuedIncoming.empty())
 	{
-		bHasQueued = false;
-
-		EnterCriticalSection(&_incomingLock);
-		if (!_queuedIncoming.empty())
+		CQueuedPacket qp;
 		{
-			qp = _queuedIncoming.front();
+			std::scoped_lock lock(m_incomingLock);
+			qp = std::move(_queuedIncoming.front());
 			_queuedIncoming.pop_front();
-			bHasQueued = true;
 		}
-		LeaveCriticalSection(&_incomingLock);
+			
+		BlobPacket_s *blob = (BlobPacket_s *)qp.data.get();
+		blob->header.dwCRC -= CalcTransportCRC((uint32_t *)blob);
 
-		if (bHasQueued)
+		if (!blob->header.wRecID)
 		{
-			BlobPacket_s *blob = (BlobPacket_s *) qp.data;
-			blob->header.dwCRC -= CalcTransportCRC((DWORD *)blob);
-		
-			if (!blob->header.wRecID)
-			{
-				ProcessConnectionless(&qp.addr, blob);
-			}
-			else if (CClient *client = ValidateClient(blob->header.wRecID, &qp.addr))
-			{
-				client->IncomingBlob(blob, qp.recvTime);
-			}
-
-			delete [] qp.data;
+			ProcessConnectionless(&qp.addr, blob);
 		}
-
-	} while (bHasQueued);
+		else if (CClient *client = ValidateClient(blob->header.wRecID, &qp.addr))
+		{
+			client->IncomingBlob(blob, qp.recvTime);
+		}
+	}
 }
 
 void CNetwork::LogoutAll()
 {
-	for (DWORD i = 0; i < m_NumClients; i++)
+	for (auto entry : m_clients)
 	{
-		if (CClient *client = m_ClientArray[i])
-		{
-			if (client->IsAlive() && client->GetEvents())
-			{
-				client->GetEvents()->BeginLogout();
-			}
-		}
+		CClient *client = entry.second;
+		if (client && client->IsAlive() && client->GetEvents())
+			client->GetEvents()->ForceLogout();
 	}
 }
 
 void CNetwork::CompleteLogoutAll()
 {
-	for (DWORD i = 0; i < m_NumClients; i++)
+	for (auto entry : m_clients)
 	{
-		if (CClient *client = m_ClientArray[i])
+		CClient *client = entry.second;
+		if (client && client->IsAlive() && client->GetEvents())
 		{
-			if (client->IsAlive() && client->GetEvents())
-			{
-				//todo: send the user to the appropriate server connection lost screen.
-				BinaryWriter EnterPortal;
-				EnterPortal.Write<DWORD>(0xF751);
-				EnterPortal.Write<DWORD>(0);
-				client->SendNetMessage(EnterPortal.GetData(), EnterPortal.GetSize(), OBJECT_MSG);
+			BinaryWriter EnterPortal;
+			EnterPortal.Write<uint32_t>(0xF751);
+			EnterPortal.Write<uint32_t>(0);
+			client->SendNetMessage(EnterPortal.GetData(), EnterPortal.GetSize(), OBJECT_MSG);
 
-				BinaryWriter popupString;
-				popupString.Write<DWORD>(4);
-				popupString.WriteString("The server has shutdown.");
-				client->SendNetMessage(&popupString, PRIVATE_MSG, FALSE, FALSE);
-			}
+			BinaryWriter popupString;
+			popupString.Write<uint32_t>(4);
+			popupString.WriteString("The server has shutdown.");
+			client->SendNetMessage(&popupString, PRIVATE_MSG, FALSE, FALSE);
 		}
 	}
 }
@@ -459,26 +362,53 @@ void CNetwork::Think()
 {
 	ProcessQueuedIncoming();
 
-	for (DWORD i = 0; i < m_NumClients; i++)
+	auto itr = m_clients.begin();
+	while (itr != m_clients.end())
 	{
-		if (CClient *client = m_ClientArray[i])
+		CClient *client = itr->second;
+		if (!client || !client->IsAlive())
 		{
-			client->Think();
+			// nuke it
+			SERVER_INFO << "Client" << client->GetAccount() << "(" << inet_ntoa(client->GetHostAddress()->sin_addr) << ") disconnected";
+			delete client;
 
-			if (!client->IsAlive())
 			{
-				KillClient(client->GetSlot());
+				std::scoped_lock lock(m_clientsLock);
+				itr = m_clients.erase(itr);
 			}
+
+			continue;
 		}
+
+		client->Think();
+		itr++;
+	}
+
+#if defined(__cpp_lib_execution) && defined(__cpp_lib_parallel_algorithm)
+	std::for_each(std::execution::par, m_clients.begin(), m_clients.end(), [](client_list_value_t &client)
+#else
+	std::for_each(m_clients.begin(), m_clients.end(), [](client_list_value_t &client)
+#endif
+	{
+		client.second->ThinkOutbound();
+	});
+
+	if (m_lastBanSave + 30.0 < g_pGlobals->Time())
+	{
+		SaveBans();
+		m_lastBanSave = g_pGlobals->Time();
 	}
 }
 
 CClient* CNetwork::GetClient(WORD slot)
 {
-	if (!slot || slot > m_MaxClients)
-		return NULL;
+	auto itr = m_clients.find(slot);
 
-	return m_ClientSlots[slot];
+	if (itr != m_clients.end())
+	{
+		return itr->second;
+	}
+	return nullptr;
 }
 
 void CNetwork::KickClient(CClient *pClient)
@@ -486,12 +416,33 @@ void CNetwork::KickClient(CClient *pClient)
 	if (!pClient)
 		return;
 
-	LOG(Temp, Normal, "Client #%u (%s) is being kicked.\n", pClient->GetSlot(), pClient->GetAccount());
+	SERVER_INFO << "Client" << pClient->GetSlot() << "(" << pClient->GetAccount() << ") is being kicked.";
 	BinaryWriter KC;
-	KC.Write<long>(0xF7DC);
-	KC.Write<long>(0);
+	KC.Write<int32_t>(0xF7DC);
+	KC.Write<int32_t>(0);
 
 	pClient->SendNetMessage(KC.GetData(), KC.GetSize(), PRIVATE_MSG);
+	pClient->ThinkOutbound();
+	pClient->Kill(NULL, NULL);
+}
+
+void CNetwork::KickBannedClient(CClient *pClient, int32_t duration)
+{
+	if (!pClient)
+		return;
+
+	// newlines to push turbine support url out of the window.
+	std::string msg;
+	msg += "\n\n";
+	msg += g_pConfig->GetBanString();
+	msg += "\n\n\n\n";
+
+	BinaryWriter KBC;
+	KBC.Write<int32_t>(0xF7C1);
+	KBC.Write<int32_t>(duration); // ban duration in seconds
+	KBC.WriteString(msg);
+
+	pClient->SendNetMessage(KBC.GetData(), KBC.GetSize(), PRIVATE_MSG);
 	pClient->ThinkOutbound();
 	pClient->Kill(NULL, NULL);
 }
@@ -516,167 +467,121 @@ CClient* CNetwork::ValidateClient(WORD index, sockaddr_in *peer)
 
 void CNetwork::KillClient(WORD slot)
 {
-	if (CClient *pClient = GetClient(slot))
-	{		
-		LOG(Temp, Normal, "Client(%s, %s) disconnected. (%s)\n", pClient->GetAccount(), inet_ntoa(pClient->GetHostAddress()->sin_addr), timestamp());
+	//if (CClient *pClient = GetClient(slot))
+	//{		
+	//	SERVER_INFO << "Client" << pClient->GetAccount() << "(" << inet_ntoa(pClient->GetHostAddress()->sin_addr) << ") disconnected";
 
-		DWORD arrayPos = pClient->GetArrayPos();
+	//	uint32_t arrayPos = pClient->GetArrayPos();
 
-		delete pClient;
+	//	delete pClient;
 
-		m_NumClients--;
-		m_ClientArray[arrayPos] = m_ClientArray[m_NumClients];
-		m_ClientArray[m_NumClients] = NULL;
-		m_ClientSlots[slot] = NULL;
-		m_OpenSlots.push_front(slot);
+	//	m_NumClients--;
+	//	m_ClientArray[arrayPos] = m_ClientArray[m_NumClients];
+	//	m_ClientArray[m_NumClients] = NULL;
+	//	m_ClientSlots[slot] = NULL;
+	//	m_OpenSlots.push_front(slot);
 
-		if (m_ClientArray[arrayPos])
-		{
-			m_ClientArray[arrayPos]->SetArrayPos(arrayPos);
-		}
+	//	if (m_ClientArray[arrayPos])
+	//	{
+	//		m_ClientArray[arrayPos]->SetArrayPos(arrayPos);
+	//	}
 
-		// m_server->Stats().UpdateClientList(NULL, 0);
-	}
+	//	// m_server->Stats().UpdateClientList(NULL, 0);
+	//}
 }
 
 CClient* CNetwork::FindClientByAccount(const char* account)
 {
-	for (DWORD i = 0; i < m_NumClients; i++)
+	for (auto entry : m_clients)
 	{
-		if (CClient *client = m_ClientArray[i])
-		{
-			if (client->CheckAccount(account))
-				return client;
-		}
+		if (entry.second && entry.second->CheckAccount(account))
+			return entry.second;
 	}
-
-	return NULL;
+	return nullptr;
 }
 
 void CNetwork::SendConnectLoginFailure(sockaddr_in *addr, int error, const char *accountname, const char *password)
 {
 	//Bad login.
-	CREATEBLOB(BadLogin, sizeof(DWORD));
-	*((DWORD *)BadLogin->data) = 0x00000000;
+	CREATEBLOB(BadLogin, sizeof(uint32_t) * 2);
+	((uint32_t *)BadLogin->data)[0] = (uint32_t)error;
+	((uint32_t *)BadLogin->data)[1] = ST_SERVER_ERRORS;
 
-	SendConnectlessBlob(addr, BadLogin, BT_ERROR, NULL);
+	SendConnectlessBlob(addr, BadLogin, BT_NETERROR, 0, 0, true);
+	//SendConnectlessBlob(addr, BadLogin, BT_ERROR, 0, 0, true);
 
 	DELETEBLOB(BadLogin);
 
-	if (strcmp(accountname, "acservertracker"))
+	if (accountname)
 	{
-		LOG(Temp, Normal, "Invalid login from %s, used account name '%s'\n", inet_ntoa(addr->sin_addr), accountname);
+		SERVER_INFO << "Invalid login from " << inet_ntoa(addr->sin_addr) << ", used account name '" << accountname << "'";
 	}
 }
 
 void CNetwork::ConnectionRequest(sockaddr_in *addr, BlobPacket_s *p)
 {
-	BinaryReader loginRequest(p->data, p->header.wSize);
+	g_pDB2->QueueAsyncQuery(new AuthenticateUserQuery(*addr, p));
+}
 
-	char *version_string = loginRequest.ReadString();
-	loginRequest.ReadDWORD(); // 0x20 ?
+void CNetwork::ProcessConnectionless(sockaddr_in *peer, BlobPacket_s *blob)
+{
+	uint32_t dwFlags = blob->header.dwFlags;
 
-	DWORD auth_method = loginRequest.ReadDWORD();
-	loginRequest.ReadDWORD(); // 0x0 ?
-	DWORD client_unix_timestamp = loginRequest.ReadDWORD(); // client unix timestamp
-
-	char *login_credentials;
-
-	if (auth_method != 1) // case 3 was turbine ticket method, took that out
-		return; 
-
-	login_credentials = loginRequest.ReadString();
-
-	DWORD portal_stamp = loginRequest.ReadDWORD();
-	DWORD cell_stamp = loginRequest.ReadDWORD();
-
-	if (loginRequest.GetLastError()) 
-		return;
-
-	char *szPassword = strstr(login_credentials, ":");
-	if (!szPassword) return;
-
-	*(szPassword) = '\0';
-	szPassword++;
-
-	if (!strcmp(login_credentials, "acservertracker"))
+	if (dwFlags == BT_LOGIN)
 	{
-		SendConnectLoginFailure(addr, 0, login_credentials, szPassword);
+		ConnectionRequest(peer, blob);
+
 		return;
 	}
 
-	// Try to login to the login_credentials
-	AccountInformation_t accountInfo;
-	int error = 0;
-	if (!g_pDBIO->VerifyAccount(login_credentials, szPassword, &accountInfo, &error))
-	{
-		if (error == VERIFYACCOUNT_ERROR_DOESNT_EXIST && g_pConfig->AutoCreateAccounts())
-		{
-			std::string ipaddress = inet_ntoa(addr->sin_addr);
+	// LOG(Network, Verbose, "Unhandled connectionless packet received: 0x%08X Look into this\n", dwFlags);
+}
 
-			// try to create the login_credentials
-			if (g_pDBIO->CreateAccount(login_credentials, szPassword, &error, ipaddress.c_str()))
-			{
-				// now try to verify the newly created login_credentials
-				if (!g_pDBIO->VerifyAccount(login_credentials, szPassword, &accountInfo, &error))
-				{
-					// fail
-					SendConnectLoginFailure(addr, error, login_credentials, szPassword);
-					return;
-				}
-			}
-			else
-			{
-				// fail
-				SendConnectLoginFailure(addr, error, login_credentials, szPassword);
-				return;
-			}
-		}
-		else
-		{
-			// fail
-			SendConnectLoginFailure(addr, error, login_credentials, szPassword);
-			return;
-		}
-	}
-	
-	CClient *client = FindClientByAccount(accountInfo.username.c_str());
+void CNetwork::AcceptClientLogin(sockaddr_in *addr, AccountInformation_t account, uint32_t timestamp, uint32_t portal_stamp, uint32_t cell_stamp)
+{
+	// this isn't happening on the same threads as before
+	// make sure everything is protected
+	CClient *client = FindClientByAccount(account.username.c_str());
 
 	if (client)
 	{
-		if (_stricmp(client->GetAccount(), "admin"))
+		if (stricmp(client->GetAccount(), "admin") && addr->sin_port == 9000)
 		{
-			KickClient(client);
-			// TODO don't allow this player to login for a few seconds while the world handles the other player
+			SendConnectLoginFailure(addr, STR_LOGIN_ACCOUNT_ONLINE, nullptr, nullptr);
+			return;
 		}
 		else
 		{
+			// TODO: make sure this client is using the same connection, otherwise send an error
 			return;
 		}
 	}
 
-	WORD slot = AllocOpenClientSlot();
-
-	if (!slot)
+	if (isFull())
 	{
-		// Server unavailable.
-		CREATEBLOB(ServerFull, sizeof(DWORD));
-		*((DWORD *)ServerFull->data) = 0x00000005;
-
-		SendConnectlessBlob(addr, ServerFull, BT_ERROR, NULL);
-
-		DELETEBLOB(ServerFull);
-		return;
+		if (account.access == 5)
+		{
+			// setup to allow admins access
+		}
+		else
+		{
+			SendConnectLoginFailure(addr, STR_LOGIN_SERVER_FULL, nullptr, nullptr);
+			return;
+		}
 	}
 
-	LOG(Temp, Normal, "Client(%s, %s) connected on slot #%u (%s)\n", login_credentials, inet_ntoa(addr->sin_addr), slot, timestamp());
+	uint16_t slot = GetClientId();
 
-	client = m_ClientSlots[slot] = new CClient(addr, slot, accountInfo);
-	client->SetLoginData(client_unix_timestamp, portal_stamp, cell_stamp);
+	SERVER_INFO << "Client" << account.username << "(" << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << ") connected on slot" << slot;
 
-	m_ClientArray[m_NumClients] = client;
-	client->SetArrayPos(m_NumClients);
-	m_NumClients++;
+	client = new CClient(addr, slot, account);
+	client->SetLoginData(timestamp, portal_stamp, cell_stamp);
+
+	{
+		std::scoped_lock lock(m_clientsLock);
+		m_clients.insert({ slot, client });
+	}
+
 
 	// Add the client to the HUD
 	// m_server->Stats().UpdateClientList(m_clients, m_slotrange);
@@ -691,78 +596,71 @@ void CNetwork::ConnectionRequest(sockaddr_in *addr, BlobPacket_s *p)
 	};
 	AcceptConnect.Write(cookie, sizeof(cookie));
 
-	AcceptConnect.Write<DWORD>(slot);
-	AcceptConnect.Write<DWORD>(client->GetPacketController()->GetServerCryptoSeed());
-	AcceptConnect.Write<DWORD>(client->GetPacketController()->GetClientCryptoSeed());
-	AcceptConnect.Write<DWORD>(2);
+	AcceptConnect.Write<uint32_t>(slot);
+	AcceptConnect.Write<uint32_t>(client->GetPacketController()->GetServerCryptoSeed());
+	AcceptConnect.Write<uint32_t>(client->GetPacketController()->GetClientCryptoSeed());
+	AcceptConnect.Write<uint32_t>(2);
 
-	DWORD dwLength = AcceptConnect.GetSize();
+	uint32_t dwLength = AcceptConnect.GetSize();
 
 	if (dwLength <= 0x1D0)
 	{
 		CREATEBLOB(Woot, (WORD)dwLength);
 		memcpy(Woot->data, AcceptConnect.GetData(), dwLength);
 
-		SendConnectlessBlob(addr, Woot, BT_LOGINREPLY, 0x00000000);
+		SendConnectlessBlob(addr, Woot, BT_LOGINREPLY, 0x00000000, 0, true);
 
 		DELETEBLOB(Woot);
+
+		// Check the account in the database to prevent users from changing their ip
+		if (IsBannedIP(addr->sin_addr) || account.banned == true)
+		{
+			int32_t duration = GetBanDuration(addr->sin_addr);
+
+			if (duration >= 0)
+				KickBannedClient(client, duration);
+			else
+			{
+				RemoveBan(addr->sin_addr);
+				g_pDBIO->UpdateBan(account.id, false);
+			}
+
+			return;
+		}
 	}
 	else
 	{
-		LOG(Temp, Normal, "AcceptConnect.GetSize() > 0x1D0");
+		SERVER_INFO << "AcceptConnect.GetSize() > 0x1D0";
 	}
-}
-
-WORD CNetwork::AllocOpenClientSlot()
-{
-	// Allocate an available slot for a connecting client
-
-	if (m_OpenSlots.empty())
-		return 0;
-
-	DWORD slot = *m_OpenSlots.begin();
-	m_OpenSlots.pop_front();
-
-	return slot;
-}
-
-void CNetwork::ProcessConnectionless(sockaddr_in *peer, BlobPacket_s *blob)
-{
-	DWORD dwFlags = blob->header.dwFlags;
-
-	if (dwFlags == BT_LOGIN)
-	{
-		if (!IsBannedIP(peer->sin_addr))
-		{
-			ConnectionRequest(peer, blob);
-		}
-
-		return;
-	}
-
-	// LOG(Network, Verbose, "Unhandled connectionless packet received: 0x%08X Look into this\n", dwFlags);
 }
 
 DEFINE_PACK(CBanDescription)
 {
-	pWriter->Write<DWORD>(1); // version
+	pWriter->Write<uint32_t>(2); // version
 	pWriter->WriteString(m_AdminName);
 	pWriter->WriteString(m_Reason);
-	pWriter->Write<DWORD>(m_Timestamp);
+	pWriter->Write<uint32_t>(m_Timestamp);
+	pWriter->Write<int32_t>(m_BanDuration);
+	pWriter->Write<uint32_t>(m_AccountID);
 }
 
 DEFINE_UNPACK(CBanDescription)
 {
-	DWORD version = pReader->Read<DWORD>();
+	uint32_t version = pReader->Read<uint32_t>();
 	m_AdminName = pReader->ReadString();
 	m_Reason = pReader->ReadString();
-	m_Timestamp = pReader->Read<DWORD>();
+	m_Timestamp = pReader->Read<uint32_t>();
+	if (version > 1)
+	{
+		m_BanDuration = pReader->Read<int32_t>();
+		m_AccountID = pReader->Read<uint32_t>();
+	}
 	return true;
 }
 
 DEFINE_PACK(CNetworkBanList)
 {
-	pWriter->Write<DWORD>(1); // version
+	pWriter->Write<uint32_t>(1); // version
 	m_BanTable.Pack(pWriter);
 }
 
@@ -770,7 +668,7 @@ DEFINE_UNPACK(CNetworkBanList)
 {
 	m_BanTable.clear();
 
-	DWORD version = pReader->Read<DWORD>();
+	uint32_t version = pReader->Read<uint32_t>();
 	m_BanTable.UnPack(pReader);
 	return true;
 }
@@ -780,10 +678,38 @@ bool CNetwork::IsBannedIP(in_addr ipaddr)
 	return m_Bans.m_BanTable.lookup(ipaddr.s_addr) ? true : false;
 }
 
+int32_t CNetwork::GetBanDuration(in_addr ipaddr)
+{
+	CBanDescription* ban = m_Bans.m_BanTable.lookup(ipaddr.s_addr);
+
+	int32_t timestamp, duration = 0;
+
+	if (ban)
+	{
+		timestamp = ban->m_Timestamp;
+		duration = ban->m_BanDuration;
+	}
+
+	if (!duration)
+		return 0;
+
+	return (timestamp + duration) - time(0);
+}
+
+uint32_t CNetwork::GetBanID(in_addr ipaddr)
+{
+	uint32_t id = m_Bans.m_BanTable.lookup(ipaddr.s_addr)->m_AccountID;
+
+	if (!id)
+		return 0;
+
+	return id;
+}
+
 void CNetwork::LoadBans()
 {
 	void *data = NULL;
-	DWORD length = 0;
+	unsigned long length = 0;
 	if (g_pDBIO->GetGlobalData(DBIO_GLOBAL_BAN_DATA, &data, &length))
 	{
 		BinaryReader reader(data, length);
@@ -798,15 +724,26 @@ void CNetwork::SaveBans()
 	g_pDBIO->CreateOrUpdateGlobalData(DBIO_GLOBAL_BAN_DATA, banData.GetData(), banData.GetSize());
 }
 
-void CNetwork::AddBan(in_addr ipaddr, const char *admin, const char *reason)
+void CNetwork::AddBan(in_addr ipaddr, const char *admin, const char *reason, uint32_t account_id)
 {
 	CBanDescription *pBan = &m_Bans.m_BanTable[ipaddr.s_addr];
 
 	pBan->m_AdminName = admin;
 	pBan->m_Reason = reason;
 	pBan->m_Timestamp = time(0);
+	pBan->m_BanDuration = 0;
+	pBan->m_AccountID = account_id;
+}
 
-	SaveBans();
+void CNetwork::AddBan(in_addr ipaddr, const char *admin, const char *reason, int32_t duration, uint32_t account_id)
+{
+	CBanDescription *pBan = &m_Bans.m_BanTable[ipaddr.s_addr];
+
+	pBan->m_AdminName = admin;
+	pBan->m_Reason = reason;
+	pBan->m_Timestamp = time(0);
+	pBan->m_BanDuration = duration;
+	pBan->m_AccountID = account_id;
 }
 
 bool CNetwork::RemoveBan(in_addr ipaddr)
@@ -815,7 +752,6 @@ bool CNetwork::RemoveBan(in_addr ipaddr)
 	{
 		m_Bans.m_BanTable.erase(ipaddr.s_addr);
 
-		SaveBans();
 		return true;
 	}
 
@@ -828,16 +764,145 @@ std::string CNetwork::GetBanList()
 	for (auto &entry : m_Bans.m_BanTable)
 	{
 		CBanDescription *pBan = &entry.second;
-		banList += csprintf("\n%s - Admin: %s @ %s Reason: %s\n", inet_ntoa(*(in_addr *)&entry.first), pBan->m_AdminName.c_str(), timestampDateString(pBan->m_Timestamp), pBan->m_Reason.c_str());
+		banList += csprintf("\n%s - Admin: %s @ %s Reason: %s Duration: %d\n", inet_ntoa(*(in_addr *)&entry.first), pBan->m_AdminName.c_str(), timestampDateString(pBan->m_Timestamp), pBan->m_Reason.c_str(), GetBanDuration(*(in_addr *)&entry.first));
 	}
 
 	return banList;
 }
 
+uint32_t CNetwork::GetUniques()
+{
+	if (m_clients.size() == 0)
+		return 0;
 
+	std::list<std::string> addresses;
+	std::string addr = "";
 
+	for (auto entry : m_clients)
+	{
+		if (entry.second)
+		{
+			addr = inet_ntoa(entry.second->GetHostAddress()->sin_addr);
+			if (addr != "")
+				addresses.push_back(addr);
+		}
+	}
 
+	addresses.unique();
 
+	uint32_t count = addresses.size();
 
+	return count;
+}
 
+AuthenticateUserQuery::AuthenticateUserQuery(sockaddr_in connection, BlobPacket_s *blob)
+	: m_connection(connection)
+{
+	BinaryReader loginRequest(blob->data, blob->header.wSize);
 
+	m_version = loginRequest.ReadString();
+	loginRequest.ReadUInt32(); // 0x20 ?
+
+	m_auth_type = loginRequest.ReadUInt32();
+	loginRequest.ReadUInt32(); // 0x0 ?
+
+	m_timestamp = loginRequest.ReadUInt32(); // client unix timestamp
+
+	switch (m_auth_type)
+	{
+	case 1:
+	{
+		// -a username:password
+		char *login_credentials;
+		login_credentials = loginRequest.ReadString();
+
+		char *szPassword = strstr(login_credentials, ":");
+		if (!szPassword) return;
+
+		*(szPassword) = '\0';
+		szPassword++;
+
+		m_username = login_credentials;
+		m_password = szPassword;
+
+		// there are two empty ints
+		loginRequest.ReadUInt32();
+		loginRequest.ReadUInt32();
+		break;
+	}
+
+	case 2:
+	{
+		// -a username -v password
+		char *login_credentials;
+		login_credentials = loginRequest.ReadString();
+		m_username = login_credentials;
+
+		// nothing
+		loginRequest.ReadUInt32();
+
+		// length of encoded data following
+		uint32_t dataLen = loginRequest.ReadUInt32();
+
+		// data is here packed_short,char[packed_short]
+		uint16_t len = loginRequest.ReadCompressedUInt16();
+		login_credentials = (char*)loginRequest.ReadArray(len);
+		m_password = login_credentials;
+		break;
+	}
+
+	default:
+		m_auth_type = 0;
+		break;
+	}
+}
+
+bool AuthenticateUserQuery::PerformQuery(MYSQL *c)
+{
+	if (!c)
+		return false;
+
+	if (m_username.compare("acservertracker") == 0)
+	{
+		g_pNetwork->SendConnectLoginFailure(&m_connection, STR_LOGIN_FAILED, nullptr, nullptr);
+		return true;
+	}
+
+	if (m_version.compare("1802") != 0)
+	{
+		g_pNetwork->SendConnectLoginFailure(&m_connection, STR_LOGIN_CLIENT_VERSION, nullptr, nullptr);
+		return true;
+	}
+
+	if (m_auth_type == 0) // case 3 was turbine ticket method, took that out
+	{
+		g_pNetwork->SendConnectLoginFailure(&m_connection, STR_LOGIN_INVALID_AUTH, nullptr, nullptr);
+		return true;
+	}
+
+	AccountInformation_t account = { 0 };
+	int err = 0;
+
+	if (!g_pDBIO->VerifyAccount(c, m_username.c_str(), m_password.c_str(), &account, &err))
+	{
+		if (err == VERIFYACCOUNT_ERROR_DOESNT_EXIST && g_pConfig->AutoCreateAccounts())
+		{
+			char *ipaddr = inet_ntoa(m_connection.sin_addr);
+			if (g_pDBIO->CreateAccount(c, m_username.c_str(), m_password.c_str(), &err, ipaddr))
+			{
+				g_pDBIO->VerifyAccount(c, m_username.c_str(), m_password.c_str(), &account, &err);
+			}
+		}
+
+		if (err != DBIO_ERROR_NONE)
+		{
+			g_pNetwork->SendConnectLoginFailure(&m_connection, STR_LOGIN_FAILED, m_username.c_str(), nullptr);
+			return true;
+		}
+	}
+
+	g_pNetwork->AcceptClientLogin(&m_connection, account, m_timestamp, 0, 0);
+
+	// if we get this far, go ahead and bail the attempt
+	return true;
+}

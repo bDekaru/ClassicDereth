@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Switch.h"
 #include "World.h"
 #include "Player.h"
@@ -20,7 +20,7 @@ void CSwitchWeenie::ApplyQualityOverrides()
 
 void CSwitchWeenie::PlaySwitchMotion()
 {
-	if (DWORD use_target_animation_did = InqDIDQuality(USE_TARGET_ANIMATION_DID, 0))
+	if (uint32_t use_target_animation_did = InqDIDQuality(USE_TARGET_ANIMATION_DID, 0))
 	{
 		last_move_was_autonomous = false;
 
@@ -38,7 +38,7 @@ void CSwitchWeenie::PlaySwitchMotion()
 	}
 }
 
-int CSwitchWeenie::Activate(DWORD activator_id)
+int CSwitchWeenie::Activate(uint32_t activator_id)
 {
 	if (get_minterp()->interpreted_state.GetNumActions())
 		return WERROR_NONE;
@@ -47,7 +47,7 @@ int CSwitchWeenie::Activate(DWORD activator_id)
 
 	if (m_fNextSwitchActivation <= Timer::cur_time)
 	{		
-		if (DWORD activation_target_id = InqIIDQuality(ACTIVATION_TARGET_IID, 0))
+		if (uint32_t activation_target_id = InqIIDQuality(ACTIVATION_TARGET_IID, 0))
 		{
 			CWeenieObject *activation_target = g_pWorld->FindObject(activation_target_id);
 			if (activation_target)
@@ -58,7 +58,7 @@ int CSwitchWeenie::Activate(DWORD activator_id)
 
 		//if (activationResponse & Activation_CastSpell)
 		{
-			if (DWORD spell_did = InqDIDQuality(SPELL_DID, 0))
+			if (uint32_t spell_did = InqDIDQuality(SPELL_DID, 0))
 			{
 				MakeSpellcastingManager()->CastSpellInstant(activator_id, spell_did);
 			}

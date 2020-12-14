@@ -80,7 +80,7 @@ public:
 	Position target_position;
 	CPhysicsObj *physics_obj;
 	int initialized;
-	long double sticky_timeout_time;
+	double sticky_timeout_time;
 };
 
 class InterpolationNode
@@ -142,10 +142,10 @@ public:
 	
 	BOOL IsInterpolating();
 
-	void StickTo(DWORD object_id, float radius, float height);
+	void StickTo(uint32_t object_id, float radius, float height);
 	void UnStick();
 	void HandleUpdateTarget(TargetInfo target_info);
-	DWORD GetStickyObjectID();
+	uint32_t GetStickyObjectID();
 
 	void ConstrainTo(Position *p, float start_distance, float max_distance);
 	void UnConstrain();

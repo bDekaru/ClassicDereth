@@ -1,25 +1,31 @@
 
 #pragma once
 
+#include <map>
+#include <unordered_map>
+
 #include "PackableJson.h"
+#include "BinaryWriter.h"
+
+class BinaryReader;
 
 class PackObj
 {
 public:
-	PackObj() { }
-	virtual ~PackObj() { }
-	// virtual DWORD GetPackSize() { return 0; }
-	virtual void Pack(class BinaryWriter *pWriter) { }
-	virtual bool UnPack(class BinaryReader *pReader) { return true; }
+	PackObj() = default;
+	virtual ~PackObj() = default;
+	// virtual uint32_t GetPackSize() { return 0; }
+	virtual void Pack(BinaryWriter *pWriter) { }
+	virtual bool UnPack(BinaryReader *pReader) { return true; }
 };
 
 #define DECLARE_PACKABLE() \
-	virtual void Pack(class BinaryWriter *pWriter) override; \
-	virtual bool UnPack(class BinaryReader *pReader) override;
+	virtual void Pack(BinaryWriter *pWriter) override; \
+	virtual bool UnPack(BinaryReader *pReader) override;
 #define DEFINE_PACK(className) \
-	void className::Pack(class BinaryWriter *pWriter)
+	void className::Pack(BinaryWriter *pWriter)
 #define DEFINE_UNPACK(className) \
-	bool className::UnPack(class BinaryReader *pReader)
+	bool className::UnPack(BinaryReader *pReader)
 
 // to make the old style (AC) packing use our new stream style
 #define DECLARE_LEGACY_PACK_MIGRATOR() \
@@ -27,14 +33,14 @@ public:
 	BOOL UnPack(BYTE **ppData, ULONG uiSize) override;
 #define DEFINE_LEGACY_PACK_MIGRATOR(className) \
 	ULONG className::Pack(BYTE **ppData, ULONG uiSize) { \
-		BinaryWriter writer; \
-		Pack(&writer); \
-		ULONG dataSize = writer.GetSize(); \
-		if (ppData && uiSize >= writer.GetSize()) { \
-			memcpy(*ppData, writer.GetData(), dataSize); \
+		std::unique_ptr<BinaryWriter> writer = std::make_unique<BinaryWriter>(); \
+		Pack(writer.get()); \
+		ULONG dataSize = writer->GetSize(); \
+		if (ppData && uiSize >= dataSize) { \
+			memcpy(*ppData, writer->GetData(), dataSize); \
 			*ppData += dataSize; \
 		} \
-		return writer.GetSize(); \
+		return dataSize; \
 	} \
 	BOOL className::UnPack(BYTE **ppData, ULONG uiSize) { \
 		BinaryReader reader(*ppData, uiSize); \
@@ -51,9 +57,11 @@ template<typename KeyType, typename ValueType, typename KeyPackType = uint32_t, 
 class PackableHashTable : public PackableHashTableBase<KeyType, ValueType>, public PackObj
 {
 public:
-	typedef PackableHashTableBase<KeyType, ValueType> baseClass;
+	using _base = PackableHashTableBase<KeyType, ValueType>;
+	using iterator = typename _base::iterator;
+	//typedef PackableHashTableBase<KeyType, ValueType> _base;
 #ifndef _DEBUG
-	PackableHashTable<KeyType, ValueType, KeyPackType, DefaultBucketSize>() : baseClass(DefaultBucketSize)
+	PackableHashTable<KeyType, ValueType, KeyPackType, DefaultBucketSize>() : _base(DefaultBucketSize)
 #else
 	PackableHashTable<KeyType, ValueType, KeyPackType, DefaultBucketSize>()
 #endif
@@ -66,17 +74,18 @@ public:
 	{
 		unsigned int numEntries = 0;
 
-		BinaryWriter entryData;
-		for (baseClass::iterator i = begin(); i != end(); i++)
+		//BinaryWriter entryData;
+		std::unique_ptr<BinaryWriter> entryData = std::make_unique<BinaryWriter>();
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			numEntries++;
-			entryData.Write<KeyPackType>(i->first);
-			entryData.Write<ValueType>(i->second);
+			entryData->template Write<KeyPackType, KeyType>(i->first);
+			entryData->template Write<ValueType, ValueType>(i->second);
 		}
 
-		pWriter->Write<WORD>(size());
-		pWriter->Write<WORD>(DefaultBucketSize);
-		pWriter->Write(&entryData);
+		pWriter->template Write<WORD>(_base::size());
+		pWriter->template Write<WORD>(DefaultBucketSize);
+		pWriter->Write(entryData.get());
 	}
 	
 	template<typename vt>
@@ -85,17 +94,18 @@ public:
 	{
 		unsigned int numEntries = 0;
 
-		BinaryWriter entryData;
-		for (baseClass::iterator i = begin(); i != end(); i++)
+		//BinaryWriter entryData;
+		std::unique_ptr<BinaryWriter> entryData = std::make_unique<BinaryWriter>();
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			numEntries++;
-			entryData.Write<KeyPackType>((KeyPackType) i->first);
-			i->second.Pack(&entryData);
+			entryData->template Write<KeyPackType>((KeyPackType) i->first);
+			i->second.Pack(entryData.get());
 		}
 
-		pWriter->Write<WORD>(size());
-		pWriter->Write<WORD>(DefaultBucketSize);
-		pWriter->Write(&entryData);
+		pWriter->template Write<WORD>(_base::size());
+		pWriter->template Write<WORD>(DefaultBucketSize);
+		pWriter->Write(entryData.get());
 	}
 
 	virtual void Pack(BinaryWriter *pWriter) override
@@ -107,10 +117,11 @@ public:
 	typename std::enable_if<!std::is_base_of<PackObj, vt>::value>::type
 		UnPackInternal(BinaryReader *pReader)
 	{
-		DWORD numEntries = pReader->Read<WORD>();
-		DWORD bucketSize = pReader->Read<WORD>();
+		uint32_t numEntries = pReader->Read<WORD>();
+		[[maybe_unused]]
+		uint32_t bucketSize = pReader->Read<WORD>();
 
-		for (DWORD i = 0; i < numEntries; i++)
+		for (uint32_t i = 0; i < numEntries; i++)
 		{
 			KeyType key = pReader->Read<KeyType>();
 			this->operator[](key) = pReader->Read<ValueType>();
@@ -124,10 +135,11 @@ public:
 	typename std::enable_if<std::is_base_of<PackObj, vt>::value>::type
 		UnPackInternal(BinaryReader *pReader)
 	{
-		DWORD numEntries = pReader->Read<WORD>();
-		DWORD bucketSize = pReader->Read<WORD>();
+		uint32_t numEntries = pReader->Read<WORD>();
+		[[maybe_unused]]
+		uint32_t bucketSize = pReader->Read<WORD>();
 
-		for (DWORD i = 0; i < numEntries; i++)
+		for (uint32_t i = 0; i < numEntries; i++)
 		{
 			KeyType key = pReader->Read<KeyType>();
 			this->operator[](key).UnPack(pReader);
@@ -139,7 +151,7 @@ public:
 
 	void EmptyContents()
 	{
-		clear();
+		_base::clear();
 	}
 
 	virtual bool UnPack(BinaryReader *pReader) override
@@ -151,10 +163,10 @@ public:
 
 	void remove(KeyType key)
 	{
-		baseClass::iterator i = find(key);
-		if (i != end())
+		iterator i = _base::find(key);
+		if (i != _base::end())
 		{
-			erase(i);
+			_base::erase(i);
 		}
 	}
 
@@ -163,19 +175,19 @@ public:
 		return lookup(key) != NULL;
 	}
 
-	ValueType *lookup(KeyType key)
+	ValueType *lookup(const KeyType &key)
 	{
-		baseClass::iterator i = find(key);
-		if (i != end())
+		iterator i = _base::find(key);
+		if (i != _base::end())
 			return &i->second;
 		return NULL;
 	}
 
 	ValueType *lookup_slow_string_case_insensitive(std::string key)
 	{
-		for (baseClass::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
-			if (!_stricmp(i.first.c_str(), key.c_str()))
+			if (!stricmp(i.first.c_str(), key.c_str()))
 				return &i.second;
 		}
 
@@ -184,10 +196,10 @@ public:
 
 	BOOL add(KeyType key, const ValueType *value)
 	{
-		baseClass::iterator i = find(key);
-		if (i == end())
+		iterator i = _base::find(key);
+		if (i == _base::end())
 		{
-			insert(std::pair<KeyType, ValueType>(key, *value));
+			_base::insert(std::pair<KeyType, ValueType>(key, *value));
 			return TRUE;
 		}
 
@@ -201,7 +213,7 @@ public:
 
 	BOOL IsEmpty()
 	{
-		return !size();
+		return !_base::size();
 	}
 
 protected:
@@ -211,9 +223,11 @@ template<typename KeyType, typename ValueType, typename KeyPackType = uint32_t, 
 class PackableHashTableWithJson : public PackableHashTable<KeyType, ValueType, KeyPackType, DefaultBucketSize>, public PackableJson
 {
 public:
-	PackableHashTableWithJson<KeyType, ValueType, KeyPackType, DefaultBucketSize>()
-	{
-	}
+	using _base = PackableHashTable<KeyType, ValueType, KeyPackType, DefaultBucketSize>;
+	using iterator = typename _base::iterator;
+
+	PackableHashTableWithJson() = default;
+	virtual ~PackableHashTableWithJson() = default;
 
 	template<typename vt>
 	typename std::enable_if<!std::is_base_of<PackableJson, vt>::value>::type
@@ -222,7 +236,8 @@ public:
 		for (const json &entry : reader)
 		{
 			KeyType key = entry["key"];
-			this->operator[](key) = entry["value"];
+			//_base::operator[](key) = entry["value"];
+			_base::insert(std::pair<KeyType, ValueType>(key, entry["value"]));
 		}
 	}
 
@@ -239,7 +254,7 @@ public:
 
 	virtual bool UnPackJson(const json &reader) override
 	{
-		EmptyContents();
+		_base::EmptyContents();
 		UnPackJson<ValueType>(reader);
 		return true;
 	}
@@ -248,7 +263,7 @@ public:
 	typename std::enable_if<!std::is_base_of<PackableJson, vt>::value>::type
 		PackJson(json &writer)
 	{
-		for (baseClass::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			json entry;
 			entry["key"] = (KeyPackType)i->first;
@@ -262,7 +277,7 @@ public:
 	typename std::enable_if<std::is_base_of<PackableJson, vt>::value>::type
 		PackJson(json &writer)
 	{
-		for (baseClass::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			json entry;
 			entry["key"] = (KeyPackType)i->first;
@@ -285,11 +300,15 @@ template<typename KeyType, typename ValueType, typename KeyPackType = uint32_t, 
 class PackableHashTableWithEnumConverterJson : public PackableHashTableWithJson<KeyType, ValueType, KeyPackType, DefaultBucketSize>
 {
 public:
+	using _base = PackableHashTableWithJson<KeyType, ValueType, KeyPackType, DefaultBucketSize>;
+	using iterator = typename _base::iterator;
+
 	typedef KeyType (*EnumUnPacker)(const std::string &key);
 	typedef std::string (*EnumPacker)(const KeyType &key);
 
 	PackableHashTableWithEnumConverterJson<KeyType, ValueType, KeyPackType, DefaultBucketSize>(
-		EnumUnPacker pfnEnumUnPacker = nullptr, EnumPacker pfnEnumPacker = nullptr)
+		EnumUnPacker pfnEnumUnPacker = nullptr, EnumPacker pfnEnumPacker = nullptr) :
+		_base()
 	{
 		_pfnEnumUnPacker = pfnEnumUnPacker;
 		_pfnEnumPacker = pfnEnumPacker;
@@ -331,7 +350,7 @@ public:
 
 	virtual bool UnPackJson(const json &reader) override
 	{
-		EmptyContents();
+		_base::EmptyContents();
 		UnPackJson<ValueType>(reader);
 		return true;
 	}
@@ -340,7 +359,7 @@ public:
 	typename std::enable_if<!std::is_base_of<PackableJson, vt>::value>::type
 		PackJson(json &writer)
 	{
-		for (baseClass::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			json entry;
 
@@ -364,7 +383,7 @@ public:
 	typename std::enable_if<std::is_base_of<PackableJson, vt>::value>::type
 		PackJson(json &writer)
 	{
-		for (baseClass::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			json entry;
 
@@ -402,10 +421,11 @@ template<typename KeyType, typename ValueType, typename KeyPackType = uint32_t, 
 class PHashTable : public PHashTableBase<KeyType, ValueType>, public PackObj
 {
 public:
-	typedef PHashTableBase<KeyType, ValueType> baseClass;
-	PHashTable<KeyType, ValueType, KeyPackType, DefaultBucketSize>()
-	{
-	}
+	using _base = PHashTableBase<KeyType, ValueType>;
+	using iterator = typename _base::iterator;
+	//typedef PHashTableBase<KeyType, ValueType> _base;
+	PHashTable() = default;
+	virtual ~PHashTable() = default;
 
 	template<typename vt>
 	typename std::enable_if<!std::is_base_of<PackObj, vt>::value>::type
@@ -413,19 +433,20 @@ public:
 	{
 		unsigned int numEntries = 0;
 
-		BinaryWriter entryData;
-		for (baseClass::iterator i = begin(); i != end(); i++)
+		//BinaryWriter entryData;
+		std::unique_ptr<BinaryWriter> entryData = std::make_unique<BinaryWriter>();
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			numEntries++;
-			entryData.Write<KeyPackType>(i->first);
-			entryData.Write<ValueType>(i->second);
+			entryData->template Write<KeyPackType>(i->first);
+			entryData->template Write<ValueType>(i->second);
 
 			if (numEntries == 0xFFFFFF)
 				break;
 		}
 
-		pWriter->Write<DWORD>((size() & 0xFFFFFF) | ((DWORD)DefaultBucketSize << 24));
-		pWriter->Write(&entryData);
+		pWriter->template Write<uint32_t>((_base::size() & 0xFFFFFF) | ((uint32_t)DefaultBucketSize << 24));
+		pWriter->Write(entryData.get());
 	}
 
 	template<typename vt>
@@ -434,19 +455,20 @@ public:
 	{
 		unsigned int numEntries = 0;
 
-		BinaryWriter entryData;
-		for (baseClass::iterator i = begin(); i != end(); i++)
+		//BinaryWriter entryData;
+		std::unique_ptr<BinaryWriter> entryData = std::make_unique<BinaryWriter>();
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			numEntries++;
-			entryData.Write<KeyPackType>(i->first);
+			entryData->template Write<KeyPackType>(i->first);
 			i->second.Pack(&entryData);
 
 			if (numEntries == 0xFFFFFF)
 				break;
 		}
 
-		pWriter->Write<DWORD>((size() & 0xFFFFFF) | ((DWORD)DefaultBucketSize << 24));
-		pWriter->Write(&entryData);
+		pWriter->template Write<uint32_t>((_base::size() & 0xFFFFFF) | ((uint32_t)DefaultBucketSize << 24));
+		pWriter->Write(entryData.get());
 	}
 
 	virtual void Pack(BinaryWriter *pWriter) override
@@ -458,11 +480,12 @@ public:
 	typename std::enable_if<!std::is_base_of<PackObj, vt>::value>::type
 		UnPackInternal(BinaryReader *pReader)
 	{
-		DWORD numEntries = pReader->Read<DWORD>();
-		DWORD bucketSize = numEntries >> 24;
+		uint32_t numEntries = pReader->Read<uint32_t>();
+		[[maybe_unused]]
+		uint32_t bucketSize = numEntries >> 24;
 		numEntries &= 0xFFFFFF;
 
-		for (DWORD i = 0; i < numEntries; i++)
+		for (uint32_t i = 0; i < numEntries; i++)
 		{
 			KeyType key = pReader->Read<KeyType>();
 			this->operator[](key) = pReader->Read<ValueType>();
@@ -473,11 +496,11 @@ public:
 	typename std::enable_if<std::is_base_of<PackObj, vt>::value>::type
 		UnPackInternal(BinaryReader *pReader)
 	{
-		DWORD numEntries = pReader->Read<DWORD>();
-		DWORD bucketSize = numEntries >> 24;
+		uint32_t numEntries = pReader->Read<uint32_t>();
+		uint32_t bucketSize = numEntries >> 24;
 		numEntries &= 0xFFFFFF;
 
-		for (DWORD i = 0; i < numEntries; i++)
+		for (uint32_t i = 0; i < numEntries; i++)
 		{
 			KeyType key = pReader->Read<KeyType>();
 			this->operator[](key).UnPack(pReader);
@@ -486,7 +509,7 @@ public:
 
 	void EmptyContents()
 	{
-		clear();
+		_base::clear();
 	}
 
 	virtual bool UnPack(BinaryReader *pReader) override
@@ -498,27 +521,27 @@ public:
 
 	void remove(KeyType key)
 	{
-		baseClass::iterator i = find(key);
-		if (i != end())
+		iterator i = _base::find(key);
+		if (i != _base::end())
 		{
-			erase(i);
+			_base::erase(i);
 		}
 	}
 
 	ValueType *lookup(KeyType key)
 	{
-		baseClass::iterator i = find(key);
-		if (i != end())
+		iterator i = _base::find(key);
+		if (i != _base::end())
 			return &i->second;
 		return NULL;
 	}
 
 	BOOL add(KeyType key, const ValueType *value)
 	{
-		baseClass::iterator i = find(key);
-		if (i == end())
+		iterator i = _base::find(key);
+		if (i == _base::end())
 		{
-			insert(std::pair<KeyType, ValueType>(key, *value));
+			_base::insert(std::pair<KeyType, ValueType>(key, *value));
 			return TRUE;
 		}
 
@@ -532,7 +555,7 @@ public:
 
 	BOOL IsEmpty()
 	{
-		return !size();
+		return !_base::size();
 	}
 
 protected:
@@ -542,24 +565,26 @@ template<typename KeyType, typename ValueType, typename KeyPackType = uint32_t, 
 class HashTable : public std::map<KeyType, ValueType>, public PackObj
 {
 public:
-	HashTable<KeyType, ValueType, KeyPackType, DefaultBucketSize>()
-	{
-	}
+	using _base = std::map<KeyType, ValueType>;
+	using iterator = typename _base::iterator;
+
+	HashTable() = default;
+	virtual ~HashTable() = default;
 
 	template<typename vt>
 	typename std::enable_if<!std::is_base_of<PackObj, vt>::value>::type
 		PackInternal(BinaryWriter *pWriter)
 	{
-		pWriter->Write<BYTE>(DefaultBucketSize);
-		pWriter->WriteCompressedUInt32((DWORD) size());
+		pWriter->template Write<BYTE>(DefaultBucketSize);
+		pWriter->WriteCompressedUInt32((uint32_t) _base::size());
 
-		for (std::map<KeyType, ValueType>::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			//if (sizeof(KeyPackType) == 4)
 			//	pWriter->Align(); // TODO handle other sizes other than 4 byte aligns
 
-			pWriter->Write<KeyPackType>(i->first);
-			pWriter->Write<ValueType>(i->second);
+			pWriter->template Write<KeyPackType>(i->first);
+			pWriter->template Write<ValueType>(i->second);
 		}
 	}
 
@@ -567,15 +592,15 @@ public:
 	typename std::enable_if<std::is_base_of<PackObj, vt>::value>::type
 		PackInternal(BinaryWriter *pWriter)
 	{
-		pWriter->Write<BYTE>(DefaultBucketSize);
-		pWriter->WriteCompressedUInt32((DWORD) size());
+		pWriter->template Write<BYTE>(DefaultBucketSize);
+		pWriter->WriteCompressedUInt32((uint32_t)_base::size());
 
-		for (std::map<KeyType, ValueType>::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			//if (sizeof(KeyPackType) == 4)
 			//	pWriter->Align(); // TODO handle other sizes other than 4 byte aligns
 
-			pWriter->Write<KeyPackType>(i->first);
+			pWriter->template Write<KeyPackType>(i->first);
 			i->second.Pack(pWriter);
 		}
 	}
@@ -589,10 +614,10 @@ public:
 	typename std::enable_if<!std::is_base_of<PackObj, vt>::value>::type
 		UnPackInternal(BinaryReader *pReader)
 	{
-		DWORD bucketSize = pReader->Read<BYTE>();
-		DWORD numEntries = pReader->ReadCompressedUInt32();
+		uint32_t bucketSize = pReader->Read<BYTE>();
+		uint32_t numEntries = pReader->ReadCompressedUInt32();
 
-		for (DWORD i = 0; i < numEntries; i++)
+		for (uint32_t i = 0; i < numEntries; i++)
 		{
 			//if (sizeof(KeyPackType) == 4)
 			//	pReader->Align(); // TODO handle other sizes other than 4 byte aligns
@@ -606,10 +631,11 @@ public:
 	typename std::enable_if<std::is_base_of<PackObj, vt>::value>::type
 		UnPackInternal(BinaryReader *pReader)
 	{
-		DWORD bucketSize = pReader->Read<BYTE>();
-		DWORD numEntries = pReader->ReadCompressedUInt32();
+		[[maybe_unused]]
+		uint32_t bucketSize = pReader->Read<BYTE>();
+		uint32_t numEntries = pReader->ReadCompressedUInt32();
 
-		for (DWORD i = 0; i < numEntries; i++)
+		for (uint32_t i = 0; i < numEntries; i++)
 		{
 			//if (sizeof(KeyPackType) == 4)
 			//	pReader->ReadAlign(); // TODO handle other sizes other than 4 byte aligns
@@ -621,7 +647,7 @@ public:
 
 	void EmptyContents()
 	{
-		clear();
+		_base::clear();
 	}
 
 	virtual bool UnPack(BinaryReader *pReader) override
@@ -633,8 +659,8 @@ public:
 
 	void remove(KeyType key)
 	{
-		std::map<KeyType, ValueType>::iterator i = find(key);
-		if (i != end())
+		iterator i = _base::find(key);
+		if (i != _base::end())
 		{
 			erase(i);
 		}
@@ -642,16 +668,16 @@ public:
 
 	ValueType *lookup(KeyType key)
 	{
-		std::map<KeyType, ValueType>::iterator i = find(key);
-		if (i != end())
+		iterator i = _base::find(key);
+		if (i != _base::end())
 			return &i->second;
 		return NULL;
 	}
 
 	BOOL add(KeyType key, const ValueType *value)
 	{
-		std::map<KeyType, ValueType>::iterator i = find(key);
-		if (i == end())
+		iterator i = _base::find(key);
+		if (i == _base::end())
 		{
 			insert(std::pair<KeyType, ValueType>(key, *value));
 			return TRUE;
@@ -667,7 +693,7 @@ public:
 
 	BOOL IsEmpty()
 	{
-		return !size();
+		return !_base::size();
 	}
 
 protected:
@@ -678,29 +704,30 @@ template<typename ValueType>
 class PackableList : public std::list<ValueType>, public PackObj
 {
 public:
-	typedef typename std::list<ValueType>::iterator Iterator;
+	using _base = std::list<ValueType>;
+	using iterator = typename _base::iterator;
+	//typedef typename std::list<ValueType>::iterator Iterator;
 
-	PackableList<ValueType>()
-	{
-	}
+	PackableList() = default;
+	virtual ~PackableList() = default;
 
 	template<typename vt>
 	typename std::enable_if<!std::is_base_of<PackObj, vt>::value>::type
 		PackInternal(BinaryWriter *pWriter)
 	{
-		pWriter->Write<DWORD>(size());
+		pWriter->template Write<uint32_t>(_base::size());
 
-		for (std::list<ValueType>::iterator i = begin(); i != end(); i++)
-			pWriter->Write<ValueType>(*i);
+		for (iterator i = _base::begin(); i != _base::end(); i++)
+			pWriter->template Write<ValueType>(*i);
 	}
 
 	template<typename vt>
 	typename std::enable_if<std::is_base_of<PackObj, vt>::value>::type
 		PackInternal(BinaryWriter *pWriter)
 	{
-		pWriter->Write<DWORD>(size());
+		pWriter->template Write<uint32_t>(_base::size());
 
-		for (std::list<ValueType>::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 			i->Pack(pWriter);
 	}
 
@@ -713,11 +740,11 @@ public:
 	typename std::enable_if<!std::is_base_of<PackObj, vt>::value>::type
 		UnPackInternal(BinaryReader *pReader)
 	{
-		DWORD numEntries = pReader->Read<DWORD>();
+		uint32_t numEntries = pReader->Read<uint32_t>();
 
-		for (DWORD i = 0; i < numEntries; i++)
+		for (uint32_t i = 0; i < numEntries; i++)
 		{
-			push_back(pReader->Read<ValueType>());
+			_base::push_back(pReader->Read<ValueType>());
 
 			if (pReader->GetLastError())
 				break;
@@ -728,12 +755,12 @@ public:
 	typename std::enable_if<std::is_base_of<PackObj, vt>::value>::type
 		UnPackInternal(BinaryReader *pReader)
 	{
-		DWORD numEntries = pReader->Read<DWORD>();
+		uint32_t numEntries = pReader->Read<uint32_t>();
 
-		for (DWORD i = 0; i < numEntries; i++)
+		for (uint32_t i = 0; i < numEntries; i++)
 		{
-			emplace_back();
-			back().UnPack(pReader);
+			_base::emplace_back();
+			_base::back().UnPack(pReader);
 
 			if (pReader->GetLastError())
 				break;
@@ -742,34 +769,34 @@ public:
 
 	virtual bool UnPack(BinaryReader *pReader) override
 	{
-		clear();
+		_base::clear();
 		UnPackInternal<ValueType>(pReader);
 		return true;
 	}
 
-	typename Iterator GetAt(int index)
+	iterator GetAt(int index)
 	{
-		if (index < 0 || index >= size())
-			return end();
+		if (index < 0 || index >= _base::size())
+			return _base::end();
 
-		Iterator i = begin();
+		iterator i = _base::begin();
 		std::advance(i, index);
 		return i;
 	}
 
 	void InsertAt(int index, const ValueType &value)
 	{
-		insert(GetAt(index), value);
+		_base::insert(GetAt(index), value);
 	}
 
 	bool RemoveAt(int index)
 	{
-		Iterator i = GetAt(index);
+		iterator i = GetAt(index);
 
-		if (i == end())
+		if (i == _base::end())
 			return false;
 
-		erase(i);
+		_base::erase(i);
 		return true;
 	}
 
@@ -781,17 +808,18 @@ template<typename ValueType>
 class PackableListWithJson : public PackableList<ValueType>, public PackableJson
 {
 public:
-	typedef typename std::list<ValueType>::iterator Iterator;
+	using _base = PackableList<ValueType>;
+	using iterator = typename _base::iterator;
+	//typedef typename std::list<ValueType>::iterator Iterator;
 
-	PackableListWithJson<ValueType>()
-	{
-	}
+	PackableListWithJson() = default;
+	virtual ~PackableListWithJson() = default;
 
 	template<typename vt>
 	typename std::enable_if<!std::is_base_of<PackableJson, vt>::value>::type
 		PackJsonInternal(json &writer)
 	{
-		for (std::list<ValueType>::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			json entry = (ValueType) *i;
 			writer.push_back(entry);
@@ -802,7 +830,7 @@ public:
 	typename std::enable_if<std::is_base_of<PackableJson, vt>::value>::type
 		PackJsonInternal(json &writer)
 	{
-		for (std::list<ValueType>::iterator i = begin(); i != end(); i++)
+		for (iterator i = _base::begin(); i != _base::end(); i++)
 		{
 			json entry;
 			i->PackJson(entry);
@@ -821,7 +849,7 @@ public:
 	{
 		for (const auto &entry : reader)
 		{
-			push_back((ValueType) entry);
+			_base::push_back((ValueType) entry);
 		}
 	}
 
@@ -831,14 +859,14 @@ public:
 	{
 		for (const auto &entry : reader)
 		{
-			emplace_back();
-			back().UnPackJson(entry);
+			_base::emplace_back();
+			_base::back().UnPackJson(entry);
 		}
 	}
 
 	virtual bool UnPackJson(const json &reader) override
 	{
-		clear();
+		_base::clear();
 		UnPackJsonInternal<ValueType>(reader);
 		return true;
 	}

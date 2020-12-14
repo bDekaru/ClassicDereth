@@ -13,10 +13,10 @@ public:
 		a = 255;
 	}
 
-	static void Get(DWORD RGBA, float *R, float *G, float *B);
+	static void Get(uint32_t RGBA, float *R, float *G, float *B);
 
 	union {
-		DWORD color;
+		uint32_t color;
 		struct {
 			BYTE b;
 			BYTE g;
@@ -33,7 +33,7 @@ public:
 	RGBColor(float r, float g, float b) { m_fRed = r; m_fGreen = g; m_fBlue = b; }
 
 	BOOL UnPack(BYTE **ppData, ULONG iSize);
-	void SetColor32(DWORD Color);
+	void SetColor32(uint32_t Color);
 
 	inline RGBColor operator*(const float amount) const {
 		return RGBColor(m_fRed * amount, m_fGreen * amount, m_fBlue * amount);
@@ -52,33 +52,33 @@ public:
 
 	static DBObj* Allocator();
 	static void Destroyer(DBObj*);
-	static Palette* Get(DWORD ID);
+	static Palette* Get(uint32_t ID);
 
 	static void releasePalette(Palette *pPalette);
 	static Palette *copyRef(Palette *pPalette);
 	static Palette *get_solid_color_palette();
-	static DWORD get_solid_color_index();
+	static uint32_t get_solid_color_index();
 
 	virtual BOOL UnPack(BYTE** ppData, ULONG iSize);
 
 	BOOL InitEnd();
 
-	WORD get_color(DWORD Index);
-	DWORD get_color_32(DWORD Index); // this was made up
-	void set_color_index(DWORD Index, DWORD Color);
+	WORD get_color(uint32_t Index);
+	uint32_t get_color_32(uint32_t Index); // this was made up
+	void set_color_index(uint32_t Index, uint32_t Color);
 
 	static LongNIValHash<Palette*> custom_palette_table; // 0x005E1288
 	static Palette* solid_color_palette; // 0x005F3BD4;
-	static DWORD curr_solid_index;
+	static uint32_t curr_solid_index;
 
-	DWORD m_dwNumPaletteColors; // 0x1C / 0x28
-	DWORD m_dwNumScreenColors; // 0x20 / 0x2C
+	uint32_t m_dwNumPaletteColors; // 0x1C / 0x28
+	uint32_t m_dwNumScreenColors; // 0x20 / 0x2C
 	WORD* m_pScreenColors; // 0x24 / 0x30
 	float m_fMinimumAlpha; // 0x28 / 0x34
 	BOOL m_bInCache; // 0x2C / 0x38
-	DWORD* m_pPaletteColors; // 0x30 / 0x3C
+	uint32_t* m_pPaletteColors; // 0x30 / 0x3C
 
 	// this was made up:
-	DWORD* m_pScreenColors32;
+	uint32_t* m_pScreenColors32;
 };
 

@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ObjectInventory.h"
 
 int ContentProfile::operator==(const ContentProfile &other)
@@ -9,29 +9,29 @@ int ContentProfile::operator==(const ContentProfile &other)
 
 DEFINE_PACK(ContentProfile)
 {
-	pWriter->Write<DWORD>(m_iid);
-	pWriter->Write<DWORD>(m_uContainerProperties);
+	pWriter->Write<uint32_t>(m_iid);
+	pWriter->Write<uint32_t>(m_uContainerProperties);
 }
 
 DEFINE_UNPACK(ContentProfile)
 {
-	m_iid = pReader->Read<DWORD>();
-	m_uContainerProperties = pReader->Read<DWORD>();
+	m_iid = pReader->Read<uint32_t>();
+	m_uContainerProperties = pReader->Read<uint32_t>();
 	return true;
 }
 
 DEFINE_PACK(InventoryPlacement)
 {
-	pWriter->Write<DWORD>(iid_);
-	pWriter->Write<DWORD>(loc_);
-	pWriter->Write<DWORD>(priority_);
+	pWriter->Write<uint32_t>(iid_);
+	pWriter->Write<uint32_t>(loc_);
+	pWriter->Write<uint32_t>(priority_);
 }
 
 DEFINE_UNPACK(InventoryPlacement)
 {
-	iid_ = pReader->Read<DWORD>();
-	loc_ = pReader->Read<DWORD>();
-	priority_ = pReader->Read<DWORD>();
+	iid_ = pReader->Read<uint32_t>();
+	loc_ = pReader->Read<uint32_t>();
+	priority_ = pReader->Read<uint32_t>();
 	return true;
 }
 

@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Frame.h"
 #include "LandDefs.h"
 #include "LegacyPackObj.h"
@@ -251,9 +251,9 @@ void Frame::set_heading(float DegreeHeading)
 Vector Frame::get_vector_heading()
 {
 	Vector heading;
-	heading.x = m00 * 0.0 + m10 + m20;
-	heading.y = m01 * 0.0 + m11 + m21;
-	heading.z = m02 * 0.0 + m12 + m22;
+	heading.x = m10;
+	heading.y = m11;
+	heading.z = m12;
 	return heading;
 }
 
@@ -568,7 +568,7 @@ void Frame::subtract2(Frame *_f1, Frame *_f2)
 	set_rotate(Quaternion(new_qw, new_qx, new_qy, new_qz));
 }
 
-Position::Position(DWORD landcell, const Vector &origin, const Quaternion &angles)
+Position::Position(uint32_t landcell, const Vector &origin, const Quaternion &angles)
 {
 	objcell_id = landcell;
 	frame.m_origin = origin;
@@ -588,7 +588,7 @@ Position::Position()
 
 Position::Position(const char *str)
 {
-	DWORD cell_id = 0;
+	uint32_t cell_id = 0;
 	float x = 0, y = 0, z = 0;
 	float qw = 1, qx = 0, qy = 0, qz = 0;
 	int fields = sscanf(str, "%X %f %f %f %f %f %f %f", &cell_id, &x, &y, &z, &qw, &qx, &qy, &qz);
@@ -619,13 +619,13 @@ Position& Position::operator=(const Position& Pos)
 
 DEFINE_PACK(Position)
 {
-	pWriter->Write<DWORD>(objcell_id);
+	pWriter->Write<uint32_t>(objcell_id);
 	frame.Pack(pWriter);
 }
 
 DEFINE_UNPACK(Position)
 {
-	objcell_id = pReader->Read<DWORD>();
+	objcell_id = pReader->Read<uint32_t>();
 	frame.UnPack(pReader);
 	return true;
 }
@@ -645,13 +645,13 @@ DEFINE_UNPACK_JSON(Position)
 
 void Position::PackOrigin(BinaryWriter *pWriter)
 {
-	pWriter->Write<DWORD>(objcell_id);
+	pWriter->Write<uint32_t>(objcell_id);
 	frame.m_origin.Pack(pWriter);
 }
 
 bool Position::UnPackOrigin(BinaryReader *pReader)
 {
-	objcell_id = pReader->Read<DWORD>();
+	objcell_id = pReader->Read<uint32_t>();
 	frame.m_origin.UnPack(pReader);
 	return true;
 }
@@ -811,11 +811,11 @@ float Position::heading_diff(const Position &p)
 	return heading(p) - frame.get_heading();
 }
 
-DWORD Position::determine_quadrant(float height, Position *p) const
+uint32_t Position::determine_quadrant(float height, Position *p) const
 {
 	Vector hitpoint = localtolocal(*p, Vector(0, 0, 0));
 	
-	DWORD quadrant;
+	uint32_t quadrant;
 
 	if (hitpoint.x < 0.0)
 		quadrant = 0x8;
@@ -854,7 +854,7 @@ Frame Position::subtract2(Position *p2)
 void PositionPack::Pack(BinaryWriter *pWriter)
 {
 	BinaryWriter content;
-	DWORD flags = 0;
+	uint32_t flags = 0;
 
 	if (!position.frame.m_angles.w)
 		flags |= 8;
@@ -885,7 +885,7 @@ void PositionPack::Pack(BinaryWriter *pWriter)
 	if (placement_id)
 	{
 		flags |= 2;
-		content.Write<DWORD>(placement_id);
+		content.Write<uint32_t>(placement_id);
 	}
 
 	if (has_contact)
@@ -893,7 +893,7 @@ void PositionPack::Pack(BinaryWriter *pWriter)
 		flags |= 4;
 	}
 
-	pWriter->Write<DWORD>(flags);
+	pWriter->Write<uint32_t>(flags);
 	position.PackOrigin(pWriter);
 	pWriter->Write(&content);
 	pWriter->Write<WORD>(instance_timestamp); // 0x174
@@ -904,7 +904,7 @@ void PositionPack::Pack(BinaryWriter *pWriter)
 
 bool PositionPack::UnPack(BinaryReader *pReader)
 {
-	DWORD flags = pReader->Read<DWORD>();
+	uint32_t flags = pReader->Read<uint32_t>();
 	position.UnPackOrigin(pReader);	
 
 	if (flags & 8)
@@ -933,7 +933,7 @@ bool PositionPack::UnPack(BinaryReader *pReader)
 		velocity = Vector(0, 0, 0);
 
 	if (flags & 2)
-		placement_id = pReader->Read<DWORD>();
+		placement_id = pReader->Read<uint32_t>();
 	else
 		placement_id = 0;
 

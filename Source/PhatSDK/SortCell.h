@@ -14,7 +14,7 @@ public:
 	void remove_building(CBuildingObj *_object);
 	BOOL has_building();
 
-	CPhysicsObj *get_object(DWORD obj_iid);
+	CPhysicsObj *get_object(uint32_t obj_iid);
 
 	virtual TransitionState find_collisions(class CTransition *transit) override;
 	virtual void find_transit_cells(const unsigned int num_parts, CPhysicsPart **parts, CELLARRAY *cell_array) override;

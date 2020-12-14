@@ -1,24 +1,24 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "PlayerModule.h"
+#include "WeenieFactory.h"
 
 DEFINE_PACK(ShortCutData)
 {
-	pWriter->Write<DWORD>(index_);
-	pWriter->Write<DWORD>(objectID_);
-	pWriter->Write<DWORD>(spellID_);
+	pWriter->Write<uint32_t>(index_);
+	pWriter->Write<uint32_t>(objectID_);
+	pWriter->Write<uint32_t>(spellID_);
 }
 
 DEFINE_UNPACK(ShortCutData)
 {
-	index_ = pReader->Read<DWORD>();
-	objectID_ = pReader->Read<DWORD>();
-	spellID_ = pReader->Read<DWORD>();
+	index_ = pReader->Read<uint32_t>();
+	objectID_ = pReader->Read<uint32_t>();
+	spellID_ = pReader->Read<uint32_t>();
 	return true;
 }
 
-const DWORD SHORTCUTMANAGER_MAX_SHORTCUTS = 18;
+const uint32_t SHORTCUTMANAGER_MAX_SHORTCUTS = 18;
 
 ShortCutManager::~ShortCutManager()
 {
@@ -29,7 +29,7 @@ void ShortCutManager::Destroy()
 {
 	if (shortCuts_)
 	{
-		for (DWORD i = 0; i < SHORTCUTMANAGER_MAX_SHORTCUTS; i++)
+		for (uint32_t i = 0; i < SHORTCUTMANAGER_MAX_SHORTCUTS; i++)
 		{
 			SafeDelete (shortCuts_[i]);
 		}
@@ -51,7 +51,7 @@ ShortCutManager &ShortCutManager::operator =(const ShortCutManager &other)
 		shortCuts_ = new ShortCutData *[SHORTCUTMANAGER_MAX_SHORTCUTS];
 		memset(shortCuts_, 0, sizeof(ShortCutData *) * SHORTCUTMANAGER_MAX_SHORTCUTS);
 
-		for (DWORD i = 0; i < SHORTCUTMANAGER_MAX_SHORTCUTS; i++)
+		for (uint32_t i = 0; i < SHORTCUTMANAGER_MAX_SHORTCUTS; i++)
 		{
 			if (other.shortCuts_[i])
 			{
@@ -99,22 +99,22 @@ void ShortCutManager::RemoveShortCut(int index)
 
 DEFINE_PACK(ShortCutManager)
 {
-	DWORD numEntries = 0;
+	uint32_t numEntries = 0;
 
 	if (shortCuts_)
 	{
-		for (DWORD i = 0; i < SHORTCUTMANAGER_MAX_SHORTCUTS; i++)
+		for (uint32_t i = 0; i < SHORTCUTMANAGER_MAX_SHORTCUTS; i++)
 		{
 			if (shortCuts_[i])
 				numEntries++;
 		}
 	}
 
-	pWriter->Write<DWORD>(numEntries);
+	pWriter->Write<uint32_t>(numEntries);
 
 	if (shortCuts_)
 	{
-		for (DWORD i = 0; i < SHORTCUTMANAGER_MAX_SHORTCUTS; i++)
+		for (uint32_t i = 0; i < SHORTCUTMANAGER_MAX_SHORTCUTS; i++)
 		{
 			if (shortCuts_[i])
 				shortCuts_[i]->Pack(pWriter);
@@ -126,7 +126,7 @@ DEFINE_UNPACK(ShortCutManager)
 {
 	Destroy();
 
-	DWORD numEntries = pReader->Read<DWORD>();
+	uint32_t numEntries = pReader->Read<uint32_t>();
 
 	shortCuts_ = new ShortCutData *[SHORTCUTMANAGER_MAX_SHORTCUTS];
 	memset(shortCuts_, 0, sizeof(ShortCutData *) * SHORTCUTMANAGER_MAX_SHORTCUTS);
@@ -134,7 +134,7 @@ DEFINE_UNPACK(ShortCutManager)
 	if (numEntries > SHORTCUTMANAGER_MAX_SHORTCUTS)
 		numEntries = SHORTCUTMANAGER_MAX_SHORTCUTS;
 
-	for (DWORD i = 0; i < numEntries; i++)
+	for (uint32_t i = 0; i < numEntries; i++)
 	{
 		ShortCutData data;
 		data.UnPack(pReader);
@@ -163,7 +163,7 @@ GenericQualitiesData::~GenericQualitiesData()
 	SafeDelete(m_pStrStatsTable);
 }
 
-BOOL GenericQualitiesData::InqString(DWORD key, std::string &value)
+BOOL GenericQualitiesData::InqString(uint32_t key, std::string &value)
 {
 	if (m_pStrStatsTable)
 	{
@@ -181,7 +181,7 @@ BOOL GenericQualitiesData::InqString(DWORD key, std::string &value)
 
 DEFINE_PACK(GenericQualitiesData)
 {
-	DWORD header = 0;
+	uint32_t header = 0;
 	if (m_pIntStatsTable)
 		header |= 1;
 	if (m_pBoolStatsTable)
@@ -191,7 +191,7 @@ DEFINE_PACK(GenericQualitiesData)
 	if (m_pStrStatsTable)
 		header |= 8;
 
-	pWriter->Write<DWORD>(header);
+	pWriter->Write<uint32_t>(header);
 
 	if (m_pIntStatsTable)
 		m_pIntStatsTable->Pack(pWriter);
@@ -205,32 +205,32 @@ DEFINE_PACK(GenericQualitiesData)
 
 DEFINE_UNPACK(GenericQualitiesData)
 {
-	DWORD header = pReader->Read<DWORD>();
+	uint32_t header = pReader->Read<uint32_t>();
 	if (header & 1)
 	{
 		if (!m_pIntStatsTable)
-			m_pIntStatsTable = new PackableHashTable<unsigned long, long>();
+			m_pIntStatsTable = new PackableHashTable<uint32_t, int32_t>();
 
 		m_pIntStatsTable->UnPack(pReader);
 	}
 	if (header & 2)
 	{
 		if (!m_pBoolStatsTable)
-			m_pBoolStatsTable = new PackableHashTable<unsigned long, int>();
+			m_pBoolStatsTable = new PackableHashTable<uint32_t, int32_t>();
 
 		m_pBoolStatsTable->UnPack(pReader);
 	}
 	if (header & 4)
 	{
 		if (!m_pFloatStatsTable)
-			m_pFloatStatsTable = new PackableHashTable<unsigned long, double>();
+			m_pFloatStatsTable = new PackableHashTable<uint32_t, double>();
 
 		m_pFloatStatsTable->UnPack(pReader);
 	}
 	if (header & 8)
 	{
 		if (!m_pStrStatsTable)
-			m_pStrStatsTable = new PackableHashTable<unsigned long, std::string>();
+			m_pStrStatsTable = new PackableHashTable<uint32_t, std::string>();
 
 		m_pStrStatsTable->UnPack(pReader);
 	}
@@ -248,7 +248,7 @@ DEFINE_UNPACK(BaseProperty)
 	return true;
 }
 
-BasePropertyValue *BaseProperty::CreatePropertyValue(DWORD propName)
+BasePropertyValue *BaseProperty::CreatePropertyValue(uint32_t propName)
 {
 	UNFINISHED();
 	return NULL;
@@ -646,13 +646,13 @@ BasePropertyValue *BaseProperty::CreatePropertyValue(DWORD propName)
 
 DEFINE_PACK(PackObjPropertyCollection)
 {
-	pWriter->Write<DWORD>(2);
+	pWriter->Write<uint32_t>(2);
 	m_hashProperties.Pack(pWriter);
 }
 
 DEFINE_UNPACK(PackObjPropertyCollection)
 {
-	pReader->Read<DWORD>();
+	pReader->Read<uint32_t>();
 	m_hashProperties.UnPack(pReader);
 	return true;
 }
@@ -667,25 +667,30 @@ void PlayerModule::Destroy()
 	SafeDelete(shortcuts_);
 	SafeDelete(desired_comps_);
 	SafeDelete(m_pPlayerOptionsData);
+	if(windowDataLength)
+		SafeDeleteArray(windowData);
 }
 
 PlayerModule &PlayerModule::operator=(const PlayerModule &other)
 {
-	options_ = other.options_;
-	options2_ = other.options2_;
-	spell_filters_ = other.spell_filters_;
+	if (&other)
+	{
+		options_ = other.options_;
+		options2_ = other.options2_;
+		spell_filters_ = other.spell_filters_;
 
-	for (DWORD i = 0; i < 8; i++)
-		favorite_spells_[i] = other.favorite_spells_[i];
+		for (uint32_t i = 0; i < 8; i++)
+			favorite_spells_[i] = other.favorite_spells_[i];
 
-	CloneMemberPointerData<ShortCutManager>(shortcuts_, other.shortcuts_);
-	CloneMemberPointerData<PackableHashTable<DWORD, long>>(desired_comps_, other.desired_comps_);
-	CloneMemberPointerData<GenericQualitiesData>(m_pPlayerOptionsData, other.m_pPlayerOptionsData);
+		CloneMemberPointerData<ShortCutManager>(shortcuts_, other.shortcuts_);
+		CloneMemberPointerData<PackableHashTable<uint32_t, int32_t>>(desired_comps_, other.desired_comps_);
+		CloneMemberPointerData<GenericQualitiesData>(m_pPlayerOptionsData, other.m_pPlayerOptionsData);
+	}
 
 	return *this;
 }
 
-void PlayerModule::SetPackHeader(DWORD *bitfield)
+void PlayerModule::SetPackHeader(uint32_t *bitfield)
 {
 	if (shortcuts_)
 		*bitfield |= 1u;
@@ -700,49 +705,45 @@ void PlayerModule::SetPackHeader(DWORD *bitfield)
 	if (m_pPlayerOptionsData)
 		*bitfield |= 0x100;
 
-	// TODO
-	//	if (m_colGameplayOptions ... numElements)
-	//		*bitfield |= 0x200u;
+	if (windowDataLength > 0)
+		*bitfield |= 0x200u;
 }
 
 DEFINE_PACK(PlayerModule)
 {
-	DWORD header = 0;
+	uint32_t header = 0;
 	SetPackHeader(&header);
 
-	pWriter->Write<DWORD>(header);
-	pWriter->Write<DWORD>(options_);
+	pWriter->Write<uint32_t>(header);
+	pWriter->Write<uint32_t>(options_);
 
 	if (shortcuts_)
 		shortcuts_->Pack(pWriter);
 
-	for (DWORD i = 0; i < 8; i++)
+	for (uint32_t i = 0; i < 8; i++)
 		favorite_spells_[i].Pack(pWriter);
 
 	if (desired_comps_)
 		desired_comps_->Pack(pWriter);
 
-	pWriter->Write<DWORD>(spell_filters_);
-	pWriter->Write<DWORD>(options2_);
+	pWriter->Write<uint32_t>(spell_filters_);
+	pWriter->Write<uint32_t>(options2_);
 	
 	if (m_pPlayerOptionsData)
 		m_pPlayerOptionsData->Pack(pWriter);
 
-	/*
-	if (0) // TODO
+	if (windowDataLength > 0)
 	{
-		UNFINISHED();
-		// m_colGameplayOptions.Pack(pWriter);
+		pWriter->Write(windowData, windowDataLength);
 	}
-	*/
-
+	
 	pWriter->Align();
 }
 
 DEFINE_UNPACK(PlayerModule)
 {
-	DWORD header = pReader->Read<DWORD>();
-	options_ = pReader->Read<DWORD>();
+	uint32_t header = pReader->Read<uint32_t>();
+	options_ = pReader->Read<uint32_t>();
 
 	if (header & 1)
 	{
@@ -760,24 +761,24 @@ DEFINE_UNPACK(PlayerModule)
 
 	if (header & 4)
 	{
-		for (DWORD i = 1; i < 5; i++)
+		for (uint32_t i = 1; i < 5; i++)
 			favorite_spells_[i].UnPack(pReader);
 	}
 	else if (header & 0x10)
 	{
-		for (DWORD i = 1; i < 7; i++)
+		for (uint32_t i = 1; i < 7; i++)
 			favorite_spells_[i].UnPack(pReader);
 	}
 	else if (header & 0x400)
 	{
-		for (DWORD i = 1; i < 8; i++)
+		for (uint32_t i = 1; i < 8; i++)
 			favorite_spells_[i].UnPack(pReader);
 	}
 
 	if (header & 8)
 	{
 		if (!desired_comps_)
-			desired_comps_ = new PackableHashTable<DWORD, long>();
+			desired_comps_ = new PackableHashTable<uint32_t, int32_t>();
 
 		desired_comps_->UnPack(pReader);
 	}
@@ -788,7 +789,7 @@ DEFINE_UNPACK(PlayerModule)
 
 	if (header & 0x20)
 	{
-		spell_filters_ = pReader->Read<DWORD>();
+		spell_filters_ = pReader->Read<uint32_t>();
 	}
 	else
 	{
@@ -797,7 +798,7 @@ DEFINE_UNPACK(PlayerModule)
 
 	if (header & 0x40)
 	{
-		options2_ = pReader->Read<DWORD>();
+		options2_ = pReader->Read<uint32_t>();
 	}
 	else
 	{
@@ -824,10 +825,9 @@ DEFINE_UNPACK(PlayerModule)
 
 	if (header & 0x200)
 	{
-		// TODO
-		// UNFINISHED();
-
-		// m_colGameplayOptions.UnPack(pReader);
+		windowDataLength = pReader->GetDataRemaining();
+		windowData = new BYTE[windowDataLength];
+		memcpy(windowData, pReader->ReadArray(windowDataLength), windowDataLength);
 	}
 
 	pReader->ReadAlign();
@@ -851,7 +851,7 @@ void PlayerModule::RemoveShortCut(int index)
 	shortcuts_->RemoveShortCut(index);
 }
 
-void PlayerModule::AddSpellFavorite(DWORD spell_id, int index, int spellBarIndex)
+void PlayerModule::AddSpellFavorite(uint32_t spell_id, int index, int spellBarIndex)
 {
 	if (spellBarIndex < 0 || spellBarIndex >= 8)
 		return;
@@ -860,18 +860,42 @@ void PlayerModule::AddSpellFavorite(DWORD spell_id, int index, int spellBarIndex
 	favorite_spells_[spellBarIndex].InsertAt(index, spell_id);
 }
 
-void PlayerModule::RemoveSpellFavorite(DWORD spell_id, int spellBarIndex)
+void PlayerModule::RemoveSpellFavorite(uint32_t spell_id, int spellBarIndex)
 {
 	if (spellBarIndex < 0 || spellBarIndex >= 8)
 		return;
 	
-	PackableList<DWORD> *spellBar = &favorite_spells_[spellBarIndex];
+	PackableList<uint32_t> *spellBar = &favorite_spells_[spellBarIndex];
 
-	for (PackableList<DWORD>::iterator i = spellBar->begin(); i != spellBar->end();)
+	for (PackableList<uint32_t>::iterator i = spellBar->begin(); i != spellBar->end();)
 	{
 		if (*i == spell_id)
 			i = spellBar->erase(i);
 		else
 			i++;
+	}
+}
+
+void PlayerModule::AddOrUpdateDesiredComp(uint32_t & compWCID, uint32_t & compQTY)
+{
+	if (compQTY == 0) { // remove desired comp - do this first to save time.
+		if (desired_comps_ && desired_comps_->exists(compWCID)) {
+			desired_comps_->erase(compWCID);
+		}
+		return;
+	}
+
+	CWeenieDefaults *defaults = g_pWeenieFactory->GetWeenieDefaults(compWCID); //pull defaults for requested wcid
+	if (!defaults)
+		return;
+	if (defaults->m_Qualities.GetInt(ITEM_TYPE_INT, 0) != 0x1000) { // ignore WCIDS without an item_type of 0x1000 (Spell Component)
+		return;
+	}
+	if (!desired_comps_) { // this should never happen with "current" playerModule init code.
+		desired_comps_ = new PackableHashTable<uint32_t, int32_t>();
+	}
+
+	if (compQTY < 5001) { //client only allows input of quantities up to 5000.
+		desired_comps_->insert_or_assign(compWCID, compQTY);
 	}
 }

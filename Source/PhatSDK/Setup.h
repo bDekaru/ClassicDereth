@@ -17,7 +17,7 @@ public:
 	PlacementType();
 	virtual ~PlacementType();
 
-	BOOL UnPack(DWORD ObjCount, BYTE **ppData, ULONG iSize);
+	BOOL UnPack(uint32_t ObjCount, BYTE **ppData, ULONG iSize);
 
 	AnimFrame m_AnimFrame;
 };
@@ -30,7 +30,7 @@ public:
 
 	BOOL UnPack(BYTE **ppData, ULONG iSize);
 
-	DWORD part_id; // 0x0C
+	uint32_t part_id; // 0x0C
 	Frame frame; // 0x10
 };
 
@@ -67,28 +67,28 @@ public:
 	CSetup();
 	~CSetup();
 
-	static CSetup *makeSimpleSetup(DWORD GfxObjID);
-	static CSetup *makeParticleSetup(DWORD ObjCount, CSphere *bounding_sphere);
+	static CSetup *makeSimpleSetup(uint32_t GfxObjID);
+	static CSetup *makeParticleSetup(uint32_t ObjCount, CSphere *bounding_sphere);
 
 	static DBObj *Allocator();
 	static void Destroyer(DBObj*);
-	static CSetup *Get(DWORD ID);
+	static CSetup *Get(uint32_t ID);
 	static void Release(CSetup *);
 
 	void Destroy();
 	BOOL UnPack(BYTE **ppData, ULONG iSize);
 
-	LocationType *GetHoldingLocation(DWORD location_id);
+	LocationType *GetHoldingLocation(uint32_t location_id);
 
-	DWORD num_parts; // 0x1C / 0x28
-	DWORD *parts; // 0x20 / 0x2C
-	DWORD *parent_index; // 0x24 / 0x30
+	uint32_t num_parts; // 0x1C / 0x28
+	uint32_t *parts; // 0x20 / 0x2C
+	uint32_t *parent_index; // 0x24 / 0x30
 	Vector *default_scale; // 0x28 / 0x34 
 
-	DWORD num_cylsphere; // 0x2C / 0x38
+	uint32_t num_cylsphere; // 0x2C / 0x38
 	CCylSphere *cylsphere; // 0x30 / 0x3C
 
-	DWORD num_sphere; // 0x34 / 0x40
+	uint32_t num_sphere; // 0x34 / 0x40
 	CSphere *sphere; // 0x38 / 0x44
 
 	BOOL has_physics_bsp; // 0x3C / 0x48
@@ -105,7 +105,7 @@ public:
 	CSphere selection_sphere; // 0x64 / 0x70
 #endif
 
-	DWORD num_lights; // 0x74 / 0x80
+	uint32_t num_lights; // 0x74 / 0x80
 	LIGHTINFO *lights; // 0x78 / 0x84
 
 	Vector anim_scale; // 0x7C / 0x88 // not CSolid?
@@ -114,11 +114,11 @@ public:
 	LongHash<LocationType> *connection_points; // 0x8C / 0x98
 	LongHash<PlacementType> placement_frames; // 0x90 / 0x9C
 
-	DWORD default_anim_id; // 0xA8 / 0xB4
-	DWORD default_script_id; // 0xAC / 0xB8
-	DWORD default_mtable_id; // 0xB0 / 0xBC
-	DWORD default_stable_id; // 0xB4 / 0xC0
-	DWORD default_phstable_id; // 0xB8 / 0xC4
+	uint32_t default_anim_id; // 0xA8 / 0xB4
+	uint32_t default_script_id; // 0xAC / 0xB8
+	uint32_t default_mtable_id; // 0xB0 / 0xBC
+	uint32_t default_stable_id; // 0xB4 / 0xC0
+	uint32_t default_phstable_id; // 0xB8 / 0xC4
 };
 
 

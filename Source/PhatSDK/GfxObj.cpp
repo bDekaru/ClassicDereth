@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Polygon.h"
 #include "Surface.h"
 #include "GfxObj.h"
@@ -54,7 +54,7 @@ void CGfxObj::Destroyer(DBObj* pGfxObj)
 	delete ((CGfxObj *)pGfxObj);
 }
 
-CGfxObj *CGfxObj::Get(DWORD ID)
+CGfxObj *CGfxObj::Get(uint32_t ID)
 {
 	return (CGfxObj *)ObjCaches::GfxObjs->Get(ID);
 }
@@ -117,7 +117,7 @@ void CGfxObj::Destroy()
 
 	if (m_rgSurfaces)
 	{
-		for (DWORD i = 0; i < num_surfaces; i++)
+		for (uint32_t i = 0; i < num_surfaces; i++)
 		{
 			CSurface::Release(m_rgSurfaces[i]);
 		}
@@ -134,23 +134,23 @@ BOOL CGfxObj::UnPack(BYTE **ppData, ULONG iSize)
 {
 	Destroy();
 
-	UNPACK(DWORD, id);
+	UNPACK(uint32_t, id);
 
-	DWORD Fields;
-	UNPACK(DWORD, Fields);
+	uint32_t Fields;
+	UNPACK(uint32_t, Fields);
 
 #ifdef PRE_TOD
-	UNPACK(DWORD, num_surfaces);
+	UNPACK(uint32_t, num_surfaces);
 #else
 	UNPACK_COMPRESSED32(num_surfaces);
 #endif
 
 	m_rgSurfaces = new CSurface*[num_surfaces];
 
-	for (DWORD i = 0; i < num_surfaces; i++)
+	for (uint32_t i = 0; i < num_surfaces; i++)
 	{
-		DWORD TextureID;
-		UNPACK(DWORD, TextureID);
+		uint32_t TextureID;
+		UNPACK(uint32_t, TextureID);
 
 		m_rgSurfaces[i] = CSurface::Get(TextureID);
 	}
@@ -164,14 +164,14 @@ BOOL CGfxObj::UnPack(BYTE **ppData, ULONG iSize)
 	{
 		// Collision data
 #ifdef PRE_TOD
-		UNPACK(DWORD, num_physics_polygons);
+		UNPACK(uint32_t, num_physics_polygons);
 #else
 		UNPACK_COMPRESSED32(num_physics_polygons);
 #endif
 
 		physics_polygons = new CPolygon[num_physics_polygons];
 
-		for (DWORD i = 0; i < num_physics_polygons; i++)
+		for (uint32_t i = 0; i < num_physics_polygons; i++)
 			UNPACK_OBJ(physics_polygons[i]);
 
 		BSPNODE::pack_poly = physics_polygons;
@@ -194,14 +194,14 @@ BOOL CGfxObj::UnPack(BYTE **ppData, ULONG iSize)
 	{
 		// Rendering data.
 #ifdef PRE_TOD
-		UNPACK(DWORD, num_polygons);
+		UNPACK(uint32_t, num_polygons);
 #else
 		UNPACK_COMPRESSED32(num_polygons);
 #endif
 
 		polygons = new CPolygon[num_polygons];
 
-		for (DWORD i = 0; i < num_polygons; i++)
+		for (uint32_t i = 0; i < num_polygons; i++)
 			UNPACK_OBJ(polygons[i]);
 
 		BSPNODE::pack_poly = polygons;
@@ -237,7 +237,7 @@ BOOL CGfxObj::UnPack(BYTE **ppData, ULONG iSize)
 
 	if (Fields & 8)
 	{
-		UNPACK(DWORD, m_didDegrade);
+		UNPACK(uint32_t, m_didDegrade);
 		assert((m_didDegrade & 0xFF000000) == 0x11000000);
 	}
 #endif
@@ -256,7 +256,7 @@ void CGfxObj::init_end()
 		gfx_bound_box.m_Min = ((CVertex *)vertex_array.vertices)[0].origin;
 		gfx_bound_box.m_Max = ((CVertex *)vertex_array.vertices)[0].origin;
 
-		for (DWORD i = 1; i < vertex_array.num_vertices; i++)
+		for (uint32_t i = 1; i < vertex_array.num_vertices; i++)
 			gfx_bound_box.AdjustBBox(((CVertex *)((BYTE *)vertex_array.vertices + i*CVertexArray::vertex_size))->origin);
 	}
 	else
@@ -287,7 +287,7 @@ void GfxObjDegradeInfo::Destroyer(DBObj* pGfxObjDegradeInfo)
 	delete ((GfxObjDegradeInfo *)pGfxObjDegradeInfo);
 }
 
-GfxObjDegradeInfo *GfxObjDegradeInfo::Get(DWORD ID)
+GfxObjDegradeInfo *GfxObjDegradeInfo::Get(uint32_t ID)
 {
 	return (GfxObjDegradeInfo *)ObjCaches::GfxObjDegradeInfos->Get(ID);
 }
@@ -312,17 +312,17 @@ BOOL GfxObjDegradeInfo::UnPack(BYTE **ppData, ULONG iSize)
 {
 	Destroy();
 
-	UNPACK(DWORD, id);
-	UNPACK(DWORD, num_degrades);
+	UNPACK(uint32_t, id);
+	UNPACK(uint32_t, num_degrades);
 
 	degrades = new GfxObjDegradeLevel[num_degrades];
 
-	for (DWORD i = 0; i < num_degrades; i++)
+	for (uint32_t i = 0; i < num_degrades; i++)
 	{
-		UNPACK(DWORD, degrades[i].gfxobj_id);
-		UNPACK(DWORD, degrades[i].degrade_mode);
-		UNPACK(DWORD, degrades[i].min_dist);
-		UNPACK(DWORD, degrades[i].ideal_dist);
+		UNPACK(uint32_t, degrades[i].gfxobj_id);
+		UNPACK(uint32_t, degrades[i].degrade_mode);
+		UNPACK(uint32_t, degrades[i].min_dist);
+		UNPACK(uint32_t, degrades[i].ideal_dist);
 		UNPACK(float, degrades[i].max_dist);
 	}
 
@@ -337,7 +337,7 @@ float GfxObjDegradeInfo::get_max_degrade_distance(void) const
 		return degrades[0].max_dist;
 }
 
-void GfxObjDegradeInfo::get_degrade(float ViewerDist, DWORD *GfxIndex, DWORD *GfxFrameMod) const
+void GfxObjDegradeInfo::get_degrade(float ViewerDist, uint32_t *GfxIndex, uint32_t *GfxFrameMod) const
 {
 	if (TRUE) // if (degrades_disabled)
 	{
@@ -349,7 +349,7 @@ void GfxObjDegradeInfo::get_degrade(float ViewerDist, DWORD *GfxIndex, DWORD *Gf
 
 TransitionState CGfxObj::find_obj_collisions(CTransition *transition, float scale)
 {
-	for (DWORD i = 0; i < transition->sphere_path.num_sphere; i++)
+	for (uint32_t i = 0; i < transition->sphere_path.num_sphere; i++)
 	{
 		Vector offset = physics_sphere->center - transition->sphere_path.localspace_sphere[i].center;
 		float radSum = physics_sphere->radius + transition->sphere_path.localspace_sphere[i].radius;

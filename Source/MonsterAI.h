@@ -80,10 +80,10 @@ public:
 	bool ShouldSeekNewTarget();
 	
 	bool RollDiceCastSpell();
-	bool DoCastSpell(DWORD spell_id);
+	bool DoCastSpell(uint32_t spell_id);
 	bool DoMeleeAttack();
 
-	void GenerateRandomAttack(DWORD *motion, ATTACK_HEIGHT *height, float *power, CWeenieObject *weapon = NULL);
+	void GenerateRandomAttack(uint32_t *motion, ATTACK_HEIGHT *height, float *power, CWeenieObject *weapon = NULL);
 	float GetChaseDistance() { return m_fChaseRange; }
 
 	CMonsterWeenie *m_pWeenie = NULL;
@@ -116,7 +116,7 @@ public:
 	double m_fNextAttackTime = 0.0;
 	double m_fMinReturnStateTime = 0.0;
 	double m_fMinCombatStateTime = 0.0;
-	DWORD m_TargetID = 0;
+	uint32_t m_TargetID = 0;
 
 	double m_fReturnTimeoutTime = 0.0;
 
@@ -131,3 +131,4 @@ public:
 	double _cachedVisualAwarenessRange = 0.0;
 };
 
+extern bool monster_brawl;

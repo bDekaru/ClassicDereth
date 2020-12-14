@@ -31,7 +31,7 @@ public:
 	void clear_physics();
 
 	void set_object(CPhysicsObj *pPhysicsObj);
-	void set_placement_frame(AnimFrame *PlacementFrame, DWORD ID);
+	void set_placement_frame(AnimFrame *PlacementFrame, uint32_t ID);
 	void set_velocity(const Vector& Velocity);
 	void set_omega(const Vector& Omega);
 
@@ -39,13 +39,13 @@ public:
 	void subtract_physics(const Vector& Velocity, const Vector& Omega);
 
 	AnimFrame * get_curr_animframe();
-	long get_curr_frame_number();
+	int32_t get_curr_frame_number();
 
 	void multiply_cyclic_animation_framerate(float fRate);
 
 	void remove_cyclic_anims();
 
-	void remove_link_animations(DWORD amount);
+	void remove_link_animations(uint32_t amount);
 	void append_animation(AnimData *pAnimData);
 	void apply_physics(Frame *pframe, double quantum, double sign);
 	void update(double time_elapsed, Frame *pframe);
@@ -77,9 +77,9 @@ public:
 	CPartArray();
 	~CPartArray();
 
-	static CPartArray *CreateMesh(CPhysicsObj *pPhysicsObj, DWORD ID);
-	static CPartArray *CreateSetup(CPhysicsObj *_owner, DWORD setup_did, BOOL bCreateParts);
-	static CPartArray *CreateParticle(CPhysicsObj *_owner, DWORD _num_parts, CSphere *sorting_sphere);
+	static CPartArray *CreateMesh(CPhysicsObj *pPhysicsObj, uint32_t ID);
+	static CPartArray *CreateSetup(CPhysicsObj *_owner, uint32_t setup_did, BOOL bCreateParts);
+	static CPartArray *CreateParticle(CPhysicsObj *_owner, uint32_t _num_parts, CSphere *sorting_sphere);
 
 	void Destroy();
 	void DestroySetup();
@@ -94,20 +94,20 @@ public:
 	void AnimationDone(BOOL success);
 	BOOL CacheHasPhysicsBSP();
 	void CheckForCompletedMotions();
-	DWORD DoInterpretedMotion(DWORD mid, MovementParameters *params);
+	uint32_t DoInterpretedMotion(uint32_t mid, MovementParameters *params);
 	void HandleEnterWorld();
 	void HandleExitWorld();
 	void InitializeMotionTables();
 	void RemoveLightsFromCell(CObjCell *pCell);
-	void SetCellID(DWORD ID);
-	BOOL SetMeshID(DWORD ID);
-	BOOL SetSetupID(DWORD ID, BOOL bCreateParts);
-	BOOL SetPlacementFrame(DWORD ID);
+	void SetCellID(uint32_t ID);
+	BOOL SetMeshID(uint32_t ID);
+	BOOL SetSetupID(uint32_t ID, BOOL bCreateParts);
+	BOOL SetPlacementFrame(uint32_t ID);
 	void SetFrame(Frame *pFrame);
 	void SetNoDrawInternal(BOOL NoDraw);
 	void SetTranslucencyInternal(float Amount);
-	DWORD StopCompletely_Internal();
-	DWORD StopInterpretedMotion(DWORD mid, MovementParameters *params);
+	uint32_t StopCompletely_Internal();
+	uint32_t StopInterpretedMotion(uint32_t mid, MovementParameters *params);
 	void UpdateParts(Frame *pFrame);
 	void Update(float fTimeElapsed, Frame *pFrame);
 	void UpdateViewerDistance();
@@ -118,25 +118,25 @@ public:
 	int GetActivePlacementFrameID(); // custom
 
 	BOOL AllowsFreeHeading();
-	DWORD GetDataID();
+	uint32_t GetDataID();
 	float GetHeight() const;
 	float GetRadius() const;
 	void HandleMovement();
 
 	void Draw(Position *Pos);
 
-	DWORD GetNumSphere();
+	uint32_t GetNumSphere();
 	class CSphere *GetSphere();
-	DWORD GetNumCylsphere();
+	uint32_t GetNumCylsphere();
 	class CCylSphere *GetCylsphere();
 	CSphere *GetSortingSphere();
 	
 	TransitionState FindObjCollisions(class CTransition *transition);
 
-	DWORD GetSetupID();
+	uint32_t GetSetupID();
 
-	DWORD GetMotionTableID();
-	BOOL SetMotionTableID(DWORD ID);
+	uint32_t GetMotionTableID();
+	BOOL SetMotionTableID(uint32_t ID);
 
 	float GetStepDownHeight();
 	float GetStepUpHeight();
@@ -145,12 +145,12 @@ public:
 	void RemoveParts(CObjCell *obj_cell);
 	void calc_cross_cells_static(CObjCell *cell, struct CELLARRAY *cell_array);
 
-	DWORD pa_state; // 0x00
+	uint32_t pa_state; // 0x00
 	CPhysicsObj* owner; // 0x04
 	CSequence sequence; // 0x08 -- size 0x48
 	MotionTableManager * motion_table_manager; // 0x50
 	CSetup* setup; // 0x54
-	DWORD num_parts; // 0x58
+	uint32_t num_parts; // 0x58
 	CPhysicsPart** parts; // 0x5C
 	Vector scale; // 0x60
 	Palette** pals; // 0x6C
@@ -180,12 +180,12 @@ public:
 class LIGHTLIST // size 0x8
 {
 public:
-	LIGHTLIST(DWORD LightCount);
+	LIGHTLIST(uint32_t LightCount);
 	~LIGHTLIST();
 
 	void set_frame(Frame *pFrame);
 
-	DWORD num_lights;
+	uint32_t num_lights;
 	LIGHTOBJ *m_Lights;
 };
 

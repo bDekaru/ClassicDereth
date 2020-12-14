@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "QuestDefDB.h"
 
@@ -13,10 +13,16 @@ DEFINE_UNPACK(QuestDef)
 	_mindelta = pReader->Read<int>();
 	_maxsolves = pReader->Read<int>();
 	_fullname = pReader->ReadString();
-
-	// these are obfuscated, swap low/high nibbles
-	for (int i = 0; i < _fullname.size(); i++)
-		_fullname[i] = (char)(BYTE)((BYTE)((BYTE)_fullname[i] << 4) | (BYTE)((BYTE)_fullname[i] >> 4));
+	try
+	{
+		// these are obfuscated, swap low/high nibbles
+		for (int i = 0; i < _fullname.size(); i++)
+			_fullname[i] = (char)(BYTE)((BYTE)((BYTE)_fullname[i] << 4) | (BYTE)((BYTE)_fullname[i] >> 4));
+	}
+	catch(...)
+	{
+		SERVER_ERROR << "Error reading quest from DAT";
+	}
 
 	return true;
 }
@@ -32,7 +38,7 @@ DEFINE_UNPACK_JSON(QuestDef)
 {
 	_mindelta = reader["mindelta"];
 	_maxsolves = reader["maxsolves"];
-	_fullname = reader["fullname"];
+	_fullname = reader["fullname"].get<std::string>();
 	return true;
 }
 
@@ -43,7 +49,7 @@ DEFINE_PACK(QuestDefDB)
 
 DEFINE_UNPACK(QuestDefDB)
 {
-	// pReader->Read<DWORD>(); // id
+	// pReader->Read<uint32_t>(); // id
 
 	_defs.UnPack(pReader);
 

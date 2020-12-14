@@ -21,9 +21,9 @@ public:
 
 	std::string _name;
 	std::string _plural_name;
-	DWORD _wcid;
-	DWORD _iconID;
-	DWORD _iconOverlayID;
+	uint32_t _wcid;
+	uint32_t _iconID;
+	uint32_t _iconOverlayID;
 	unsigned int _containerID;
 	unsigned int _wielderID;
 	unsigned int _priority;
@@ -47,7 +47,7 @@ public:
 	int _blipColor;
 	RadarEnum _radar_enum;
 	float _obvious_distance;
-	DWORD _vndwcid;
+	uint32_t _vndwcid;
 	unsigned int _spellID;
 	unsigned int _house_owner_iid;
 	class RestrictionDB *_db;

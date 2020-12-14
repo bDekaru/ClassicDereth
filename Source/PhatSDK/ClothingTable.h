@@ -13,8 +13,8 @@ public:
 	DECLARE_PACKABLE();
 	DECLARE_PACKABLE_JSON();
 
-	DWORD oldTexID = 0;
-	DWORD newTexID = 0;
+	uint32_t oldTexID = 0;
+	uint32_t newTexID = 0;
 };
 
 class CloObjectEffect : public PackObj, public PackableJson
@@ -27,7 +27,7 @@ public:
 	DECLARE_PACKABLE_JSON();
 
 	unsigned int partNum = 0;
-	DWORD objectID = 0;
+	uint32_t objectID = 0;
 	unsigned int numTextureEffects = 0;
 	CloTextureEffect *textureEffects = NULL;
 };
@@ -59,7 +59,7 @@ public:
 	unsigned int numRanges = 0;
 	unsigned int *rangeStart = NULL;
 	unsigned int *rangeLength = NULL;
-	DWORD palSet = 0;
+	uint32_t palSet = 0;
 };
 
 class CloPaletteTemplate : public PackObj, public PackableJson
@@ -71,7 +71,7 @@ public:
 	DECLARE_PACKABLE();
 	DECLARE_PACKABLE_JSON();
 
-	DWORD iconID = 0;
+	uint32_t iconID = 0;
 	unsigned int numSubpalEffects = 0;
 	CloSubpalEffect *subpalEffects = NULL;
 };
@@ -107,15 +107,17 @@ public:
 	static DBObj *Allocator();
 	static DBObjWithJson *AllocatorWithJson();
 	static void Destroyer(DBObj *pObject);
-	static ClothingTable *Get(DWORD ID);
+	static ClothingTable *Get(uint32_t ID);
 	static void Release(ClothingTable *pClothingTable);
 
 	DECLARE_PACKABLE();
 	DECLARE_PACKABLE_JSON();
 	DECLARE_LEGACY_PACK_MIGRATOR();
 
-	BOOL BuildObjDesc(DWORD setup, DWORD pt, class ShadePackage *shades, class ObjDesc *od);
+	uint32_t GetAltSetup(uint32_t setup);
 
-	PackableHashTableWithJson<DWORD, ClothingBase> _cloBaseHash;
-	PackableHashTableWithJson<DWORD, CloPaletteTemplate> _paletteTemplatesHash;
+	BOOL BuildObjDesc(uint32_t setup, uint32_t pt, class ShadePackage *shades, class ObjDesc *od, uint32_t *iconId = 0);
+
+	PackableHashTableWithJson<uint32_t, ClothingBase> _cloBaseHash;
+	PackableHashTableWithJson<uint32_t, CloPaletteTemplate> _paletteTemplatesHash;
 };

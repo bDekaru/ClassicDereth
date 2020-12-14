@@ -12,14 +12,14 @@ public:
 
 	static DBObj *Allocator();
 	static void Destroyer(DBObj *pObject);
-	static PalSet *Get(DWORD ID);
+	static PalSet *Get(uint32_t ID);
 	static void Release(PalSet *pPalSet);
 
 	DECLARE_PACKABLE();
 	DECLARE_LEGACY_PACK_MIGRATOR();
 
-	DWORD GetPaletteID(double v);
+	uint32_t GetPaletteID(double v);
 
 	int numPals = 0;
-	DWORD *palette_IDs = NULL;
+	uint32_t *palette_IDs = NULL;
 };

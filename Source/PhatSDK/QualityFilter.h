@@ -72,16 +72,16 @@ public:
 	DECLARE_PACKABLE()
 	DECLARE_LEGACY_PACK_MIGRATOR()
 
-	virtual int GetNumIntStats() { return 512; }
-	virtual int GetNumInt64Stats() { return 64; }
-	virtual int GetNumBoolStats() { return 256; }
-	virtual int GetNumFloatStats() { return 512; }
-	virtual int GetNumStringStats() { return 64; }
-	virtual int GetNumDIDStats() { return 64; }
-	virtual int GetNumIIDStats() { return 64; }
-	virtual int GetNumPositionStats() { return 32; }
-	virtual int GetNumAttributeStats() { return 7; }
-	virtual int GetNumAttribute2ndStats() { return 7; }
+	virtual int GetNumIntStats() override { return 512; }
+	virtual int GetNumInt64Stats() override { return 64; }
+	virtual int GetNumBoolStats() override { return 256; }
+	virtual int GetNumFloatStats() override { return 512; }
+	virtual int GetNumStringStats() override { return 64; }
+	virtual int GetNumDIDStats() override { return 64; }
+	virtual int GetNumIIDStats() override { return 64; }
+	virtual int GetNumPositionStats() override { return 32; }
+	virtual int GetNumAttributeStats() override { return 7; }
+	virtual int GetNumAttribute2ndStats() override { return 7; }
 	virtual int GetNumSkillStats() { return 64; }
 
 	SET_AND_QUERY_QUALITY_FILTER_METHOD(Attribute, _attribute_stat_filter)

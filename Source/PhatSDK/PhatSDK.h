@@ -12,7 +12,7 @@
 
 #include "PhatSDKSettings.h"
 
-#ifndef LOG
+#ifndef WINLOG
 #define LOG(category, level, format, ...) 
 #endif
 
@@ -28,18 +28,18 @@
 // =============================================
 // Legacy support stuff
 // =============================================
-#define UNFINISHED() { DebugBreak(); } // things that aren't finished
+#define UNFINISHED() { /*DebugBreak();*/ } // things that aren't finished
 #define UNFINISHED_UNSAFE() { }
-#define UNFINISHED_LEGACY(comment) DEBUGOUT("Unfinished code.\r\n"); DebugBreak();
+#define UNFINISHED_LEGACY(comment) DEBUGOUT("Unfinished code.\r\n"); /*DebugBreak();*/
 #define UNFINISHED_WARNING_LEGACY(comment) DEBUGOUT("Unfinished code.\r\n");
-typedef DWORD UNKNOWN_ARG;
+typedef uint32_t UNKNOWN_ARG;
 
 #ifndef DEBUGOUT
 #define DEBUGOUT(format, ...)
 #endif
 
 #if _DEBUG
-#define DEBUG_BREAK() DebugBreak()
+#define DEBUG_BREAK() /*DebugBreak()*/
 #else
 #define DEBUG_BREAK()
 #endif
@@ -73,6 +73,13 @@ FORCEINLINE void CloneMemberPointerData(typeName * &selfMember, const typeName *
 
 class CWeenieObject;
 class CPhysicsObj;
+
+class Timer
+{
+public:
+	static double cur_time;
+};
+
 
 #include "Support/BinaryReader.h"
 #include "Support/BinaryWriter.h"
@@ -272,6 +279,9 @@ public:
 class CPhatSDKImpl
 {
 public:
+	CPhatSDKImpl() = default;
+	virtual ~CPhatSDKImpl() = default;
+
 	CPhatSDKRandom Random;
 
 	void UpdateInternalTime();
@@ -281,25 +291,19 @@ public:
 	virtual double GetRandomFloat(double min, double max) { return Random.GenFloat(min, max); }
 	virtual int GetRandomInt(int min, int max) { return Random.GenInt(min, max); }
 	virtual unsigned int GetRandomUInt(unsigned int min, unsigned int max) { return Random.GenUInt(min, max); }
-	virtual BYTE *GetPortalDataEntry(DWORD id, DWORD *length) = 0;
-	virtual BYTE *GetCellDataEntry(DWORD id, DWORD *length) = 0;
+	virtual BYTE *GetPortalDataEntry(uint32_t id, uint32_t *length) = 0;
+	virtual BYTE *GetCellDataEntry(uint32_t id, uint32_t *length) = 0;
 
-	virtual class CEnvCell *EnvCell_GetVisible(DWORD cell_id) = 0;
+	virtual class CEnvCell *EnvCell_GetVisible(uint32_t cell_id, bool bDoPostLoad = true) = 0;
 
 	virtual class CQuestDefDB *GetQuestDefDB() { return NULL; }
 };
 
 extern CPhatSDKImpl *g_pPhatSDK;
 
-namespace Random
-{
-	inline float RollDice(float min, float max) {
-		return (float) g_pPhatSDK->GetRandomFloat(min, max);
-	}
-};
-
-class Timer
-{
-public:
-	static double cur_time;
-};
+//namespace Random
+//{
+//	inline float RollDice(float min, float max) {
+//		return (float) g_pPhatSDK->GetRandomFloat(min, max);
+//	}
+//};

@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "VendorProfile.h"
 
@@ -20,8 +20,8 @@ DEFINE_PACK(ItemProfile)
 	if (pwd)
 		foo = -1;
 
-	pWriter->Write<DWORD>((foo << 24)  | amount & 0xFFFFFF);
-	pWriter->Write<DWORD>(iid);	
+	pWriter->Write<uint32_t>((foo << 24)  | amount & 0xFFFFFF);
+	pWriter->Write<uint32_t>(iid);	
 	if (pwd)
 		pwd->Pack(pWriter);
 }
@@ -30,13 +30,13 @@ DEFINE_UNPACK(ItemProfile)
 {
 	SafeDelete(pwd);
 
-	DWORD foo = pReader->Read<DWORD>();
+	uint32_t foo = pReader->Read<uint32_t>();
 
 	amount = foo;
 	if (amount & 0x800000)
 		amount = ((foo & 0xFFFFFF) | 0xFF000000);
 
-	iid = pReader->Read<DWORD>();
+	iid = pReader->Read<uint32_t>();
 
 	int has_pwd = foo >> 24;
 	if (has_pwd == -1)
@@ -62,13 +62,13 @@ VendorProfile::~VendorProfile()
 
 DEFINE_PACK(VendorProfile)
 {
-	pWriter->Write<DWORD>(item_types);
+	pWriter->Write<uint32_t>(item_types);
 	pWriter->Write<int>(min_value);
 	pWriter->Write<int>(max_value);
 	pWriter->Write<int>(magic);
 	pWriter->Write<float>(buy_price);
 	pWriter->Write<float>(sell_price);
-	pWriter->Write<DWORD>(trade_id);
+	pWriter->Write<uint32_t>(trade_id);
 	pWriter->Write<int>(trade_num);
 	pWriter->WriteString(trade_name);
 }
@@ -79,7 +79,7 @@ DEFINE_UNPACK(VendorProfile)
 	return true;
 }
 
-DWORD VendorProfile::VendorTradeCurrency()
+uint32_t VendorProfile::VendorTradeCurrency()
 {
 	return trade_id;
 }

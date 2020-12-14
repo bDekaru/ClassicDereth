@@ -1,19 +1,19 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 
 #include "TurbineData.h"
 #include "TurbineFile.h"
 
 #include "Database.h"
 
-TurbineFile::TurbineFile(DWORD dwID)
+TurbineFile::TurbineFile(uint32_t dwID)
 {
 	m_dwID = dwID;
 	m_pbData = NULL;
 	m_dwLength = 0;
 }
 
-TurbineFile::TurbineFile(DWORD dwID, BYTE *data, DWORD length)
+TurbineFile::TurbineFile(uint32_t dwID, BYTE *data, uint32_t length)
 {
 	m_dwID = dwID;
 	m_pbData = data;
@@ -27,21 +27,21 @@ TurbineFile::~TurbineFile()
 }
 
 #if 0
-void TurbineFile::Initialize(BYTE* pbDataFile, DWORD dwSectorStart, DWORD dwSectorSize, DWORD dwFileLength)
+void TurbineFile::Initialize(BYTE* pbDataFile, uint32_t dwSectorStart, uint32_t dwSectorSize, uint32_t dwFileLength)
 {
 	//One extra sector so it doesn't overflow.
-	BYTE *pbData = new BYTE[dwFileLength + (sizeof(DWORD) * dwSectorSize)];
+	BYTE *pbData = new BYTE[dwFileLength + (sizeof(uint32_t) * dwSectorSize)];
 	BYTE *pbDataPtr = pbData;
 
-	DWORD dwNextSector = dwSectorStart;
-	DWORD dwSectorData = sizeof(DWORD) * (dwSectorSize - 1);
+	uint32_t dwNextSector = dwSectorStart;
+	uint32_t dwSectorData = sizeof(uint32_t) * (dwSectorSize - 1);
 
 	while (dwNextSector)
 	{
 		BYTE* pbSector = pbDataFile + dwNextSector;
 
-		dwNextSector = *((DWORD *)pbSector);
-		pbSector += sizeof(DWORD);
+		dwNextSector = *((uint32_t *)pbSector);
+		pbSector += sizeof(uint32_t);
 
 		memcpy(pbDataPtr, pbSector, dwSectorData);
 		pbDataPtr += dwSectorData;
@@ -234,10 +234,10 @@ void TurbineFile::Initialize(BYTE* pbDataFile, DWORD dwSectorStart, DWORD dwSect
 
 BYTE *TurbineFile::GetData()
 {
-	return m_pbData + sizeof(DWORD);
+	return m_pbData + sizeof(uint32_t);
 }
 
-DWORD TurbineFile::GetLength()
+uint32_t TurbineFile::GetLength()
 {
 	return m_dwLength;
 }

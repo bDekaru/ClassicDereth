@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Lockpick.h"
 #include "UseManager.h"
 #include "Player.h"
@@ -74,7 +74,7 @@ int CLockpickWeenie::DoUseWithResponse(CWeenieObject *player, CWeenieObject *wit
 					return WERROR_DONT_KNOW_LOCKPICKING;
 				}
 				
-				DWORD skillLevel = 0;
+				uint32_t skillLevel = 0;
 				if (player->InqSkill(LOCKPICK_SKILL, skillLevel, FALSE))
 				{
 					DecrementStackOrStructureNum();

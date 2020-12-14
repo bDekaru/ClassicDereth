@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Texture.h"
 #include "Palette.h"
 #include "Surface.h"
@@ -63,7 +63,7 @@ CSurface::CSurface(CSurface *pSurface)
 	}
 	else
 	{
-		DebugBreak();
+		// DebugBreak();
 	}
 }
 
@@ -82,7 +82,7 @@ void CSurface::Destroyer(DBObj *pSurface)
 	delete ((CSurface *)pSurface);
 }
 
-CSurface *CSurface::Get(DWORD ID)
+CSurface *CSurface::Get(uint32_t ID)
 {
 #if PHATSDK_LOAD_SURFACES
 	return (CSurface *)ObjCaches::Surfaces->Get(ID);
@@ -106,7 +106,7 @@ CSurface *CSurface::makeCustomSurface(CSurface *pSurface)
 
 	pCustom->SetID(0);
 	pCustom->m_lLinks = 0;
-	custom_surface_table.add(pCustom, (DWORD)pCustom);
+	custom_surface_table.add(pCustom, pCustom->GetID());
 
 	return pCustom;
 }
@@ -115,8 +115,8 @@ void CSurface::releaseCustomSurface(CSurface *pSurface)
 {
 	/*
 	// Don't ask.
-	HashBaseData<unsigned long> *pRemoved =
-	((HashBase<unsigned long> *)&custom_surface_table)->remove((DWORD)pSurface);
+	HashBaseData<uint32_t> *pRemoved =
+	((HashBase<uint32_t> *)&custom_surface_table)->remove((uint32_t)pSurface);
 
 	if (pRemoved)
 	{
@@ -126,7 +126,7 @@ void CSurface::releaseCustomSurface(CSurface *pSurface)
 	delete pSurface;
 	}
 	*/
-	if (custom_surface_table.remove((DWORD)pSurface, &pSurface))
+	if (custom_surface_table.remove(pSurface->GetID(), &pSurface))
 	{
 		if (pSurface)
 			delete pSurface;
@@ -186,7 +186,7 @@ BOOL CSurface::ClearSurface()
 	return TRUE;
 }
 
-DWORD CSurface::GetFlags()
+uint32_t CSurface::GetFlags()
 {
 	return type;
 }
@@ -234,7 +234,7 @@ BOOL CSurface::UsePalette(Palette *pPalette)
 	return TRUE;
 }
 
-BOOL CSurface::UseTextureMap(ImgTex *pTexture, DWORD dw2CNum)
+BOOL CSurface::UseTextureMap(ImgTex *pTexture, uint32_t dw2CNum)
 {
 	if (handler == SH_DATABASE)
 		return FALSE;
@@ -300,20 +300,20 @@ BOOL CSurface::SetTranslucency(float Value)
 	return TRUE;
 }
 
-DWORD CSurface::GetOriginalTextureMapID()
+uint32_t CSurface::GetOriginalTextureMapID()
 {
 	return orig_texture_id;
 }
 
-DWORD CSurface::GetOriginalPaletteID()
+uint32_t CSurface::GetOriginalPaletteID()
 {
 	return orig_palette_id;
 }
 
-DWORD CSurface::GetTextureCode(ImgTex *pTexture, Palette *pPalette)
+uint32_t CSurface::GetTextureCode(ImgTex *pTexture, Palette *pPalette)
 {
 	if (pPalette->m_bInCache)
-		return ((pTexture->GetID() << 16) | (pTexture->GetID() & 0xFFFF));
+		return ((pTexture->id << 16) | (pTexture->GetID() & 0xFFFF));
 	else
 		return 0;
 }
@@ -321,19 +321,19 @@ DWORD CSurface::GetTextureCode(ImgTex *pTexture, Palette *pPalette)
 BOOL CSurface::UnPack(BYTE* *ppData, ULONG iSize)
 {
 #ifdef PRE_TOD
-	UNPACK(DWORD, id);
+	UNPACK(uint32_t, id);
 #else
-	// CFTOD: UNPACK(DWORD, m_Key)
+	// CFTOD: UNPACK(uint32_t, m_Key)
 #endif
-	UNPACK(DWORD, type);
+	UNPACK(uint32_t, type);
 
 	if (GetFlags() & 6)
 	{
-		UNPACK(DWORD, orig_texture_id);
-		UNPACK(DWORD, orig_palette_id);
+		UNPACK(uint32_t, orig_texture_id);
+		UNPACK(uint32_t, orig_palette_id);
 	}
 	else
-		UNPACK(DWORD, color_value);
+		UNPACK(uint32_t, color_value);
 
 	UNPACK(float, translucency);
 	UNPACK(float, luminosity);
@@ -350,7 +350,7 @@ BOOL CSurface::UnPack(BYTE* *ppData, ULONG iSize)
 
 void CSurface::InitEnd(SurfaceInitType init_type)
 {
-	DWORD TextureID = indexed_texture_id ? indexed_texture_id : orig_texture_id;
+	uint32_t TextureID = indexed_texture_id ? indexed_texture_id : orig_texture_id;
 
 	if (!TextureID)
 		ReleaseTexture();
@@ -358,7 +358,7 @@ void CSurface::InitEnd(SurfaceInitType init_type)
 	{
 		if (GetFlags() & 6)
 		{
-			long old_image_type = ImgTex::image_use_type;
+			int32_t old_image_type = ImgTex::image_use_type;
 
 			// Force type on this texture.
 			if (GetFlags() & 4)
@@ -434,7 +434,7 @@ void CSurface::SetTexture(ImgTex *pTexture)
 		if (pTexture->m_bInCache)
 			base1map = ImgTex::Get(pTexture->GetID());
 		else
-			base1map = ImgTex::getCustomTexture(pTexture->GetID());
+			base1map = ImgTex::getCustomTexture(pTexture->id);
 	}
 }
 
@@ -445,10 +445,10 @@ BOOL CSurface::SetTextureAndPalette(ImgTex *pTexture, Palette *pPalette)
 	handler = SH_PALSHIFT;
 
 	ImgTex *custom_texture;
-	DWORD custom_texture_ID;
+	uint32_t custom_texture_ID;
 
 	if (pPalette->m_bInCache)
-		custom_texture_ID = (pTexture->GetID() << 16) | (pPalette->GetID() & 0xFFFF);
+		custom_texture_ID = (pTexture->id << 16) | (pPalette->GetID() & 0xFFFF);
 	else
 		custom_texture_ID = 0;
 

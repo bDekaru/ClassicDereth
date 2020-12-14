@@ -3,15 +3,15 @@
 
 #include "MathLib.h"
 
-class AFrame
+class AFrame : public PackObj
 {
 public:
 	AFrame();
 
 	BOOL UnPack(BYTE **ppData, ULONG iSize); // For legacy purposes
 
-	void Pack(BinaryWriter *pWriter);
-	bool UnPack(BinaryReader *pReader);
+	virtual void Pack(BinaryWriter *pWriter) override;
+	virtual bool UnPack(BinaryReader *pReader) override;
 	BOOL IsValid();
 
 	Vector m_origin;
@@ -19,7 +19,7 @@ public:
 };
 
 // wait a second, these aren't really inherited.. fix this.
-class Frame : public AFrame
+class Frame : public AFrame, public PackableJson
 {
 public:
 	Frame();
@@ -28,11 +28,11 @@ public:
 	ULONG Pack(BYTE **ppData, ULONG iSize); // For legacy purposes.
 	BOOL UnPack(BYTE **ppData, ULONG iSize); // For legacy purposes.
 
-	void Pack(BinaryWriter *pWriter);
-	bool UnPack(BinaryReader *pReader);
+	virtual void Pack(BinaryWriter *pWriter) override;
+	virtual bool UnPack(BinaryReader *pReader) override;
 
-	void PackJson(json &writer);
-	bool UnPackJson(const json &reader);
+	virtual void PackJson(json &writer) override;
+	virtual bool UnPackJson(const json &reader) override;
 
 	BOOL IsValid();
 	BOOL IsValidExceptForHeading();
@@ -92,7 +92,7 @@ public:
 class Position : public PackObj, public PackableJson
 {
 public:
-	Position(DWORD landcell, const Vector &origin = Vector(0, 0, 0), const Quaternion &angles = Quaternion(1, 0, 0, 0));
+	Position(uint32_t landcell, const Vector &origin = Vector(0, 0, 0), const Quaternion &angles = Quaternion(1, 0, 0, 0));
 	Position(const Position& Pos);
 	Position(const char *str); // custom
 	Position();
@@ -100,7 +100,7 @@ public:
 
 	virtual ULONG pack_size() {
 		// For legacy purposes.
-		return (sizeof(DWORD) + frame.pack_size());
+		return (sizeof(uint32_t) + frame.pack_size());
 	}
 	
 	DECLARE_PACKABLE()
@@ -128,7 +128,7 @@ public:
 	float distance_squared(const Position& pos) const; // custom
 	float heading(const Position &p);
 	float heading_diff(const Position &p);
-	DWORD determine_quadrant(float height, Position *p) const;
+	uint32_t determine_quadrant(float height, Position *p) const;
 
 	void adjust_to_outside();
 
@@ -139,9 +139,25 @@ public:
 	static float cylinder_distance(float r1, float h1, const Position &p1, float r2, float h2, const Position &p2);
 	static float cylinder_distance_no_z(float r1, const Position &p1, float r2, const Position &p2);
 
-	DWORD objcell_id;
+	uint32_t objcell_id;
 	Frame frame;
 };
+
+inline std::ostream& operator<<(std::ostream& out, const Position &pos)
+{
+	auto flags = out.flags();
+	auto prec = out.precision();
+	char fill = out.fill();
+
+	out << "0x" << std::setfill('0') << std::setw(8) << std::hex << pos.objcell_id;
+	out << std::setfill(fill) << std::setw(0) << std::dec << std::fixed << std::setprecision(4);
+	out << " [" << pos.frame.m_origin << "] " << pos.frame.m_angles;
+
+	out.precision(prec);
+	out.flags(flags);
+
+	return out;
+}
 
 inline bool operator !(const Position &position) {
 	return !position.objcell_id ? true : false;
@@ -162,7 +178,7 @@ public:
 	short force_position_timestamp = 0; // 0xA
 	Position position; // 0xC
 	Vector velocity; // 0x54
-	unsigned long placement_id = 0; // 0x60
+	uint32_t placement_id = 0; // 0x60
 	int has_contact = 0; // 0x64
 };
 

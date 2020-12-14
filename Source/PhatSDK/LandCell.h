@@ -11,7 +11,7 @@ public:
 	CLandCell();
 	~CLandCell();
 
-	static CLandCell *Get(DWORD cell_id);
+	static CLandCell *Get(uint32_t cell_id);
 
 	static void add_outside_cell(CELLARRAY *cell_array, int x, int y);
 	static void add_cell_block(int min_x, int min_y, int max_x, int max_y, CELLARRAY *cell_array);
@@ -26,7 +26,7 @@ public:
 
 	BOOL IsInView(void);
 	BOOL find_terrain_poly(const Vector &origin, CPolygon **walkable);
-	BOOL point_in_cell(const Vector &pt);
+	BOOL point_in_cell(const Vector &pt) override;
 
 	CPolygon **polygons; // 0xF0
 	BOOL in_view; // 0xF4

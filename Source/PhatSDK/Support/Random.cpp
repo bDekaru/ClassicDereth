@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include <StdAfx.h>
 #include "Random.h"
 #include <limits.h>
 #include <math.h>
@@ -61,7 +61,7 @@ CSharpRandom::CSharpRandom(int seed) {
 
 CSharpRandom::~CSharpRandom()
 {
-	delete SeedArray;
+	delete[] SeedArray;
 }
 
 int CSharpRandom::Next() {

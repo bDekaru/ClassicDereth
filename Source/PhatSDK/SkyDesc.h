@@ -18,8 +18,8 @@ public:
 	float end_angle = 0.0f;
 	Vector tex_velocity;
 	unsigned int properties = 0;
-	DWORD default_gfx_object = 0;
-	DWORD default_pes_object = 0;
+	uint32_t default_gfx_object = 0;
+	uint32_t default_pes_object = 0;
 };
 
 class SkyObjectReplace : public PackObj
@@ -32,7 +32,7 @@ public:
 
 	unsigned int object_index = 0;
 	SkyObject *object = NULL;
-	DWORD gfx_obj_id = 0;
+	uint32_t gfx_obj_id = 0;
 	float rotate = 0.0f;
 	float transparent = -1.0f;
 	float luminosity = 0.0f;
@@ -88,8 +88,8 @@ public:
 	int GetSky(float time_of_day, SmartArray<CelestialPosition> *sky_pos);
 
 	unsigned int present_day_group;
-	long double tick_size;
-	long double light_tick_size;
+	double tick_size;
+	double light_tick_size;
 	SmartArray<DayGroup *> day_groups;
 };
 

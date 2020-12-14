@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "SkillChecks.h"
 
@@ -42,20 +42,18 @@ int GetManaCost(int skill, int difficulty, int manaCost, int manaConversion)
 	//	not be specialized.Unfortunately, a mana conversion of 300 is
 	//	not much worse than 350.
 
-	int manaConversionDifficulty = round((((float)difficulty / 50.0) + 1) * 25.0);
-
-	double chance = GetSkillChance(manaConversion, manaConversionDifficulty);
-	
-	if (Random::RollDice(0.0, 1.0) > chance)
+	if (manaCost > 1)
 	{
-		// fail conversion, full cost
-		return manaCost;
+		int manaConversionDifficulty = round((((float)difficulty / 50.0) + 1) * 25.0);
+
+		double successChance = GetSkillChance(manaConversion, manaConversionDifficulty);
+		float roll = Random::RollDice(0, 1);
+
+		if (roll <= successChance)
+			manaCost *= (1.0f - roll);
 	}
 
-	// roll again to select conversion amount
-	double conversionFactor = 1.0 - Random::RollDice(0.0, chance);
-
-	return (int)(manaCost * conversionFactor);
+	return max(manaCost, 1);
 }
 
 bool GenericSkillCheck(int offense, int defense)

@@ -6,14 +6,23 @@
 
 class CharGenResult : public PackObj
 {
+public:
+	CharGenResult() = default;
+	virtual ~CharGenResult() = default;
 };
 
 class ACCharGenResult : public CharGenResult
 {
 public:
+	ACCharGenResult() = default;
+	virtual ~ACCharGenResult();
+
 	DECLARE_PACKABLE();
 
 	bool CG_UnPack(BinaryReader *pReader);
+
+	bool trained(STypeSkill skill) { return (int)skill < numSkills && skillAdvancementClasses[(int)skill] >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS; }
+	bool specialized(STypeSkill skill) { return (int)skill < numSkills && skillAdvancementClasses[(int)skill] >= SKILL_ADVANCEMENT_CLASS::SPECIALIZED_SKILL_ADVANCEMENT_CLASS; }
 
 	HeritageGroup heritageGroup = Invalid_HeritageGroup;
 	Gender gender = Invalid_Gender;
@@ -31,12 +40,12 @@ public:
 	PALETTE_TEMPLATE_ID shirtColor = PALETTE_TEMPLATE_ID::UNDEF_PALETTE_TEMPLATE;
 	PALETTE_TEMPLATE_ID trousersColor = PALETTE_TEMPLATE_ID::UNDEF_PALETTE_TEMPLATE;
 	PALETTE_TEMPLATE_ID footwearColor = PALETTE_TEMPLATE_ID::UNDEF_PALETTE_TEMPLATE;
-	long double skinShade = 0;
-	long double hairShade = 0;
-	long double headgearShade = 0;
-	long double shirtShade = 0;
-	long double trousersShade = 0;
-	long double footwearShade = 0;
+	double skinShade = 0;
+	double hairShade = 0;
+	double headgearShade = 0;
+	double shirtShade = 0;
+	double trousersShade = 0;
+	double footwearShade = 0;
 	int templateNum = 0;
 	int strength = 0;
 	int endurance = 0;
@@ -48,7 +57,7 @@ public:
 	SKILL_ADVANCEMENT_CLASS *skillAdvancementClasses = NULL;
 	std::string name;
 	int slot = 0;
-	DWORD classID = 0;
+	uint32_t classID = 0;
 	unsigned int startArea = 0;
 	int isAdmin = 0;
 	int isEnvoy = 0;

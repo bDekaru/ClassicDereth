@@ -16,7 +16,7 @@ public:
 	DECLARE_PACKABLE_JSON()
 
 	ITEM_TYPE GetTargetingType();
-	DWORD GetPowerLevelOfPowerComponent();
+	uint32_t GetPowerLevelOfPowerComponent();
 
 	unsigned int _comps[SPELLFORMULA_MAX_COMPS];
 };
@@ -32,10 +32,12 @@ public:
 	static SpellEx *BuildSpell(SpellType sp_type);
 
 	virtual bool IsProjectileSpell() { return false; }
+	virtual bool IsProjectileEnchantSpell() { return false; }
 	virtual double InqDuration();
 
 	virtual class ProjectileSpellEx *AsProjectileSpell() { return NULL; }
 	virtual class ProjectileLifeSpellEx *AsLifeProjectileSpell() { return NULL; }
+	virtual class ProjectileEnchantmentSpellEx *AsEnchantProjectileSpell() { return NULL; }
 
 	unsigned int _spell_id;
 };
@@ -45,38 +47,32 @@ public:
 class EnchantmentSpellEx : public SpellEx
 {
 public:
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		SpellEx::UnPack(pReader);
-
 		_duration = pReader->Read<double>();
 		_degrade_modifier = pReader->Read<float>();
 		_degrade_limit = pReader->Read<float>();
-
-#if 1 // PHATSDK_USE_INFERRED_SPELL_DATA
-		_spellCategory = pReader->Read<DWORD>();
+		_spellCategory = pReader->Read<uint32_t>();
 		_smod.UnPack(pReader);
-#endif
-
 		return true;
 	}
 
 	DEFINE_LOCAL_UNPACK_JSON()
 	{
 		SpellEx::UnPackJson(reader);
-
 		_duration = reader["duration"];
 		_degrade_modifier = reader["degrade_modifier"];
 		_degrade_limit = reader["degrade_limit"];
 		_spellCategory = reader["spellCategory"];
 		_smod.UnPackJson(reader["smod"]);
+		UnPackValue(reader, "dtype", _elementalDamageType);
 		return true;
 	}
 
 	DEFINE_LOCAL_PACK_JSON()
 	{
 		SpellEx::PackJson(writer);
-
 		writer["duration"] = _duration;
 		writer["degrade_modifier"] = _degrade_modifier;
 		writer["degrade_limit"] = _degrade_limit;
@@ -84,14 +80,13 @@ public:
 		_smod.PackJson(writer["smod"]);
 	}
 
-	long double _duration = -1.0;
+	uint32_t _elementalDamageType = 0;
+	double _duration = -1.0;
+
 	float _degrade_modifier = 0.0f;
 	float _degrade_limit = INVALID_ENCHANTMENT_DEGRADE_LIMIT;
-
-#if 1 // PHATSDK_USE_INFERRED_SPELL_DATA
 	int _spellCategory = 0;
 	StatMod _smod;
-#endif
 };
 
 class FellowshipEnchantmentSpellEx : public EnchantmentSpellEx
@@ -102,19 +97,19 @@ public:
 class ProjectileSpellEx : public SpellEx
 {
 public:
-	virtual bool IsProjectileSpell() { return true; }
+	virtual bool IsProjectileSpell() override { return true; }
 
-	virtual class ProjectileSpellEx *AsProjectileSpell() { return this; }
+	virtual class ProjectileSpellEx *AsProjectileSpell() override { return this; }
 
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		SpellEx::UnPack(pReader);
 
 #if 1 // PHATSDK_USE_INFERRED_SPELL_DATA
-		_etype = pReader->Read<DWORD>();
+		_etype = pReader->Read<uint32_t>();
 		_baseIntensity = pReader->Read<int>();
 		_variance = pReader->Read<int>();
-		_wcid = pReader->Read<DWORD>();
+		_wcid = pReader->Read<uint32_t>();
 		_numProjectiles = pReader->Read<int>();
 		_numProjectilesVariance = pReader->Read<int>();
 		_spreadAngle = pReader->Read<float>();
@@ -127,7 +122,7 @@ public:
 		_dims.UnPack(pReader);
 		_peturbation.UnPack(pReader);
 
-		_imbuedEffect = pReader->Read<DWORD>();
+		_imbuedEffect = pReader->Read<uint32_t>();
 		_slayerCreatureType = pReader->Read<int>();
 		_slayerDamageBonus = pReader->Read<float>();
 		_critFreq = pReader->Read<double>();
@@ -201,10 +196,10 @@ public:
 #endif
 	}
 
-	DWORD _etype = 0;
+	uint32_t _etype = 0;
 	int _baseIntensity = 0;
 	int _variance = 0;
-	DWORD _wcid = 0;
+	uint32_t _wcid = 0;
 	int _numProjectiles = 0;
 	float _numProjectilesVariance = 0.0f;
 	float _spreadAngle = 0.0f;
@@ -216,7 +211,7 @@ public:
 	Vector _dims;
 	Vector _peturbation;
 
-	DWORD _imbuedEffect = 0;
+	uint32_t _imbuedEffect = 0;
 	int _slayerCreatureType = 0;
 	float _slayerDamageBonus = 0.0f;
 	double _critFreq = 0.0;
@@ -228,9 +223,9 @@ public:
 class ProjectileLifeSpellEx : public ProjectileSpellEx
 {
 public:
-	virtual class ProjectileLifeSpellEx *AsLifeProjectileSpell() { return this; }
+	virtual class ProjectileLifeSpellEx *AsLifeProjectileSpell() override { return this; }
 
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		ProjectileSpellEx::UnPack(pReader);
 
@@ -243,7 +238,7 @@ public:
 
 	DEFINE_LOCAL_PACK_JSON()
 	{
-		SpellEx::PackJson(writer);
+		ProjectileSpellEx::PackJson(writer);
 
 		writer["drain_percentage"] = _drain_percentage;
 		writer["damage_ratio"] = _damage_ratio;
@@ -251,7 +246,7 @@ public:
 
 	DEFINE_LOCAL_UNPACK_JSON()
 	{
-		SpellEx::UnPackJson(reader);
+		ProjectileSpellEx::UnPackJson(reader);
 
 		_drain_percentage = reader["drain_percentage"];
 		_damage_ratio = reader["damage_ratio"];
@@ -265,12 +260,56 @@ public:
 class ProjectileEnchantmentSpellEx : public ProjectileSpellEx
 {
 public:
+	virtual bool IsProjectileEnchantSpell() { return true; }
+
+	virtual class ProjectileEnchantmentSpellEx *AsProjectileEnchantSpell() { return this; }
+
+	virtual bool UnPack(class BinaryReader *pReader)
+	{
+		ProjectileSpellEx::UnPack(pReader);
+
+		_duration = pReader->Read<double>();
+		_degrade_modifier = pReader->Read<float>();
+		_degrade_limit = pReader->Read<float>();
+
+#if 1 // PHATSDK_USE_INFERRED_SPELL_DATA
+		_spellCategory = pReader->Read<uint32_t>();
+		_smod.UnPack(pReader);
+#endif	
+		return true;
+	}
+
+	DEFINE_LOCAL_UNPACK_JSON()
+	{
+		ProjectileSpellEx::UnPackJson(reader);
+
+#if 1 // PHATSDK_USE_INFERRED_SPELL_DATA
+		UnPackValue(reader, "duration", _duration);
+		UnPackValue(reader, "degrade_modifier", _degrade_modifier);
+		UnPackValue(reader, "degrade_limit", _degrade_limit);
+		UnPackValue(reader, "spellCategory", _spellCategory);
+		UnPackObjJson(reader, "smod", _smod);
+		
+#endif		
+		return true;
+	}
+
+	DEFINE_LOCAL_PACK_JSON()
+	{
+
+	}
+
+	double _duration = -1.0;
+	float _degrade_modifier = 0.0f;
+	float _degrade_limit = INVALID_ENCHANTMENT_DEGRADE_LIMIT;
+	int _spellCategory = 0;
+	StatMod _smod;
 };
 
 class BoostSpellEx : public SpellEx
 {
 public:
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		SpellEx::UnPack(pReader);
 
@@ -286,7 +325,7 @@ public:
 	{
 		SpellEx::PackJson(writer);
 
-		writer["dt"] = (DWORD) _dt;
+		writer["dt"] = (uint32_t) _dt;
 		writer["boost"] = _boost;
 		writer["boostVariance"] = _boostVariance;
 	}
@@ -295,7 +334,7 @@ public:
 	{
 		SpellEx::UnPackJson(reader);
 
-		_dt = (DAMAGE_TYPE) (DWORD)reader["dt"];
+		_dt = (DAMAGE_TYPE) (uint32_t)reader["dt"];
 		_boost = reader["boost"];
 		_boostVariance = reader["boostVariance"];
 		return true;
@@ -316,7 +355,7 @@ public:
 class TransferSpellEx : public SpellEx
 {
 public:
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		SpellEx::UnPack(pReader);
 
@@ -328,7 +367,7 @@ public:
 		_sourceLoss = pReader->Read<int>();
 		_transferCap = pReader->Read<int>();
 		_maxBoostAllowed = pReader->Read<int>();
-		_bitfield = pReader->Read<DWORD>();
+		_bitfield = pReader->Read<uint32_t>();
 #endif
 
 		return true;
@@ -378,13 +417,13 @@ public:
 	int _sourceLoss;
 	int _transferCap;
 	int _maxBoostAllowed;
-	DWORD _bitfield; // 1 = source self, 2 = source other, 4 = destination self, 8 = destination other
+	uint32_t _bitfield; // 1 = source self, 2 = source other, 4 = destination self, 8 = destination other
 };
 
 class PortalLinkSpellEx : public SpellEx
 {
 public:
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		SpellEx::UnPack(pReader);
 
@@ -415,7 +454,7 @@ public:
 class PortalRecallSpellEx : public SpellEx
 {
 public:
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		SpellEx::UnPack(pReader);
 
@@ -446,7 +485,7 @@ public:
 class PortalSendingSpellEx : public SpellEx
 {
 public:
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		SpellEx::UnPack(pReader);
 
@@ -482,7 +521,7 @@ public:
 class DispelSpellEx : public SpellEx
 {
 public:
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		//  Align:EnchantmentAlignment(u4 - Neutral, Good, Bad), Number:s4, NumberVariance:f4
 		SpellEx::UnPack(pReader);
@@ -543,7 +582,7 @@ public:
 class PortalSummonSpellEx : public SpellEx
 {
 public:
-	virtual bool UnPack(class BinaryReader *pReader)
+	virtual bool UnPack(class BinaryReader *pReader) override
 	{
 		SpellEx::UnPack(pReader);
 		_portal_lifetime = pReader->Read<double>();
@@ -601,7 +640,7 @@ public:
 	std::string _name;
 	std::string _desc;
 	unsigned int _school;
-	DWORD _iconID;
+	uint32_t _iconID;
 	unsigned int _category;
 	unsigned int _bitfield;
 	int _base_mana;
@@ -616,29 +655,29 @@ public:
 	PScriptType _caster_effect;
 	PScriptType _target_effect;
 	PScriptType _fizzle_effect;
-	long double _recovery_interval;
+	double _recovery_interval;
 	float _recovery_amount;
 	int _display_order;
 	unsigned int _non_component_target_type;
 	MetaSpellEx _meta_spell;
 };
 
-class SpellSetTierList : public PackObj
-{
-public:
-	DECLARE_PACKABLE()
-
-	unsigned int m_PieceCount;
-	std::list<unsigned long> m_SpellList;
-};
-
-class SpellSetEx : public PackObj
-{
-public:
-	DECLARE_PACKABLE()
-
-	std::list<SpellSetTierList> m_countTiers;
-};
+//class SpellSetTierList : public PackObj
+//{
+//public:
+//	DECLARE_PACKABLE()
+//
+//	unsigned int m_PieceCount;
+//	std::list<uint32_t> m_SpellList;
+//};
+//
+//class SpellSetEx : public PackObj
+//{
+//public:
+//	DECLARE_PACKABLE()
+//
+//	std::list<SpellSetTierList> m_countTiers;
+//};
 
 class CSpellTableEx : public PackObj, public PackableJson
 {
@@ -653,10 +692,10 @@ public:
 	DECLARE_PACKABLE_JSON()
 	// DECLARE_LEGACY_PACK_MIGRATOR()
 
-	const CSpellBaseEx *GetSpellBase(DWORD spell_id);
+	const CSpellBaseEx *GetSpellBase(uint32_t spell_id);
 
-	PackableHashTableWithJson<unsigned long, CSpellBaseEx> _spellBaseHash;
-	// don't do this for now PHashTable<unsigned long, SpellSetEx> m_SpellSetHash;
+	PackableHashTableWithJson<uint32_t, CSpellBaseEx> _spellBaseHash;
+	// don't do this for now PHashTable<uint32_t, SpellSetEx> m_SpellSetHash;
 };
 
 

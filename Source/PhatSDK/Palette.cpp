@@ -1,30 +1,30 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ObjCache.h"
 #include "Palette.h"
 
 LongNIValHash< Palette* > Palette::custom_palette_table;
 Palette* Palette::solid_color_palette = NULL;
-DWORD Palette::curr_solid_index = -1;
+uint32_t Palette::curr_solid_index = -1;
 
 BOOL RGBColor::UnPack(BYTE **ppData, ULONG iSize)
 {
-	DWORD Color;
-	UNPACK(DWORD, Color);
+	uint32_t Color;
+	UNPACK(uint32_t, Color);
 
 	SetColor32(Color);
 
 	return TRUE;
 }
 
-void RGBColor::SetColor32(DWORD Color)
+void RGBColor::SetColor32(uint32_t Color)
 {
 	m_fRed = ((Color >> 16) & 0xFF) / 255.0f;
 	m_fGreen = ((Color >> 8) & 0xFF) / 255.0f;
 	m_fBlue = ((Color >> 0) & 0xFF) / 255.0f;
 }
 
-void RGBAUnion::Get(DWORD RGBA, float *R, float *G, float *B)
+void RGBAUnion::Get(uint32_t RGBA, float *R, float *G, float *B)
 {
 	*R = BYTE(RGBA >> 16) / 255.0f;
 	*G = BYTE(RGBA >> 8) / 255.0f;
@@ -80,7 +80,7 @@ void Palette::Destroyer(DBObj* pPalette)
 	delete ((Palette *)pPalette);
 }
 
-Palette *Palette::Get(DWORD ID)
+Palette *Palette::Get(uint32_t ID)
 {
 	// added by pea
 	if (ID == 0x04001071)
@@ -136,7 +136,7 @@ void Palette::releasePalette(Palette *pPalette)
 				// No more links exist.
 				Palette *pEntry = NULL;
 
-				if (custom_palette_table.remove((DWORD)pPalette->GetID(), &pEntry))
+				if (custom_palette_table.remove((uint32_t)pPalette->GetID(), &pEntry))
 				{
 					if (pEntry)
 						delete pEntry;
@@ -150,9 +150,9 @@ void Palette::releasePalette(Palette *pPalette)
 
 BOOL Palette::InitEnd()
 {
-	m_pPaletteColors = new DWORD[m_dwNumPaletteColors];
+	m_pPaletteColors = new uint32_t[m_dwNumPaletteColors];
 	m_pScreenColors = new WORD[m_dwNumPaletteColors * m_dwNumScreenColors];
-	m_pScreenColors32 = new DWORD[m_dwNumPaletteColors * m_dwNumScreenColors];
+	m_pScreenColors32 = new uint32_t[m_dwNumPaletteColors * m_dwNumScreenColors];
 
 	return TRUE;
 }
@@ -178,14 +178,14 @@ Palette* Palette::get_solid_color_palette()
 
 BOOL Palette::UnPack(BYTE **ppData, ULONG iSize)
 {
-	UNPACK(DWORD, id);
-	UNPACK(DWORD, m_dwNumPaletteColors);
+	UNPACK(uint32_t, id);
+	UNPACK(uint32_t, m_dwNumPaletteColors);
 
-	for (DWORD Index = 0; Index < m_dwNumPaletteColors; Index++)
+	for (uint32_t Index = 0; Index < m_dwNumPaletteColors; Index++)
 	{
 		// Load all the colors.
-		DWORD Color;
-		UNPACK(DWORD, Color);
+		uint32_t Color;
+		UNPACK(uint32_t, Color);
 		set_color_index(Index, Color);
 	}
 
@@ -194,7 +194,7 @@ BOOL Palette::UnPack(BYTE **ppData, ULONG iSize)
 	return TRUE;
 }
 
-void Palette::set_color_index(DWORD Index, DWORD Color)
+void Palette::set_color_index(uint32_t Index, uint32_t Color)
 {
 	m_pPaletteColors[Index] = Color;
 
@@ -214,9 +214,9 @@ void Palette::set_color_index(DWORD Index, DWORD Color)
 	m_pScreenColors32[Index] = Color;
 }
 
-DWORD Palette::get_solid_color_index()
+uint32_t Palette::get_solid_color_index()
 {
-	DWORD index = ++curr_solid_index;
+	uint32_t index = ++curr_solid_index;
 
 	if (index > 256)
 		return 0;
@@ -224,17 +224,17 @@ DWORD Palette::get_solid_color_index()
 	return index;
 }
 
-WORD Palette::get_color(DWORD Index)
+WORD Palette::get_color(uint32_t Index)
 {
 	// The last entries should be solid colors.
-	DWORD ScreenIndex = (m_dwNumPaletteColors * (m_dwNumScreenColors - 1)) + Index;
+	uint32_t ScreenIndex = (m_dwNumPaletteColors * (m_dwNumScreenColors - 1)) + Index;
 	return m_pScreenColors[ScreenIndex];
 }
 
-DWORD Palette::get_color_32(DWORD Index)
+uint32_t Palette::get_color_32(uint32_t Index)
 {
 	// this function was made up
-	DWORD ScreenIndex = (m_dwNumPaletteColors * (m_dwNumScreenColors - 1)) + Index;
+	uint32_t ScreenIndex = (m_dwNumPaletteColors * (m_dwNumScreenColors - 1)) + Index;
 	return m_pScreenColors32[ScreenIndex];
 }
 

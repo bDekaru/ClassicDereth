@@ -22,14 +22,14 @@ public:
 	CGameMode_Tag();
 	virtual ~CGameMode_Tag() override;
 
-	virtual const char *GetName();
+	virtual const char *GetName() override;
 	virtual void Think() override;
 
 	virtual void OnRemoveEntity(CWeenieObject *pEntity) override;
 	virtual void OnTargetAttacked(CWeenieObject *pTarget, CWeenieObject *pSource) override;
 
 protected:
-	void SelectPlayer(CPlayerWeenie *pPlayer);
+	void SelectPlayer(CPlayerWeenie * pPlayer);
 	void UnselectPlayer();
 
 	CPlayerWeenie *m_pSelectedPlayer;

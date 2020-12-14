@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PKModifier.h"
 #include "UseManager.h"
 #include "Player.h"
@@ -92,6 +92,6 @@ int CPKModifierWeenie::DoUseResponse(CWeenieObject *player)
 		}
 	}
 
-	return WERROR_NONE;
+	return CWeenieObject::DoUseResponse(player);
 }
 

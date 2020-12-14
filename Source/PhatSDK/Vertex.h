@@ -24,18 +24,18 @@ public:
 	CVertexArray();
 	~CVertexArray();
 
-	static void SetVertexSize(DWORD Size);
+	static void SetVertexSize(uint32_t Size);
 
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
-	BOOL AllocateVertex(DWORD VertexCount, DWORD VertexType);
+	BOOL AllocateVertex(uint32_t VertexCount, uint32_t VertexType);
 	void DestroyVertex();
 
 	LPVOID vertex_memory; // 0x00
-	DWORD vertex_type; // 0x04
-	DWORD num_vertices; // 0x08
+	uint32_t vertex_type; // 0x04
+	uint32_t num_vertices; // 0x08
 	CVertex *vertices; // 0x0C
 
-	static DWORD vertex_size;
+	static uint32_t vertex_size;
 
 #define VERTEX_NUM(vertbuffer, vertindex) ((CVertex *)((BYTE *)vertbuffer + ((CVertexArray::vertex_size) * (vertindex))))
 };

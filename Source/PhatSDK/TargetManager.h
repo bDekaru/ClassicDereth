@@ -5,7 +5,7 @@ class TargettedVoyeurInfo
 {
 public:
 	unsigned int object_id;
-	long double quantum;
+	double quantum;
 	float radius;
 	Position last_sent_position;
 };
@@ -18,12 +18,12 @@ public:
 	~TargetManager();
 
 	void SetTargetQuantum(double new_quantum);
-	void AddVoyeur(DWORD object_id, float radius, double quantum);
+	void AddVoyeur(uint32_t object_id, float radius, double quantum);
 	void SendVoyeurUpdate(TargettedVoyeurInfo *voyeur, Position *p, TargetStatus status);
-	BOOL RemoveVoyeur(DWORD object_id);
+	BOOL RemoveVoyeur(uint32_t object_id);
 	void ReceiveUpdate(class TargetInfo *target_update);
 	void ClearTarget();
-	void SetTarget(DWORD context_id, DWORD object_id, float radius, double quantum);
+	void SetTarget(uint32_t context_id, uint32_t object_id, float radius, double quantum);
 	void HandleTargetting();
 	void CheckAndUpdateVoyeur(TargettedVoyeurInfo *voyeur);
 	void GetInterpolatedPosition(double quantum, Position *p);
@@ -32,5 +32,5 @@ public:
 	CPhysicsObj *physobj;
 	TargetInfo *target_info;
 	LongNIHash<TargettedVoyeurInfo> *voyeur_table;
-	long double last_update_time;	
+	double last_update_time;	
 };

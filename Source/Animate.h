@@ -4,7 +4,7 @@
 
 void Animation_Init();
 void Animation_Shutdown();
-DWORD Animation_GetAnimationSet();
+uint32_t Animation_GetAnimationSet();
 
 void Animation_Jump(float fPower, Vector &jumpVelocity);
 

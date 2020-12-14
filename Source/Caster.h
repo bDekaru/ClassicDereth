@@ -8,7 +8,7 @@ class CCasterWeenie : public CWeenieObject
 public:
 	CCasterWeenie();
 
-	virtual class CCasterWeenie *AsCaster() { return this; }
+	virtual class CCasterWeenie *AsCaster() override { return this; }
 
 	virtual void ApplyQualityOverrides() override;
 	virtual int Use(CPlayerWeenie *other) override;

@@ -1,5 +1,4 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "World.h"
 #include "WorldLandBlock.h"
 #include "WeenieObject.h"
@@ -19,8 +18,9 @@
 #include "WClassID.h"
 #include "Config.h"
 #include "DatabaseIO.h"
+#include "Scene.h"
 
-const double LANDBLOCK_DORMANCY_DELAY = 30.0;
+const double LANDBLOCK_DORMANCY_DELAY = 120.0;
 const double LANDBLOCK_DORMANCY_TICK_INTERVAL = 10.0;
 
 CWorldLandBlock::CWorldLandBlock(CWorld *pWorld, WORD wHeader) : m_pWorld(pWorld), m_wHeader(wHeader)
@@ -73,26 +73,41 @@ void CWorldLandBlock::ClearOldDatabaseEntries()
 	std::list<unsigned int> weeniesList = g_pDBIO->GetWeeniesAt(m_wHeader);
 	for (auto entry : weeniesList)
 	{
-		bool stillExists = false;
-		for (auto &entity : m_EntityList)
+		try
 		{
-			if (entity->GetID() == entry)
+			bool stillExists = false;
+			for (auto &entity : m_EntityList)
 			{
-				stillExists = true;
-				break;
+				try
+				{
+					if (entity && (entity->GetID() == entry || entity->ShouldSave()))
+					{
+						stillExists = true;
+						break;
+					}
+				}
+				catch (...)
+				{
+					SERVER_ERROR << "Error getting ID for " << entity;
+				}
+			}
+
+			if (!stillExists)
+			{
+				g_pDBIO->RemoveWeenieFromBlock(entry);
+				g_pDBIO->DeleteWeenie(entry);
 			}
 		}
-
-		if (!stillExists)
+		catch (...)
 		{
-			g_pDBIO->RemoveWeenieFromBlock(entry);
-			g_pDBIO->DeleteWeenie(entry);
+			SERVER_ERROR << "Failed to get data for " << entry;
 		}
 	}
 }
 
 void CWorldLandBlock::Init()
 {
+	m_noDrop = g_pCellDataEx->BlockHasFlags(m_wHeader << 16, LandBlockFlags::NoDrop);
 	{
 		// CStopWatch stopWatch;
 		LoadLandBlock();
@@ -109,106 +124,135 @@ void CWorldLandBlock::Init()
 
 void CWorldLandBlock::SpawnDynamics()
 {
-#if 0
-	WORD block = m_wHeader;
-
-	for (DWORD i = 0; i < 64; i++)
-	{
-		DWORD landcell_id = (DWORD)((DWORD)m_wHeader << 16) | (i + 1);
-
-		SmartArray<DWORD> *spawn_ids = g_pWeenieLandCoverage->GetSpawnsForCell(landcell_id);
-		if (!spawn_ids)
-			continue;
-
-		int spawn_amount = Random::GenUInt(0, min(3, spawn_ids->num_used));
-
-		for (DWORD j = 0; j < spawn_amount; j++)
-		{
-			extern float CalcSurfaceZ(DWORD dwCell, float xOffset, float yOffset);
-
-			Position pos;
-			pos.objcell_id = landcell_id;
-
-			float x_shift = ((landcell_id >> 3) & 7) * 24.0f;
-			float y_shift = ((landcell_id >> 0) & 7) * 24.0f;
-
-			x_shift += Random::GenFloat(0.5f, 23.5f);
-			y_shift += Random::GenFloat(0.5f, 23.5f);
-
-			/*
-			float x_shift = Random::GenFloat(0.5f, 191.5f);
-			float y_shift = Random::GenFloat(0.5f, 191.5f);
-
-			WORD cellw = CELL_WORD(landcell_id);
-			int minix = (cellw >> 3) & 7;
-			int miniy = (cellw >> 0) & 7;
-			x_shift += (24 * minix);
-			y_shift += (24 * miniy);
-			*/
-
-			pos.frame.m_origin = Vector(x_shift, y_shift, CalcSurfaceZ(landcell_id, x_shift, y_shift));
-
-			CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(spawn_ids->array_data[j], &pos, true);
-
-			if (weenie && weenie->IsMonsterWeenie())
-			{
-				CMonsterWeenie *monster = (CMonsterWeenie *)weenie;
-				monster->m_MonsterAI = new MonsterAIManager(monster, monster->m_Position);
-			}
-		}
-	}
-#endif
-
 	if (g_pConfig->SpawnLandscape() && m_LoadedLandBlock)
 	{
-		DWORD block_x = (m_wHeader & 0xFF00) >> 8;
-		DWORD block_y = (m_wHeader & 0x00FF) >> 0;
+		uint32_t block_x = (m_wHeader & 0xFF00) >> 8;
+		uint32_t block_y = (m_wHeader & 0x00FF) >> 0;
 
-		for (DWORD cell_x = 0; cell_x < 8; cell_x++)
+		for (uint32_t cell_x = 0; cell_x < 9; cell_x++)
 		{
-			for (DWORD cell_y = 0; cell_y < 8; cell_y++)
+			for (uint32_t cell_y = 0; cell_y < 9; cell_y++)
 			{
-				WORD old_terrain = m_LoadedLandBlock->terrain[(cell_x * 9) + cell_y];
-				WORD terrain = g_pCellDataEx->_data.get_terrain((DWORD)m_wHeader << 16, cell_x, cell_y);
+				uint32_t landcell = (m_wHeader << 16) | (cell_x << 3) | cell_y;
 
-				int encounterIndex = (terrain >> 7) & 0xF;
-				DWORD wcid = g_pPortalDataEx->GetWCIDForTerrain(block_x, block_y, encounterIndex);
+				WORD terrain = m_LoadedLandBlock->terrain[(cell_x * 9) + cell_y];
+				// scene type / terrain type
+				WORD stIdx = (terrain >> 7) >> 4;
+				WORD ttIdx = ((terrain & 0x7f) >> 2) & 31;
 
-				if (!encounterIndex && !wcid)
+				CTerrainType *tt = CachedRegionDesc->terrain_info->terrain_types.array_data[ttIdx];
+				CSceneType *st = tt->scene_types.array_data[stIdx];
+
+				if (!st || st->scenes.num_used == 0)
 					continue;
 
-				float x_shift = 24.0f * cell_x;
-				float y_shift = 24.0f * cell_y;
+				uint32_t sx = (block_x << 3) + cell_x;
+				uint32_t sy = (block_y << 3) + cell_y;
 
-				Position pos;
-				pos.objcell_id = ((DWORD)m_wHeader << 16) | 1;
-				pos.frame.m_origin = Vector(x_shift, y_shift, 0.0f);
-				pos.adjust_to_outside();
-
-				pos.frame.m_origin.z = CalcSurfaceZ(pos.objcell_id, x_shift, y_shift);
-
-				if (wcid == W_HUMAN_CLASS || wcid == W_ADMIN_CLASS || wcid == W_SENTINEL_CLASS)
-					continue;
-
-				CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(wcid, &pos, true);
-
-				if (!weenie)
+				uint32_t sceneIdx = 0;
+				int sceneCount = st->scenes.num_used;
+				if (sceneCount > 1)
 				{
+					sceneIdx = sy * (712977289 * sx + 1813693831) - 1109124029 * sx + 2139937281;
+					sceneIdx = (uint32_t)floor((double)sceneIdx * 2.3283064e-10 * (double)sceneCount);
+					if (sceneIdx >= sceneCount)
+						sceneIdx = 0;
 				}
 
-				// LOG(Temp, Normal, TEXT("Loaded auto-spawn %s (%u, %X) ei: %d\n"), GetWCIDName(wcid), wcid, wcid, encounterIndex);
+				Scene *scene = Scene::Get(st->scenes.array_data[sceneIdx]);
+
+				// reused rand calcs
+				uint32_t rx = sx * -1109124029;
+				uint32_t ry = sy * 1813693831;
+				uint32_t rxy = sx * sy * 1360117743 + 1888038839;
+				uint32_t rxy2 = rxy * 23399;
+
+				for (int soi = 0; soi < scene->num_objects; soi++, rxy2 += rxy)
+				{
+					ObjectDesc &od = scene->objects[soi];
+
+					double r = (double)(rx + ry - rxy2) * 2.3283064e-10;
+					if (r < od.freq)
+					{
+						Position pos;
+						Vector v;
+
+						od.Place(sx, sy, soi, &v);
+						v.x += (double)cell_x * 24.0;
+						v.y += (double)cell_y * 24.0;
+
+						// in block
+						if (!(v.x >= 0 && v.y >= 0 && v.x < 192 && v.y < 192))
+							continue;
+
+						// on road
+
+						pos.objcell_id = m_LoadedLandBlock->id;
+						pos.frame.m_origin = v;
+						//pos.objcell_id = ((uint32_t)m_wHeader << 16) | 1;
+						//pos.frame.m_origin = Vector(x_shift, y_shift, 0.0f);
+						pos.adjust_to_outside();
+
+						CLandCell *cell = m_LoadedLandBlock->get_landcell(pos.objcell_id);
+
+						// building?
+						if (cell->has_building())
+							continue;
+
+						CPolygon *walkable;
+						if (!cell->find_terrain_poly(v, &walkable))
+							continue;
+
+						// on hill
+						if (!od.CheckSlope(walkable->plane.m_normal.z))
+							continue;
+
+						walkable->plane.set_height(v);
+
+						if (od.align)
+							od.ObjAlign(&walkable->plane, &v, &pos.frame);
+						else
+							od.GetObjFrame(sx, sy, soi, &v, &pos.frame);
+
+						uint32_t wcid = od.obj_id;
+						if (!wcid)
+						{
+							uint16_t encounterIndex = g_pCellDataEx->GetEncounterIndex(m_wHeader, cell_x, cell_y);
+							wcid = g_pPortalDataEx->GetWCIDForTerrain(block_x, block_y, encounterIndex);
+						}
+
+						if (wcid == W_UNDEF_CLASS || wcid == W_HUMAN_CLASS || wcid == W_ADMIN_CLASS || wcid == W_SENTINEL_CLASS)
+							continue;
+						CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(wcid, &pos, false);
+						if (weenie)
+						{
+							weenie->SetID(g_pObjectIDGen->GenerateGUID(eEphemeral));
+							g_pWorld->CreateEntity(weenie, false);
+						}
+						else if(od.obj_id)
+						{
+							// trees/rocks
+							CPhysicsObj * obj = CPhysicsObj::makeObject(od.obj_id, 0, FALSE);
+							obj->add_obj_to_cell(cell, &pos.frame);
+						}
+
+					}
+				}
 			}
 		}
 	}
 
-	CLandBlockExtendedData *data = g_pCellDataEx->GetLandBlockData((DWORD)m_wHeader << 16);
+	CLandBlockExtendedData *data = g_pCellDataEx->GetLandBlockData((uint32_t)m_wHeader << 16);
 	if (data)
 	{
-		for (DWORD i = 0; i < data->weenies.num_used; i++)
+		SmartArray<CLandBlockWeenieLink> tmp_links = data->weenie_links;
+		uint32_t id_mask = 0x70000000 | (m_wHeader << 12);
+
+		for (uint32_t i = 0; i < data->weenies.num_used; i++)
 		{
-			DWORD wcid = data->weenies.array_data[i].wcid;
+			uint32_t wcid = data->weenies.array_data[i].wcid;
 			Position pos = data->weenies.array_data[i].pos;
-			DWORD iid = data->weenies.array_data[i].iid;
+			uint32_t iid = data->weenies.array_data[i].iid;
 
 			if ((pos.objcell_id & 0xFFFF) >= 0x100)
 			{
@@ -263,24 +307,24 @@ void CWorldLandBlock::SpawnDynamics()
 				break;
 			}
 
+			CWeenieDefaults *weenieDefs = g_pWeenieFactory->GetWeenieDefaults(wcid);
+			if (!weenieDefs)
+				continue;
+
 			if (!g_pConfig->SpawnStaticCreatures())
 			{
-				CWeenieDefaults *weenieDefaults = g_pWeenieFactory->GetWeenieDefaults(wcid);
-				if (!weenieDefaults
-					|| weenieDefaults->m_Qualities.m_WeenieType == Creature_WeenieType
-					|| weenieDefaults->m_Qualities.m_WeenieType == Vendor_WeenieType)
+				if (weenieDefs->m_Qualities.m_WeenieType == Creature_WeenieType
+					|| weenieDefs->m_Qualities.m_WeenieType == Vendor_WeenieType)
 				{
 					continue;
 				}
 			}
 
-			CWeenieObject *weenie;
+			CWeenieObject *weenie = nullptr;
 
-			CWeenieDefaults *weenieDefs = g_pWeenieFactory->GetWeenieDefaults(wcid);
-			if (weenieDefs != NULL &&
-				(weenieDefs->m_Qualities.m_WeenieType == WeenieType::House_WeenieType ||
-				weenieDefs->m_Qualities.m_WeenieType == WeenieType::Hook_WeenieType ||
-				weenieDefs->m_Qualities.m_WeenieType == WeenieType::Storage_WeenieType)
+			if ((weenieDefs->m_Qualities.m_WeenieType == WeenieType::House_WeenieType ||
+					weenieDefs->m_Qualities.m_WeenieType == WeenieType::Hook_WeenieType ||
+					weenieDefs->m_Qualities.m_WeenieType == WeenieType::Storage_WeenieType)
 				&& g_pDBIO->IsWeenieInDatabase(iid))
 			{
 				weenie = CWeenieObject::Load(iid);
@@ -294,75 +338,50 @@ void CWorldLandBlock::SpawnDynamics()
 
 			if (weenie)
 			{
-				bool bDynamicID = !weenie->IsStuck();
+				bool creature = weenie->IsCreature();
+				bool npc = weenie->InqIntQuality(PLAYER_KILLER_STATUS_INT, 0) & RubberGlue_PKStatus;
+				bool stuck = weenie->IsStuck();
 
-				if (!bDynamicID)
+				// things that are stuck or an npc, but not another creature type
+				// will be assigned a landblock-specific id
+				if (stuck && !(creature && !npc))
 				{
-					weenie->SetID(iid);
+					weenie->SetID(id_mask | (iid & 0x00000FFF));
 				}
 
+				// CreateEntity will determine if the item needs a dynamic or ephemeral id
 				g_pWorld->CreateEntity(weenie);
 
-				if (bDynamicID)
+				uint32_t weenie_id = weenie->GetID();
+				for (uint32_t i = 0; i < tmp_links.num_used; i++)
 				{
-					DWORD weenie_id = weenie->GetID();
-					for (DWORD i = 0; i < data->weenie_links.num_used; i++)
-					{
-						if (data->weenie_links.array_data[i].source == iid)
-							data->weenie_links.array_data[i].source = weenie_id;
-						if (data->weenie_links.array_data[i].target == iid)
-							data->weenie_links.array_data[i].target = weenie_id;
-					}
+					if (tmp_links.array_data[i].source == iid)
+						tmp_links.array_data[i].source = weenie_id;
+					if (tmp_links.array_data[i].target == iid)
+						tmp_links.array_data[i].target = weenie_id;
 				}
 			}
 		}
 
-		for (DWORD i = 0; i < data->weenie_links.num_used; i++)
+		for (uint32_t i = 0; i < tmp_links.num_used; i++)
 		{
-			DWORD source_id = data->weenie_links.array_data[i].source;
-			DWORD target_id = data->weenie_links.array_data[i].target;
+			uint32_t source_id = tmp_links.array_data[i].source;
+			uint32_t target_id = tmp_links.array_data[i].target;
 
 			CWeenieObject *source_weenie = g_pWorld->FindObject(source_id); // often creature, or respawnable item
 			if (source_weenie)
 			{
+				if (!source_weenie->cell)
+				{
+					//LOG_PRIVATE(World, Warning, "Trying to spawn a monster in an invalid position! Deleting instead.\n", source_id);
+					g_pWorld->RemoveEntity(source_weenie);
+					continue;
+				}
+
 				CWeenieObject *target_weenie = g_pWorld->FindObject(target_id); // often generator
 				if (target_weenie)
 				{
 					target_weenie->EnsureLink(source_weenie);
-
-					if (target_weenie->m_Qualities._generator_table)
-					{
-						GeneratorProfile prof;
-
-						if (target_weenie->m_Qualities._generator_table->_profile_list.size() >= 1)
-							prof = *target_weenie->m_Qualities._generator_table->_profile_list.begin();
-						else
-							prof.whereCreate = Specific_RegenLocationType;
-
-						prof.type = source_weenie->m_Qualities.id;
-						prof.initCreate = false;
-						prof.ptid = source_weenie->m_Qualities.GetInt(PALETTE_TEMPLATE_INT, 0);
-						prof.shade = source_weenie->m_Qualities.GetFloat(SHADE_FLOAT, 0.0);
-						prof.pos_val = source_weenie->m_Position;
-						prof.slot = (DWORD)target_weenie->m_Qualities._generator_table->_profile_list.size();
-						// prof.delay = (target_weenie->m_Qualities._generator_table->_profile_list.size() > 0) ? target_weenie->m_Qualities._generator_table->_profile_list.begin()->delay : 600.0f;
-						prof.probability = -1;
-
-						target_weenie->m_Qualities._generator_table->_profile_list.push_back(prof);
-
-						if (!target_weenie->m_Qualities._generator_registry)
-							target_weenie->m_Qualities._generator_registry = new GeneratorRegistry();
-
-						GeneratorRegistryNode regNode;
-						regNode.slot = prof.slot;
-						regNode.amount = 1;
-						regNode.shop = 0;
-						regNode.m_wcidOrTtype = prof.type;
-						regNode.checkpointed = 0;
-						regNode.ts = Timer::cur_time;
-						regNode.m_bTreasureType = false;
-						target_weenie->m_Qualities._generator_registry->_registry.add(source_weenie->id, &regNode);
-					}
 				}
 			}
 		}
@@ -371,18 +390,18 @@ void CWorldLandBlock::SpawnDynamics()
 
 void CWorldLandBlock::LoadLandBlock()
 {
-	DWORD landBlock = (DWORD)(m_wHeader << 16) | 0xFFFF;
+	uint32_t landBlock = (uint32_t)(m_wHeader << 16) | 0xFFFF;
 	m_LoadedLandBlock = CLandBlock::Get(landBlock);
 
 	if (m_LoadedLandBlock)
 	{
-		long LCoordX, LCoordY;
+		int32_t LCoordX, LCoordY;
 		LandDefs::blockid_to_lcoord(landBlock, LCoordX, LCoordY);
 		m_LoadedLandBlock->block_coord.x = LCoordX;
 		m_LoadedLandBlock->block_coord.y = LCoordY;
 
 		/*
-		long Magic1, Magic2;
+		int32_t Magic1, Magic2;
 		get_block_orient(x, y, Magic1, Magic2);
 
 		if ((pLB->side_cell_count == LandDefs::lblock_side) &&
@@ -400,18 +419,11 @@ void CWorldLandBlock::LoadLandBlock()
 			m_LoadedLandBlock->get_land_limits();
 		}
 
-		if (m_LoadedLandBlock->needs_post_load)
-		{
-			m_LoadedLandBlock->init_buildings();
-			m_LoadedLandBlock->init_static_objs(0);
-			m_LoadedLandBlock->needs_post_load = false;
-		}
-
 		if (m_LoadedLandBlock->lbi)
 		{
-			for (DWORD i = 0; i < m_LoadedLandBlock->lbi->num_cells; i++)
+			for (uint32_t i = 0; i < m_LoadedLandBlock->lbi->num_cells; i++)
 			{
-				if (CEnvCell *cell = (CEnvCell *)GetObjCell((DWORD)(m_wHeader << 16) | (0x100 + i), false))
+				if (CEnvCell *cell = (CEnvCell *)GetObjCell((uint32_t)(m_wHeader << 16) | (0x100 + i), false))
 				{
 					if (cell->seen_outside)
 					{
@@ -419,6 +431,13 @@ void CWorldLandBlock::LoadLandBlock()
 					}
 				}
 			}
+		}
+
+		if (m_LoadedLandBlock->needs_post_load)
+		{
+			m_LoadedLandBlock->init_buildings();
+			m_LoadedLandBlock->init_static_objs(0);
+			m_LoadedLandBlock->needs_post_load = false;
 		}
 	}
 }
@@ -437,30 +456,45 @@ void CWorldLandBlock::MakeNotDormant()
 
 void CWorldLandBlock::Insert(CWeenieObject *pEntity, WORD wOld, BOOL bNew, bool bMakeAware)
 {
+	using player_map_pib = std::pair<PlayerWeenieMap::iterator, bool>;
+	using weenie_map_pib = std::pair<WeenieMap::iterator, bool>;
+
 	if (CPlayerWeenie *player = pEntity->AsPlayer())
 	{
-		m_PlayerMap.insert(std::pair<DWORD, CPlayerWeenie *>(pEntity->GetID(), player));
-		m_PlayerList.push_back(player);
+		Position pos = pEntity->GetPosition();
 
-		MakeNotDormant();
+		player_map_pib pib =
+			m_PlayerMap.insert(std::pair<uint32_t, CPlayerWeenie *>(pEntity->GetID(), player));
 
-		// spawn up adjacent landblocks
-		ActivateLandblocksWithinPVS(pEntity->GetLandcell());
+		if (pib.second)
+		{
+			m_PlayerList.push_back(player);
+
+			MakeNotDormant();
+
+			// spawn up adjacent landblocks only if outdoors, otherwise only load the block you're on.
+			if ((pos.objcell_id & 0xFFFF) < 0x100) //outdoors
+				ActivateLandblocksWithinPVS(pEntity->GetLandcell());
+		}
 	}
 
-	m_EntityMap.insert(std::pair<DWORD, CWeenieObject *>(pEntity->GetID(), pEntity));
-	m_EntitiesToAdd.push_back(pEntity);
+	weenie_map_pib pib =
+		m_EntityMap.insert(std::pair<uint32_t, CWeenieObject *>(pEntity->GetID(), pEntity));
+	if (pib.second)
+	{
+		m_EntitiesToAdd.push_back(pEntity);
 
-	pEntity->Attach(this);
+		pEntity->Attach(this);
 
-	if (bNew)
-		pEntity->RemovePreviousInstance();
+		if (bNew)
+			pEntity->RemovePreviousInstance();
 
-	if (bMakeAware)
-		ExchangePVS(pEntity, wOld);
+		if (bMakeAware)
+			ExchangePVS(pEntity, wOld);
+	}
 }
 
-CWeenieObject *CWorldLandBlock::FindEntity(DWORD dwGUID)
+CWeenieObject *CWorldLandBlock::FindEntity(uint32_t dwGUID)
 {
 	WeenieMap::iterator eit = m_EntityMap.find(dwGUID);
 
@@ -470,7 +504,7 @@ CWeenieObject *CWorldLandBlock::FindEntity(DWORD dwGUID)
 	return eit->second;
 }
 
-CPlayerWeenie *CWorldLandBlock::FindPlayer(DWORD dwGUID)
+CPlayerWeenie *CWorldLandBlock::FindPlayer(uint32_t dwGUID)
 {
 	PlayerWeenieMap::iterator pit = m_PlayerMap.find(dwGUID);
 
@@ -518,7 +552,7 @@ void CWorldLandBlock::ExchangeData(CWeenieObject *source)
 	}
 }
 
-void CWorldLandBlock::ExchangeDataForStabChange(CWeenieObject *pSource, DWORD old_cell_id, DWORD new_cell_id)
+void CWorldLandBlock::ExchangeDataForStabChange(CWeenieObject *pSource, uint32_t old_cell_id, uint32_t new_cell_id)
 {
 	CObjCell *old_cell, *new_cell;
 
@@ -527,9 +561,9 @@ void CWorldLandBlock::ExchangeDataForStabChange(CWeenieObject *pSource, DWORD ol
 
 	if (new_cell)
 	{
-		for (DWORD i = 0; i < new_cell->num_stabs; i++)
+		for (uint32_t i = 0; i < new_cell->num_stabs; i++)
 		{
-			DWORD cell_id_check = new_cell->stab_list[i];
+			uint32_t cell_id_check = new_cell->stab_list[i];
 
 			if (old_cell_id == cell_id_check)
 				continue;
@@ -538,7 +572,7 @@ void CWorldLandBlock::ExchangeDataForStabChange(CWeenieObject *pSource, DWORD ol
 
 			if (old_cell)
 			{
-				for (DWORD j = 0; j < old_cell->num_stabs; j++)
+				for (uint32_t j = 0; j < old_cell->num_stabs; j++)
 				{
 					if (old_cell->stab_list[j] == cell_id_check)
 					{
@@ -556,7 +590,7 @@ void CWorldLandBlock::ExchangeDataForStabChange(CWeenieObject *pSource, DWORD ol
 	}
 }
 
-void CWorldLandBlock::ExchangeDataForCellID(CWeenieObject *source, DWORD cell_id)
+void CWorldLandBlock::ExchangeDataForCellID(CWeenieObject *source, uint32_t cell_id)
 {
 	for (auto &entity : m_EntitiesToAdd)
 	{
@@ -588,6 +622,16 @@ void CWorldLandBlock::ExchangePVS(CWeenieObject *pSource, WORD old_block_id)
 	if (!pSource)
 		return;
 
+	WORD cell = CELL_WORD(pSource->GetLandcell());
+
+	CWorldLandBlock *pBlock = pSource->GetBlock();
+
+	//if in a Dungeon only exchange data on this landblock. Indoor landblocks, such as inside buildings should still exchange.
+	if ((pBlock && (pSource->GetLandcell() & 0xFFFF) > 0x100) && !PossiblyVisibleToOutdoors(pSource->GetLandcell()))
+	{
+		pBlock->ExchangeData(pSource);
+	}
+	else
 	{
 		// outdoor exchange -- this should eventually become obselete
 
@@ -624,7 +668,7 @@ void CWorldLandBlock::ExchangePVS(CWeenieObject *pSource, WORD old_block_id)
 	}
 }
 
-void CWorldLandBlock::Broadcast(void *_data, DWORD _len, WORD _group, DWORD ignore_ent, BOOL _game_event)
+void CWorldLandBlock::Broadcast(void *_data, uint32_t _len, WORD _group, uint32_t ignore_ent, BOOL _game_event, bool ephemeral)
 {
 	for (PlayerWeenieVector::iterator pit = m_PlayerList.begin(); pit != m_PlayerList.end();)
 	{
@@ -638,7 +682,7 @@ void CWorldLandBlock::Broadcast(void *_data, DWORD _len, WORD _group, DWORD igno
 
 		if (!ignore_ent || (ignore_ent != pPlayer->GetID()))
 		{
-			pPlayer->SendNetMessage(_data, _len, _group, _game_event);
+			pPlayer->SendNetMessage(_data, _len, _group, _game_event, ephemeral);
 		}
 
 		pit++;
@@ -647,7 +691,7 @@ void CWorldLandBlock::Broadcast(void *_data, DWORD _len, WORD _group, DWORD igno
 
 bool CWorldLandBlock::CanGoDormant()
 {
-	return !HasPlayers();
+	return m_DormancyStatus != LandblockDormancyStatus::NeverDormant && !HasPlayers();
 }
 
 bool CWorldLandBlock::HasPlayers()
@@ -665,7 +709,7 @@ bool CWorldLandBlock::HasAnySeenOutside()
 	return _cached_any_seen_outside;
 }
 
-bool CWorldLandBlock::PossiblyVisibleToOutdoors(DWORD cell_id)
+bool CWorldLandBlock::PossiblyVisibleToOutdoors(WORD cell_id)
 {
 	if (cell_id >= LandDefs::first_envcell_id && cell_id <= LandDefs::last_envcell_id)
 	{
@@ -786,14 +830,14 @@ void CWorldLandBlock::Destroy(CWeenieObject *pEntity, bool bDoRelease)
 	g_pWorld->EnsureRemoved(pEntity);
 
 #if FALSE
-	DWORD DestroyObject[2];
+	uint32_t DestroyObject[2];
 	DestroyObject[0] = 0x0024;
 	DestroyObject[1] = pEntity->GetID();
 
 	m_pWorld->BroadcastPVS(pEntity->GetLandcell(), DestroyObject, sizeof(DestroyObject), OBJECT_MSG, 0);
 #else
 
-	DWORD RemoveObject[3];
+	uint32_t RemoveObject[3];
 	RemoveObject[0] = 0xF747;
 	RemoveObject[1] = pEntity->GetID();
 	RemoveObject[2] = pEntity->_instance_timestamp;
@@ -803,6 +847,8 @@ void CWorldLandBlock::Destroy(CWeenieObject *pEntity, bool bDoRelease)
 	// LOG(Temp, Normal, "Removing entity %08X %04X @ %08X \n", pEntity->GetID(), pEntity->_instance_timestamp, pEntity->GetLandcell());
 #endif
 
+	pEntity->NotifyRemoveFromWorld();
+
 	pEntity->exit_world();
 	pEntity->leave_world();
 	pEntity->unset_parent();
@@ -810,18 +856,21 @@ void CWorldLandBlock::Destroy(CWeenieObject *pEntity, bool bDoRelease)
 
 	m_pWorld->EnsureRemoved(pEntity);
 
-	if (DWORD generator_id = pEntity->InqIIDQuality(GENERATOR_IID, 0))
+	if (uint32_t generator_id = pEntity->InqIIDQuality(GENERATOR_IID, 0))
 	{
 		CWeenieObject *target = g_pWorld->FindObject(generator_id);
 		if (target)
 			target->NotifyGeneratedDeath(pEntity);
 	}
 
-	DELETE_ENTITY(pEntity);
+	if (pEntity)
+		delete pEntity;
 }
 
 BOOL CWorldLandBlock::Think()
 {
+	scope_lock();
+
 	if (m_DormancyStatus == LandblockDormancyStatus::Dormant)
 	{
 		return FALSE;
@@ -870,11 +919,11 @@ BOOL CWorldLandBlock::Think()
 			eit = m_EntityList.erase(eit);
 			eend = m_EntityList.end();
 			continue;
-		}
+	}
 
 		// This entity *is* under our control
 
-		DWORD cell_id = pEntity->GetLandcell();
+		uint32_t cell_id = pEntity->GetLandcell();
 		WORD wHeader = BLOCK_WORD(cell_id);
 		if (wHeader == m_wHeader && !pEntity->CachedHasOwner())
 		{
@@ -888,12 +937,15 @@ BOOL CWorldLandBlock::Think()
 
 			if (!pEntity->ShouldDestroy())
 			{
+				// ...why?
+#ifdef DEBUG
 				static bool checkMe = true;
 				if (checkMe)
 				{
 					assert(pEntity->cell);
 					checkMe = false;
 				}
+#endif
 
 				if (!pEntity->cell)
 				{
@@ -901,8 +953,13 @@ BOOL CWorldLandBlock::Think()
 					{
 						if (player->_nextTryFixBrokenPosition < Timer::cur_time)
 						{
-							player->_nextTryFixBrokenPosition = Timer::cur_time + 5.0;
-							player->Movement_Teleport(Position(0xA9B4001F, Vector(87.750603f, 147.722321f, 66.005005f), Quaternion(0.011819f, 0.000000, 0.000000, -0.999930f)), false);
+							player->_nextTryFixBrokenPosition = Timer::cur_time + 2.0;
+
+							if (player->m_LastValidPosition.objcell_id != 0)
+								player->Movement_Teleport(player->m_LastValidPosition);
+							else
+								//player->Movement_Teleport(Position(0xA9B4001F, Vector(87.750603f, 147.722321f, 66.005005f), Quaternion(0.011819f, 0.000000, 0.000000, -0.999930f)), false);
+								player->TeleportToLifestone();
 						}
 					}
 				}
@@ -910,7 +967,7 @@ BOOL CWorldLandBlock::Think()
 				pEntity->update_object();
 				pEntity->Tick();
 
-				DWORD cell_id = pEntity->GetLandcell();
+				uint32_t cell_id = pEntity->GetLandcell();
 				WORD wHeader = BLOCK_WORD(cell_id);
 				if (wHeader != m_wHeader)
 				{
@@ -953,7 +1010,7 @@ BOOL CWorldLandBlock::Think()
 		eend = m_EntityList.end();
 
 		m_pWorld->JuggleEntity(m_wHeader, pEntity);
-	}
+}
 
 	m_bThinking = FALSE;
 
@@ -1001,7 +1058,7 @@ BOOL CWorldLandBlock::Think()
 	return TRUE;
 }
 
-void CWorldLandBlock::ActivateLandblocksWithinPVS(DWORD cell_id)
+void CWorldLandBlock::ActivateLandblocksWithinPVS(uint32_t cell_id)
 {
 	if (IsWaterBlock())
 	{
@@ -1062,8 +1119,10 @@ bool CWorldLandBlock::PlayerWithinPVS()
 	return false;
 }
 
-void CWorldLandBlock::ClearSpawns()
+void CWorldLandBlock::ClearSpawns(bool forced)
 {
+	scope_lock();
+
 	WeenieVector::iterator eit = m_EntityList.begin();
 	WeenieVector::iterator eend = m_EntityList.end();
 
@@ -1073,26 +1132,36 @@ void CWorldLandBlock::ClearSpawns()
 	{
 		pEntity = *eit;
 
-		if (pEntity && !pEntity->HasOwner() && !pEntity->m_bDontClear)
+		if (pEntity && !pEntity->HasOwner() && !pEntity->AsPlayer())
 		{
-			if (pEntity)
+			if (forced || !pEntity->m_bDontClear)
 			{
-				Destroy(pEntity);
+				if (pEntity)
+				{
+					Destroy(pEntity);
 
-				eit = m_EntityList.begin();
-				eend = m_EntityList.end();
+					eit = m_EntityList.begin();
+					eend = m_EntityList.end();
+				}
+				else
+				{
+					eit = m_EntityList.erase(eit);
+					eend = m_EntityList.end();
+				}
 			}
 			else
-			{
-				eit = m_EntityList.erase(eit);
-				eend = m_EntityList.end();
-			}
+				eit++;
 		}
 		else
 		{
 			eit++;
 		}
 	}
+
+	// clear the awareness of the players
+	for (auto player : m_PlayerList)
+		if (player)
+			player->FlushMadeAwareof(true);
 }
 
 void CWorldLandBlock::EnumNearbyFastNoSphere(const Position &pos, float range, std::list<CWeenieObject *> *results)
@@ -1224,7 +1293,7 @@ CObjCell *CWorldLandBlock::GetObjCell(WORD cell_id, bool bDoPostLoad) // , bool 
 			return pEnvCell;
 		}
 
-		CEnvCell *pEnvCell = CEnvCell::Get(((DWORD)m_wHeader << 16) | (DWORD)(cell_id & 0xFFFF));
+		CEnvCell *pEnvCell = CEnvCell::Get(((uint32_t)m_wHeader << 16) | (uint32_t)(cell_id & 0xFFFF));
 		if (pEnvCell)
 		{
 			m_LoadedEnvCells[cell_id] = pEnvCell;
@@ -1244,7 +1313,7 @@ CObjCell *CWorldLandBlock::GetObjCell(WORD cell_id, bool bDoPostLoad) // , bool 
 	{
 		if (m_LoadedLandBlock)
 		{
-			return m_LoadedLandBlock->get_landcell(((DWORD)m_wHeader << 16) | (DWORD)(cell_id & 0xFFFF));
+			return m_LoadedLandBlock->get_landcell(((uint32_t)m_wHeader << 16) | (uint32_t)(cell_id & 0xFFFF));
 		}
 	}
 
@@ -1282,6 +1351,8 @@ void CWorldLandBlock::UnloadSpawnsUntilNextTick()
 	m_bSpawnOnNextTick = true;
 }
 
-
-
-
+void CWorldLandBlock::RespawnNextTick()
+{
+	ClearSpawns(true);
+	m_bSpawnOnNextTick = true;
+}

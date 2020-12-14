@@ -1,5 +1,4 @@
-
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhysicsObj.h"
 #include "AnimHooks.h"
 
@@ -37,19 +36,19 @@ void AnimFrame::Destroy()
     hooks = NULL;
 }
 
-BOOL AnimFrame::UnPack(DWORD ObjCount, BYTE **ppData, ULONG iSize)
+BOOL AnimFrame::UnPack(uint32_t ObjCount, BYTE **ppData, ULONG iSize)
 {
     Destroy();
 
     num_parts = ObjCount;
     frame = new AFrame[ ObjCount ];
 
-    for (DWORD i = 0; i < num_parts; i++)
+    for (uint32_t i = 0; i < num_parts; i++)
         UNPACK_OBJ_READER(frame[i]);
     
-    UNPACK(DWORD, num_frame_hooks);
+    UNPACK(uint32_t, num_frame_hooks);
 
-    for (DWORD i = 0; i < num_frame_hooks; i++)
+    for (uint32_t i = 0; i < num_frame_hooks; i++)
         CAnimHook::UnPackHook(ppData, iSize)->add_to_list(&hooks);
 
     return TRUE;
@@ -346,7 +345,7 @@ int DefaultScriptPartHook::GetType()
 
 ULONG DefaultScriptPartHook::pack_size()
 {
-    return sizeof(DWORD);
+    return sizeof(uint32_t);
 }
 
 ULONG DefaultScriptPartHook::Pack(BYTE** ppData, ULONG iSize)
@@ -355,7 +354,7 @@ ULONG DefaultScriptPartHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, _part_index);
+        PACK(uint32_t, _part_index);
     }
 
     return PackSize;
@@ -363,7 +362,7 @@ ULONG DefaultScriptPartHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL DefaultScriptPartHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, _part_index);
+    UNPACK(uint32_t, _part_index);
     return TRUE;
 }
 
@@ -392,21 +391,21 @@ void SoundHook::GetDataRecursion(LPVOID)
 
 ULONG SoundHook::pack_size()
 {
-    return sizeof(DWORD);
+    return sizeof(uint32_t);
 }
 
 ULONG SoundHook::Pack(BYTE** ppData, ULONG iSize)
 {
     ULONG PackSize = pack_size();
 
-    PACK(DWORD, gid_);
+    PACK(uint32_t, gid_);
 
     return PackSize;
 }
 
 BOOL SoundHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, gid_);
+    UNPACK(uint32_t, gid_);
 
     // SoundManager::CreateSound(m_dwSoundID);
 	// TODO
@@ -436,21 +435,21 @@ int SoundTableHook::GetType()
 
 ULONG SoundTableHook::pack_size()
 {
-    return sizeof(DWORD);
+    return sizeof(uint32_t);
 }
 
 ULONG SoundTableHook::Pack(BYTE** ppData, ULONG iSize)
 {
     ULONG PackSize = pack_size();
 
-    PACK(DWORD, sound_type_);
+    PACK(uint32_t, sound_type_);
 
     return PackSize;
 }
 
 BOOL SoundTableHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, sound_type_);
+    UNPACK(uint32_t, sound_type_);
 
     return TRUE;
 }
@@ -597,7 +596,7 @@ int TransparentPartHook::GetType()
 
 ULONG TransparentPartHook::pack_size()
 {
-    return(sizeof(DWORD) + sizeof(float)*3);
+    return(sizeof(uint32_t) + sizeof(float)*3);
 }
 
 ULONG TransparentPartHook::Pack(BYTE** ppData, ULONG iSize)
@@ -606,7 +605,7 @@ ULONG TransparentPartHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, part);
+        PACK(uint32_t, part);
         PACK(float, start);
         PACK(float, end);
         PACK(float, time);
@@ -617,7 +616,7 @@ ULONG TransparentPartHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL TransparentPartHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, part);
+    UNPACK(uint32_t, part);
     UNPACK(float, start);
     UNPACK(float, end);
     UNPACK(float, time);
@@ -645,7 +644,7 @@ int LuminousPartHook::GetType()
 
 ULONG LuminousPartHook::pack_size()
 {
-    return(sizeof(DWORD) + sizeof(float)*3);
+    return(sizeof(uint32_t) + sizeof(float)*3);
 }
 
 ULONG LuminousPartHook::Pack(BYTE** ppData, ULONG iSize)
@@ -654,7 +653,7 @@ ULONG LuminousPartHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, part);
+        PACK(uint32_t, part);
         PACK(float, start);
         PACK(float, end);
         PACK(float, time);
@@ -665,7 +664,7 @@ ULONG LuminousPartHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL LuminousPartHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, part);
+    UNPACK(uint32_t, part);
     UNPACK(float, start);
     UNPACK(float, end);
     UNPACK(float, time);
@@ -739,7 +738,7 @@ int DiffusePartHook::GetType()
 
 ULONG DiffusePartHook::pack_size()
 {
-    return(sizeof(DWORD) + sizeof(float)*3);
+    return(sizeof(uint32_t) + sizeof(float)*3);
 }
 
 ULONG DiffusePartHook::Pack(BYTE** ppData, ULONG iSize)
@@ -748,7 +747,7 @@ ULONG DiffusePartHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, part);
+        PACK(uint32_t, part);
         PACK(float, start);
         PACK(float, end);
         PACK(float, time);
@@ -759,7 +758,7 @@ ULONG DiffusePartHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL DiffusePartHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, part);
+    UNPACK(uint32_t, part);
     UNPACK(float, start);
     UNPACK(float, end);
     UNPACK(float, time);
@@ -886,7 +885,7 @@ void CreateParticleHook::GetDataRecursion(LPVOID)
 
 ULONG CreateParticleHook::pack_size()
 {
-    return(sizeof(DWORD) + sizeof(long) + offset.pack_size() + sizeof(DWORD));
+    return(sizeof(uint32_t) + sizeof(int32_t) + offset.pack_size() + sizeof(uint32_t));
 }
 
 ULONG CreateParticleHook::Pack(BYTE** ppData, ULONG iSize)
@@ -895,10 +894,10 @@ ULONG CreateParticleHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, emitter_info_id);
-        PACK(DWORD, part_index);
+        PACK(uint32_t, emitter_info_id);
+        PACK(uint32_t, part_index);
         PACK_OBJ_WRITER(offset);
-        PACK(DWORD, emitter_id);
+        PACK(uint32_t, emitter_id);
     }
 
     return PackSize;
@@ -906,10 +905,10 @@ ULONG CreateParticleHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL CreateParticleHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, emitter_info_id);
-    UNPACK(DWORD, part_index);
+    UNPACK(uint32_t, emitter_info_id);
+    UNPACK(uint32_t, part_index);
     UNPACK_OBJ_READER(offset);
-    UNPACK(DWORD, emitter_id);
+    UNPACK(uint32_t, emitter_id);
 
     return TRUE;
 }
@@ -956,7 +955,7 @@ int DestroyParticleHook::GetType()
 
 ULONG DestroyParticleHook::pack_size()
 {
-    return(sizeof(DWORD));
+    return(sizeof(uint32_t));
 }
 
 ULONG DestroyParticleHook::Pack(BYTE** ppData, ULONG iSize)
@@ -965,7 +964,7 @@ ULONG DestroyParticleHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, emitter_id);
+        PACK(uint32_t, emitter_id);
     }
 
     return PackSize;
@@ -973,7 +972,10 @@ ULONG DestroyParticleHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL DestroyParticleHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, emitter_id);
+    if (emitter_id == 0)
+	    return true;
+    
+    UNPACK(uint32_t, emitter_id);
 
     return TRUE;
 }
@@ -1000,7 +1002,7 @@ int StopParticleHook::GetType()
 
 ULONG StopParticleHook::pack_size()
 {
-    return(sizeof(DWORD));
+    return(sizeof(uint32_t));
 }
 
 ULONG StopParticleHook::Pack(BYTE** ppData, ULONG iSize)
@@ -1009,7 +1011,7 @@ ULONG StopParticleHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, emitter_id);
+        PACK(uint32_t, emitter_id);
     }
 
     return PackSize;
@@ -1017,7 +1019,7 @@ ULONG StopParticleHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL StopParticleHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, emitter_id);
+    UNPACK(uint32_t, emitter_id);
 
     return TRUE;
 }
@@ -1051,7 +1053,7 @@ void CallPESHook::GetDataRecursion(LPVOID)
 
 ULONG CallPESHook::pack_size()
 {
-    return(sizeof(DWORD) + sizeof(float));
+    return(sizeof(uint32_t) + sizeof(float));
 }
 
 ULONG CallPESHook::Pack(BYTE** ppData, ULONG iSize)
@@ -1060,7 +1062,7 @@ ULONG CallPESHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, pes);
+        PACK(uint32_t, pes);
         PACK(float, pause);
     }
 
@@ -1069,7 +1071,7 @@ ULONG CallPESHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL CallPESHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, pes);
+    UNPACK(uint32_t, pes);
     UNPACK(float, pause);
 
     return TRUE;
@@ -1112,14 +1114,14 @@ void SoundTweakedHook::GetDataRecursion(LPVOID)
 
 ULONG SoundTweakedHook::pack_size()
 {
-    return(sizeof(DWORD) + sizeof(float)*3);
+    return(sizeof(uint32_t) + sizeof(float)*3);
 }
 
 ULONG SoundTweakedHook::Pack(BYTE** ppData, ULONG iSize)
 {
     ULONG PackSize = pack_size();
 
-    PACK(DWORD, gid_);
+    PACK(uint32_t, gid_);
     PACK(float, prob);
     PACK(float, prio);
     PACK(float, vol);
@@ -1129,7 +1131,7 @@ ULONG SoundTweakedHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL SoundTweakedHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, gid_);
+    UNPACK(uint32_t, gid_);
     UNPACK(float, prob);
     UNPACK(float, prio);
     UNPACK(float, vol);
@@ -1161,7 +1163,7 @@ int SetOmegaHook::GetType()
 
 ULONG SetOmegaHook::pack_size()
 {
-    return(sizeof(DWORD) + sizeof(float)*2);
+    return(sizeof(uint32_t) + sizeof(float)*2);
 }
 
 ULONG SetOmegaHook::Pack(BYTE** ppData, ULONG iSize)
@@ -1251,7 +1253,7 @@ int TextureVelocityPartHook::GetType()
 
 ULONG TextureVelocityPartHook::pack_size()
 {
-    return(sizeof(DWORD) + sizeof(float)*2);
+    return(sizeof(uint32_t) + sizeof(float)*2);
 }
 
 ULONG TextureVelocityPartHook::Pack(BYTE** ppData, ULONG iSize)
@@ -1260,7 +1262,7 @@ ULONG TextureVelocityPartHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, part_index);
+        PACK(uint32_t, part_index);
         PACK(float, u_speed);
         PACK(float, v_speed);
     }
@@ -1270,7 +1272,7 @@ ULONG TextureVelocityPartHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL TextureVelocityPartHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, part_index);
+    UNPACK(uint32_t, part_index);
     UNPACK(float, u_speed);
     UNPACK(float, v_speed);
 
@@ -1297,7 +1299,7 @@ int SetLightHook::GetType()
 
 ULONG SetLightHook::pack_size()
 {
-    return(sizeof(DWORD));
+    return(sizeof(uint32_t));
 }
 
 ULONG SetLightHook::Pack(BYTE** ppData, ULONG iSize)
@@ -1306,7 +1308,7 @@ ULONG SetLightHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, _lights_on);
+        PACK(uint32_t, _lights_on);
     }
 
     return PackSize;
@@ -1314,7 +1316,7 @@ ULONG SetLightHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL SetLightHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, _lights_on);
+    UNPACK(uint32_t, _lights_on);
 
     return TRUE;
 }
@@ -1329,7 +1331,7 @@ AttackCone::AttackCone()
 
 ULONG AttackCone::pack_size()
 {
-    return(sizeof(DWORD) + left.pack_size() + right.pack_size() + sizeof(float)*2);
+    return(sizeof(uint32_t) + left.pack_size() + right.pack_size() + sizeof(float)*2);
 }
 
 ULONG AttackCone::Pack(BYTE** ppData, ULONG iSize)
@@ -1338,7 +1340,7 @@ ULONG AttackCone::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, part_index);
+        PACK(uint32_t, part_index);
         PACK_OBJ_WRITER(left);
         PACK_OBJ_WRITER(right);
         PACK(float, radius);
@@ -1350,7 +1352,7 @@ ULONG AttackCone::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL AttackCone::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, part_index);
+    UNPACK(uint32_t, part_index);
     UNPACK_OBJ_READER(left);
     UNPACK_OBJ_READER(right);
     UNPACK(float, radius);
@@ -1425,7 +1427,7 @@ int EtherealHook::GetType()
 
 ULONG EtherealHook::pack_size()
 {
-    return(sizeof(DWORD));
+    return(sizeof(uint32_t));
 }
 
 ULONG EtherealHook::Pack(BYTE** ppData, ULONG iSize)
@@ -1434,7 +1436,7 @@ ULONG EtherealHook::Pack(BYTE** ppData, ULONG iSize)
 
     if (iSize >= PackSize)
     {
-        PACK(DWORD, ethereal);
+        PACK(uint32_t, ethereal);
     }
 
     return PackSize;
@@ -1442,7 +1444,7 @@ ULONG EtherealHook::Pack(BYTE** ppData, ULONG iSize)
 
 BOOL EtherealHook::UnPack(BYTE** ppData, ULONG iSize)
 {
-    UNPACK(DWORD, ethereal);
+    UNPACK(uint32_t, ethereal);
 
     return TRUE;
 }

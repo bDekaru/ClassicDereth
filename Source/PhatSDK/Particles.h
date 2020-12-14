@@ -26,10 +26,10 @@ class ParticleManager;
 class Particle
 {
 public:
-	void Init(CPhysicsObj *pOwner, DWORD EmitterID, Frame *pFrame, CPhysicsPart *pPart, Vector *Offset, DWORD Info2C, BOOL Persistant,
+	void Init(CPhysicsObj *pOwner, uint32_t EmitterID, Frame *pFrame, CPhysicsPart *pPart, Vector *Offset, uint32_t Info2C, BOOL Persistant,
 		Vector *RandomA, Vector *RandomB, Vector *RandomC, float StartScale, float FinalScale, float StartTrans, float FinalTrans, double Lifespan);
 
-	void Update(DWORD Info2C, BOOL Persistant, CPhysicsPart *pPartObj, Frame *pFrame);
+	void Update(uint32_t Info2C, BOOL Persistant, CPhysicsPart *pPartObj, Frame *pFrame);
 
 	double m_LastUpdate; // 0x00
 	double m_08; // 0x08
@@ -58,22 +58,22 @@ public:
 
 	void Destroy();
 
-	BOOL SetInfo(DWORD InfoID);
+	BOOL SetInfo(uint32_t InfoID);
 	BOOL SetInfo(ParticleEmitterInfo *pInfo);
-	BOOL SetParenting(DWORD b, Frame *c);
+	BOOL SetParenting(uint32_t b, Frame *c);
 	BOOL InitEnd();
 
 	BOOL ShouldEmitParticle();
 	BOOL StopEmitter();
 	void EmitParticle();
-	BOOL KillParticle(long Index);
+	BOOL KillParticle(int32_t Index);
 	void RecordParticleEmission();
 
 	BOOL UpdateParticles();
 
-	DWORD m_EmitterID; // 0x00
+	uint32_t m_EmitterID; // 0x00
 	CPhysicsObj *m_Owner; // 0x04
-	DWORD m_08; // 0x08
+	uint32_t m_08; // 0x08
 
 	Frame m_Frame; // 0x0C (size: 0x40)
 
@@ -82,11 +82,11 @@ public:
 	Particle *m_Particles; // 0x54
 	CPhysicsPart **m_Parts58; // 0x58
 	CPhysicsPart **m_Parts5C; // 0x5C
-	DWORD m_60;
+	uint32_t m_60;
 	float m_MaxDegradeDist; // 0x64
 	double m_68;
-	long m_70;
-	long m_74;
+	int32_t m_70;
+	int32_t m_74;
 	double m_78;
 	Vector m_Origin; // 0x80
 	BOOL m_bStopEmitting; // 0x8C
@@ -103,7 +103,7 @@ public:
 
 	static DBObj* Allocator();
 	static void Destroyer(DBObj*);
-	static ParticleEmitterInfo* Get(DWORD ID);
+	static ParticleEmitterInfo* Get(uint32_t ID);
 	static void Release(ParticleEmitterInfo *);
 
 	BOOL UnPack(BYTE **ppData, ULONG iSize);
@@ -120,21 +120,21 @@ public:
 	Vector *GetRandomOffset(Vector *pVector);
 
 	BOOL IsPersistant();
-	BOOL ShouldEmitParticle(long, long, Vector *, double);
+	BOOL ShouldEmitParticle(int32_t, int32_t, Vector *, double);
 
-	DWORD m_28;
-	DWORD m_2C;
+	uint32_t m_28;
+	uint32_t m_2C;
 
-	DWORD m_30;
+	uint32_t m_30;
 
-	DWORD m_34;
-	DWORD m_38;
+	uint32_t m_34;
+	uint32_t m_38;
 
 	double m_40;
 
-	long m_48;
-	long m_4C;
-	long m_50;
+	int32_t m_48;
+	int32_t m_4C;
+	int32_t m_50;
 
 	double m_58;
 	double m_60;
@@ -178,12 +178,12 @@ public:
 	ParticleManager();
 	~ParticleManager();
 
-	DWORD CreateParticleEmitter(CPhysicsObj *pOwner, DWORD a, long b, Frame *c, DWORD d);
+	uint32_t CreateParticleEmitter(CPhysicsObj *pOwner, uint32_t a, int32_t b, Frame *c, uint32_t d);
 
 	void UpdateParticles();
 
 private:
-	DWORD m_NoIDEmitters; // 0x00
+	uint32_t m_NoIDEmitters; // 0x00
 	LongNIHash<ParticleEmitter> m_Emitters; // 0x04
 };
 

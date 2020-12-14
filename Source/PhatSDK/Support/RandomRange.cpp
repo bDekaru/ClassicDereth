@@ -1,8 +1,9 @@
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "RandomRange.h"
 #include "Random.h"
 #include <random>
+#include "easylogging++.h"
 
 std::random_device randomDevice;
 CSharpRandom rng = CSharpRandom(randomDevice());
@@ -36,9 +37,9 @@ void testRandomValueGenerator()
 			valueDistribution.emplace(test, 1);
 	}
 
-	for each(auto entry in valueDistribution)
+	for (auto entry : valueDistribution)
 	{
-		LOG(Data, Error, "value: %d amount: %d percent: %f\n", entry.first, entry.second, entry.second * 100.0 / testRolls);
+		SERVER_ERROR << "RNG Distribution - Value:" << entry.first << " Amount:" << entry.second << " Percent:" << (entry.second * 100.0 / testRolls);
 	}
 }
 
@@ -82,35 +83,38 @@ int getRandomNumber(int minInclusive, int maxInclusive)
 int getRandomNumber(int minInclusive, int maxInclusive, eRandomFormula formula, double favorStrength, double favorModifier, double favorSpecificValue)
 {
 	int numbersAmount = maxInclusive - minInclusive;
+	double maxVal = (double)maxInclusive;
+	double minVal = (double)minInclusive;
+
 	switch (formula)
 	{
 	case eRandomFormula::favorSpecificValue:
 	{
 		favorSpecificValue = favorSpecificValue + (numbersAmount * favorModifier);
-		favorSpecificValue = min(favorSpecificValue, maxInclusive);
-		favorSpecificValue = max(favorSpecificValue, minInclusive);
+		favorSpecificValue = min(favorSpecificValue, maxVal);
+		favorSpecificValue = max(favorSpecificValue, minVal);
 		return getRandomNumberWithFavoredValue(minInclusive, maxInclusive, favorSpecificValue, favorStrength);
 	}
 	case eRandomFormula::favorLow:
 	{
 		favorSpecificValue = minInclusive + (numbersAmount * favorModifier);
-		favorSpecificValue = min(favorSpecificValue, maxInclusive);
-		favorSpecificValue = max(favorSpecificValue, minInclusive);
+		favorSpecificValue = min(favorSpecificValue, maxVal);
+		favorSpecificValue = max(favorSpecificValue, minVal);
 		return getRandomNumberWithFavoredValue(minInclusive, maxInclusive, favorSpecificValue, favorStrength);
 	}
 	case eRandomFormula::favorMid:
 	{
 		int midValue = (int)round(((double)(maxInclusive - minInclusive) / 2)) + minInclusive;
 		favorSpecificValue = midValue + (numbersAmount * favorModifier);
-		favorSpecificValue = min(favorSpecificValue, maxInclusive);
-		favorSpecificValue = max(favorSpecificValue, minInclusive);
+		favorSpecificValue = min(favorSpecificValue, maxVal);
+		favorSpecificValue = max(favorSpecificValue, minVal);
 		return getRandomNumberWithFavoredValue(minInclusive, maxInclusive, favorSpecificValue, favorStrength);
 	}
 	case eRandomFormula::favorHigh:
 	{
 		favorSpecificValue = maxInclusive - (numbersAmount * favorModifier);
-		favorSpecificValue = min(favorSpecificValue, maxInclusive);
-		favorSpecificValue = max(favorSpecificValue, minInclusive);
+		favorSpecificValue = min(favorSpecificValue, maxVal);
+		favorSpecificValue = max(favorSpecificValue, minVal);
 		return getRandomNumberWithFavoredValue(minInclusive, maxInclusive, favorSpecificValue, favorStrength);
 	}
 	default:

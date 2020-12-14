@@ -14,23 +14,23 @@ public:
 	DBObj();
 	virtual ~DBObj();
 
-	long Link();
-	long Unlink();
-	long GetLinkCount() { return m_lLinks; }
+	int32_t Link();
+	int32_t Unlink();
+	int32_t GetLinkCount() { return m_lLinks; }
 	void SetCache(ObjCache *pCache) { m_pCache = pCache; }
 	double GetTimeFreed() { return m_fTimeFreed; }
 	virtual bool ShouldFreeAfterTime() { return true; }
 
 protected:
 	ObjCache* m_pCache = NULL;
-	long m_lLinks = 1;
+	int32_t m_lLinks = 1;
 	double m_fTimeFreed = 0.0;
 };
 
 class DBObjWithJson : public DBObj, public PackableJson
 {
 public:
-	virtual bool ShouldFreeAfterTime() { return !m_bLoadedFromJson; }
+	virtual bool ShouldFreeAfterTime() override { return !m_bLoadedFromJson; }
 
 	DEFINE_LOCAL_PACK_JSON()
 	{
@@ -55,10 +55,10 @@ public:
 	ObjCache(DATDisk *pDisk, DBObj *(*pfnAllocator)(), DBObjWithJson *(*pfnAllocatorWithJson)(), void(*pfnDestroyer)(DBObj *), const char *cacheName);
 	virtual ~ObjCache();
 
-	DBObj *Get(DWORD ID);
-	void Release(DWORD ID);
+	DBObj *Get(uint32_t ID);
+	void Release(uint32_t ID);
 
-	DWORD GetCachedCount();
+	uint32_t GetCachedCount();
 	void UseTime();
 
 	bool ReleaseFreeObjects(bool bForce);
@@ -67,7 +67,7 @@ public:
 
 protected:
 
-	bool GetDataFromJson(DWORD ID, json **ppReader);
+	bool GetDataFromJson(uint32_t ID, json **ppReader);
 
 	DATDisk *m_pDisk;
 
@@ -78,7 +78,7 @@ protected:
 	void(*m_pfnDestroyerWithJson)(DBObjWithJson *);
 
 	LongHash<DBObj> m_Objects;
-	std::set<DWORD> m_FreeObjects;
+	std::set<uint32_t> m_FreeObjects;
 	double m_fLastUpdate = 0.0;
 
 	std::string m_CacheName;
@@ -139,7 +139,7 @@ extern class CRegionDesc *CachedRegionDesc;
 #define DECLARE_DBOBJ(classname) \
     static DBObj* Allocator(); \
     static void Destroyer(DBObj *); \
-    static classname *Get(DWORD ID); \
+    static classname *Get(uint32_t ID); \
     static void Release(classname *);
 
 #define DEFINE_DBOBJ(classname, cachename) \
@@ -149,7 +149,7 @@ extern class CRegionDesc *CachedRegionDesc;
     void classname::Destroyer(DBObj* pObj) { \
         delete ((classname *)pObj); \
     } \
-    classname *classname::Get(DWORD ID) { \
+    classname *classname::Get(uint32_t ID) { \
         return (classname *)ObjCaches::cachename->Get(ID); \
     } \
     void classname::Release(classname *pObj) { \

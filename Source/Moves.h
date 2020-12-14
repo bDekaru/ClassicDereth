@@ -8,7 +8,7 @@ void Movement_Think();
 
 void Movement_UpdatePos();
 void Movement_UpdateVector();
-void Movement_SendUpdate(DWORD dwCell);
+void Movement_SendUpdate(uint32_t dwCell);
 
 double m_fMoveThink;
 

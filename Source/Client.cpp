@@ -1,9 +1,10 @@
-
-#include "StdAfx.h"
-
+#include <StdAfx.h>
+#include "easylogging++.h"
+#include "InferredPortalData.h"
 #include "Client.h"
 #include "ClientEvents.h"
 #include "Config.h"
+#include <chrono>
 
 // Network access
 #include "Network.h"
@@ -30,6 +31,9 @@
 #include "ClientCommands.h"
 #include "ChatMsgs.h"
 #include "AllegianceManager.h"
+#include "Util.h"
+#include "House.h"
+#include "HouseManager.h"
 
 // CClient - for client/server interaction
 CClient::CClient(SOCKADDR_IN *peer, WORD slot, AccountInformation_t &accountInfo)
@@ -78,7 +82,7 @@ void CClient::ThinkOutbound()
 	if (!IsAlive())
 		return;
 
-	if (m_pPC && m_pPC - IsAlive())
+	if (m_pPC && m_pPC->IsAlive())
 	{
 		m_pPC->ThinkOutbound();
 	}
@@ -108,7 +112,7 @@ const std::list<CharacterDesc_t> &CClient::GetCharacters()
 	return m_Characters;
 }
 
-bool CClient::HasCharacter(DWORD character_weenie_id)
+bool CClient::HasCharacter(uint32_t character_weenie_id)
 {
 	for (auto &character : m_Characters)
 	{
@@ -119,7 +123,7 @@ bool CClient::HasCharacter(DWORD character_weenie_id)
 	return false;
 }
 
-DWORD CClient::IncCharacterInstanceTS(DWORD character_weenie_id)
+uint32_t CClient::IncCharacterInstanceTS(uint32_t character_weenie_id)
 {
 	WORD newInstanceTS = 0;
 
@@ -140,77 +144,108 @@ DWORD CClient::IncCharacterInstanceTS(DWORD character_weenie_id)
 	return newInstanceTS;
 }
 
+bool CClient::RemoveCharacterGag(unsigned int character_id)
+{
+	for (auto &character : m_Characters)
+	{
+		if (character.weenie_id == character_id)
+		{
+			character.gag_timer = 0;
+		}
+	}
+	for (auto &character : m_CharactersSent)
+	{
+		if (character.weenie_id == character_id)
+		{
+			character.gag_timer = 0;
+		}
+	}
+	return false;
+}
+
+bool CClient::IsCharacterGagged(unsigned int character_id)
+{
+	for (auto &character : m_Characters)
+	{
+		if (character.weenie_id == character_id && character.gag_timer != 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void CClient::UpdateLoginScreen()
 {
 	m_CharactersSent = m_Characters = g_pDBIO->GetCharacterList(m_AccountInfo.id);
 
 	BinaryWriter CharacterList;
-	CharacterList.Write<DWORD>(0xF658);
-	CharacterList.Write<DWORD>(0); // check what this is
-	CharacterList.Write<DWORD>(m_Characters.size());
+	CharacterList.Write<uint32_t>(0xF658);
+	CharacterList.Write<uint32_t>(0); // check what this is
+	CharacterList.Write<uint32_t>(m_Characters.size());
 
 	for (auto &character : m_Characters)
 	{
-		CharacterList.Write<DWORD>(character.weenie_id);
+		CharacterList.Write<uint32_t>(character.weenie_id);
 		CharacterList.WriteString(character.name);
-		CharacterList.Write<DWORD>(0); // delete period, TODO
+		CharacterList.Write<uint32_t>(character.ts_deleted);
 	}
 
-	CharacterList.Write<DWORD>(0);
-	CharacterList.Write<DWORD>(11); // max characters I'm assuming
+	CharacterList.Write<uint32_t>(0);
+	CharacterList.Write<uint32_t>(11); // max characters I'm assuming
 	CharacterList.WriteString(m_AccountInfo.username);
-	CharacterList.Write<DWORD>(1); // what are these
-	CharacterList.Write<DWORD>(1); // what are these
+	CharacterList.Write<uint32_t>(1); // what are these
+	CharacterList.Write<uint32_t>(1); // what are these
 	SendNetMessage(CharacterList.GetData(), CharacterList.GetSize(), PRIVATE_MSG);
 
 	BinaryWriter ServerName;
-	ServerName.Write<DWORD>(0xF7E1);
-	ServerName.Write<DWORD>(g_pWorld->GetNumPlayers()); // num connections
-	ServerName.Write<DWORD>(-1); // Max connections
+	ServerName.Write<uint32_t>(0xF7E1);
+	ServerName.Write<uint32_t>(g_pWorld->GetNumPlayers()); // num connections
+	ServerName.Write<uint32_t>(-1); // Max connections
 	ServerName.WriteString(g_pConfig->WorldName());
 	SendNetMessage(ServerName.GetData(), ServerName.GetSize(), PRIVATE_MSG);
 
 	BinaryWriter DDD_InterrogationMessage;
-	DDD_InterrogationMessage.Write<DWORD>(0xF7E5);
-	DDD_InterrogationMessage.Write<DWORD>(1); // servers region
-	DDD_InterrogationMessage.Write<DWORD>(1); // name rule language
-	DDD_InterrogationMessage.Write<DWORD>(1); // product id
-	DDD_InterrogationMessage.Write<DWORD>(2); // supports languages (2)
-	DDD_InterrogationMessage.Write<DWORD>(0); // language #1
-	DDD_InterrogationMessage.Write<DWORD>(1); // language #2
+	DDD_InterrogationMessage.Write<uint32_t>(0xF7E5);
+	DDD_InterrogationMessage.Write<uint32_t>(1); // servers region
+	DDD_InterrogationMessage.Write<uint32_t>(1); // name rule language
+	DDD_InterrogationMessage.Write<uint32_t>(1); // product id
+	DDD_InterrogationMessage.Write<uint32_t>(2); // supports languages (2)
+	DDD_InterrogationMessage.Write<uint32_t>(0); // language #1
+	DDD_InterrogationMessage.Write<uint32_t>(1); // language #2
 	SendNetMessage(DDD_InterrogationMessage.GetData(), DDD_InterrogationMessage.GetSize(), EVENT_MSG);
 }
 
 void CClient::EnterWorld()
 {
-	DWORD EnterWorld = 0xF7DF; // 0xF7C7;
+	uint32_t EnterWorld = 0xF7DF; // 0xF7C7;
 
-	SendNetMessage(&EnterWorld, sizeof(DWORD), 9);
-	LOG(Client, Normal, "Client #%u is entering the world.\n", m_vars.slot);
+	SendNetMessage(&EnterWorld, sizeof(uint32_t), 9);
+	SERVER_INFO << "Client" << m_vars.slot << "is entering the world.";
 
 	m_vars.bInWorld = TRUE;
 
 	BinaryWriter setChatChannels;
-	setChatChannels.Write<DWORD>(0x295);
-	setChatChannels.Write<DWORD>(Allegiance_ChatChannel);
-	setChatChannels.Write<DWORD>(General_ChatChannel);
-	setChatChannels.Write<DWORD>(Trade_ChatChannel);
-	setChatChannels.Write<DWORD>(LFG_ChatChannel);
-	setChatChannels.Write<DWORD>(Roleplay_ChatChannel);
-	setChatChannels.Write<DWORD>(Olthoi_ChatChannel);
-	setChatChannels.Write<DWORD>(Society_ChatChannel);
-	setChatChannels.Write<DWORD>(SocietyCelHan_ChatChannel);
-	setChatChannels.Write<DWORD>(SocietyEldWeb_ChatChannel);
-	setChatChannels.Write<DWORD>(SocietyRadBlo_ChatChannel);
+	setChatChannels.Write<uint32_t>(0x295);
+	setChatChannels.Write<uint32_t>(Allegiance_ChatChannel);
+	setChatChannels.Write<uint32_t>(General_ChatChannel);
+	setChatChannels.Write<uint32_t>(Trade_ChatChannel);
+	setChatChannels.Write<uint32_t>(LFG_ChatChannel);
+	setChatChannels.Write<uint32_t>(Roleplay_ChatChannel);
+	setChatChannels.Write<uint32_t>(Olthoi_ChatChannel);
+	setChatChannels.Write<uint32_t>(Society_ChatChannel);
+	setChatChannels.Write<uint32_t>(SocietyCelHan_ChatChannel);
+	setChatChannels.Write<uint32_t>(SocietyEldWeb_ChatChannel);
+	setChatChannels.Write<uint32_t>(SocietyRadBlo_ChatChannel);
 	SendNetMessage(&setChatChannels, PRIVATE_MSG, FALSE, FALSE);
 }
 
 void CClient::ExitWorld()
 {
-	DWORD ExitWorld = 0xF653;
-	SendNetMessage(&ExitWorld, sizeof(DWORD), PRIVATE_MSG);
-	LOG(Client, Normal, "Client #%u is exiting the world.\n", m_vars.slot);
-
+	uint32_t ExitWorld = 0xF653;
+	SendNetMessage(&ExitWorld, sizeof(uint32_t), PRIVATE_MSG);
+	SERVER_INFO << "Client" << m_vars.slot << "is exiting the world.";
+	
 	m_pPC->ResetEvent();
 
 	UpdateLoginScreen();
@@ -218,17 +253,17 @@ void CClient::ExitWorld()
 	m_vars.bInWorld = FALSE;
 }
 
-void CClient::SendNetMessage(BinaryWriter* pMessage, WORD group, BOOL event, BOOL del)
+void CClient::SendNetMessage(BinaryWriter* pMessage, WORD group, BOOL event, BOOL del, bool ephemeral)
 {
 	if (!pMessage)
 		return;
 
-	SendNetMessage(pMessage->GetData(), pMessage->GetSize(), group, event);
+	SendNetMessage(pMessage->GetData(), pMessage->GetSize(), group, event, del, ephemeral);
 
 	if (del)
 		delete pMessage;
 }
-void CClient::SendNetMessage(void *data, DWORD length, WORD group, BOOL game_event)
+void CClient::SendNetMessage(void *data, uint32_t length, WORD group, BOOL game_event, BOOL del, bool ephemeral)
 {
 	if (!IsAlive())
 		return;
@@ -236,14 +271,29 @@ void CClient::SendNetMessage(void *data, DWORD length, WORD group, BOOL game_eve
 	if (!data || !length)
 		return;
 
-	if (g_bDebugToggle)
+	m_pPC->QueueNetMessage(data, length, group, game_event ? GetEvents()->GetPlayerID() : 0, ephemeral);
+}
+
+BOOL CClient::CheckBadName(const std::string name)
+{
+	string ps = name;
+	std::transform(ps.begin(), ps.end(), ps.begin(), ::tolower);
+	
+	ps = ReplaceInString(ps, " ", "");
+	ps = ReplaceInString(ps, "-", "");
+	ps = ReplaceInString(ps, "'", "");
+	ps = ReplaceInString(ps, "\"", "");
+
+	
+	for (auto const& value : g_pPortalDataEx->GetBannedwords())
 	{
-		LOG(Network, Normal, "%.03f Sending response (group %u) to %s:\n", g_pGlobals->Time(), group, (GetEvents() && GetEvents()->GetPlayer()) ? GetEvents()->GetPlayer()->GetName().c_str() : "[unknown]");
-		LOG_BYTES(Network, Normal, data, length);
+		if (ps.find(value) != std::string::npos)
+			return false;
 	}
 
-	m_pPC->QueueNetMessage(data, length, group, game_event ? GetEvents()->GetPlayerID() : 0);
+	return true;
 }
+
 
 BOOL CClient::CheckNameValidity(const char *name, int access, std::string &resultName)
 {
@@ -295,19 +345,53 @@ void CClient::DeleteCharacter(BinaryReader *pReader)
 	auto entry = m_CharactersSent.begin();
 	std::advance(entry, slot);
 
-	g_pAllegianceManager->BreakAllAllegiance(entry->weenie_id);
-	g_pDBIO->DeleteCharacter(entry->weenie_id);
-	g_pDBIO->DeleteWeenie(entry->weenie_id);
-	m_CharactersSent.erase(entry);
+	
+	std::list<CharacterDesc_t> friendsof = g_pDBIO->GetFriendsOf(entry->weenie_id);
+	for (auto it : friendsof)
+	{
+		CPlayerWeenie* myfriend = g_pWorld->FindPlayer(it.weenie_id);
+		if (myfriend)
+		{
+			myfriend->RemoveFriend(entry->weenie_id);
+		}
+	}
+	g_pDBIO->DeleteCharFriends(entry->weenie_id); 
 
-	BinaryWriter response;
-	response.Write<DWORD>(0xF655);
-	SendNetMessage(response.GetData(), response.GetSize(), PRIVATE_MSG);
+	g_pAllegianceManager->BreakAllAllegiance(entry->weenie_id);
+	g_pHouseManager->RemoveHouseFromAccount(entry->weenie_id);
+	g_pDBIO->DeleteCharacter(entry->weenie_id);
+
+	UpdateLoginScreen();
+}
+
+void CClient::RestoreCharacter(BinaryReader *pReader)
+{
+	uint32_t character_id = pReader->Read<uint32_t>();
+	if (!HasCharacter(character_id))
+	{
+		m_pPC->EvilClient(NULL, NULL, true);
+	}
+	if (!g_pDBIO->IsCharacterDeleting(character_id))
+	{
+		m_pPC->EvilClient(NULL, NULL, true);
+	}
+
+	g_pDBIO->RestoreCharacter(character_id);
+
+	UpdateLoginScreen();
 }
 
 void CClient::CreateCharacter(BinaryReader *pReader)
 {
-	DWORD errorCode = CG_VERIFICATION_RESPONSE_CORRUPT;
+	auto badData = [&](uint32_t err = CG_VERIFICATION_RESPONSE_CORRUPT)
+	{
+		BinaryWriter response;
+		response.Write<uint32_t>(0xF643);
+		response.Write<uint32_t>(err);
+		SendNetMessage(response.GetData(), response.GetSize(), PRIVATE_MSG);
+	};
+
+	//uint32_t errorCode = CG_VERIFICATION_RESPONSE_CORRUPT;
 
 	std::string account_name = pReader->ReadString();
 	if (strcmp(account_name.c_str(), m_vars.account.c_str()))
@@ -319,8 +403,11 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 	std::string resultName;
 
 	if (pReader->GetLastError())
-		goto BadData;
-	
+	{
+		badData();
+		return;
+	}
+
 	cg.strength = max(min(cg.strength, 100), 10);
 	cg.endurance = max(min(cg.endurance, 100), 10);
 	cg.coordination = max(min(cg.coordination, 100), 10);
@@ -331,29 +418,27 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 	int totalAttribs = cg.strength + cg.endurance + cg.coordination + cg.quickness + cg.focus + cg.self;
 	if (totalAttribs > 330)
 	{
-		goto BadData;
+		badData();
+		return;
 	}
 
 	//if (cg.heritageGroup <= 0 || cg.heritageGroup >= 14)
 	if (cg.heritageGroup <= 0 || cg.heritageGroup >= 4)
 	{
-		BinaryWriter response;
-		response.Write<DWORD>(0xF643);
-		response.Write<DWORD>(errorCode);
-		SendNetMessage(response.GetData(), response.GetSize(), PRIVATE_MSG);
+		badData();
 
 		BinaryWriter popupString;
-		popupString.Write<DWORD>(4);
-		popupString.WriteString("Only Aluvian, Gharu'ndim and Sho heritages are supported.");
+		popupString.Write<uint32_t>(4);
+		popupString.WriteString("Only Aluvian, Gharu'ndim and Sho heritages are allowed on this server.");
 		SendNetMessage(&popupString, PRIVATE_MSG, FALSE, FALSE);
 
 		return;
-		//goto BadData;
 	}
 
 	if (cg.gender < 0 || cg.gender >= 3) // allow invalid gender? not sure
 	{
-		goto BadData;
+		badData();
+		return;
 	}
 
 	SkillTable *pSkillTable = SkillSystem::GetSkillTable();
@@ -366,7 +451,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 	HeritageGroup_CG *heritageGroup = cgd->mHeritageGroupList.lookup(cg.heritageGroup);
 	Sex_CG *scg = NULL;
 
-	for (DWORD i = 0; i < cg.numSkills; i++)
+	for (uint32_t i = 0; i < cg.numSkills; i++)
 	{
 		switch (cg.skillAdvancementClasses[i])
 		{
@@ -377,7 +462,8 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 			break;
 			
 		default:
-			goto BadData;
+			badData();
+			return;
 		}
 
 		const SkillBase *pSkillBase = pSkillTable->GetSkillBaseRaw((STypeSkill) i);
@@ -385,7 +471,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 		{
 			//first we check our heritage specific skill costs.
 			bool found = false;
-			for (DWORD j = 0; j < heritageGroup->mSkillList.num_used; j++)
+			for (uint32_t j = 0; j < heritageGroup->mSkillList.num_used; j++)
 			{
 				if (heritageGroup->mSkillList.array_data[j].skillNum == i)
 				{
@@ -412,21 +498,29 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 			if (cg.skillAdvancementClasses[i] == SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS ||
 				cg.skillAdvancementClasses[i] == SKILL_ADVANCEMENT_CLASS::SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
 			{
-				goto BadData;
+				badData();
+				return;
 			}
 		}
 	}
 
 	if (numCreditsUsed > 50)
 	{
-		goto BadData;
+		badData();
+		return;
 	}
 
 	// need to reformat name here...
 	if (!CheckNameValidity(cg.name.c_str(), GetAccessLevel(), resultName))
 	{
-		errorCode = CG_VERIFICATION_RESPONSE_NAME_BANNED;
-		goto BadData;
+		badData(CG_VERIFICATION_RESPONSE_NAME_BANNED);
+		return;
+	}
+
+	if (!CheckBadName(cg.name))
+	{
+		badData(CG_VERIFICATION_RESPONSE_NAME_BANNED);
+		return;
 	}
 
 	// should check variables to make sure everythings within restriction
@@ -440,7 +534,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 		if (g_pDBIO->IsCharacterNameOpen(resultName.c_str()))
 		{
 			const int MIN_PLAYER_GUID = 0x50000000;
-			const int MAX_PLAYER_GUID = 0x6FFFFFFF;
+			const int MAX_PLAYER_GUID = 0x5FFFFFFF;
 
 			unsigned int newCharacterGUID = g_pDBIO->GetHighestWeenieID(MIN_PLAYER_GUID, MAX_PLAYER_GUID) + 1;
 
@@ -457,8 +551,11 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 				// WCID "1" is always a player weenie
 				CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(1, &startPos, false);
 
-				if(!weenie)
-					goto BadData;
+				if (!weenie)
+				{
+					badData();
+					return;
+				}
 
 				weenie->SetID(newCharacterGUID);
 
@@ -473,7 +570,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 				weenie->m_Qualities.SetAttribute(QUICKNESS_ATTRIBUTE, cg.quickness);
 				weenie->m_Qualities.SetAttribute(FOCUS_ATTRIBUTE, cg.focus);
 				weenie->m_Qualities.SetAttribute(SELF_ATTRIBUTE, cg.self);
-
+				weenie->m_Qualities.SetInt(CHARACTER_TITLE_ID_INT, 1);
 				if (heritageGroup)
 				{
 					weenie->m_Qualities.SetString(HERITAGE_GROUP_STRING, heritageGroup->name.c_str());
@@ -491,19 +588,37 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 						weenie->m_Qualities.SetDataID(COMBAT_TABLE_DID, scg->combatTable);
 						weenie->m_Qualities.SetDataID(PHYSICS_EFFECT_TABLE_DID, scg->physicsTable);
 						weenie->m_Qualities.SetDataID(SETUP_DID, scg->setup);
+						weenie->m_Qualities.SetFloat(DEFAULT_SCALE_FLOAT, scg->scaling / 100);
+						weenie->m_ObjDescOverride = scg->objDesc;
 						//weenie->m_ObjDesc = scg->objDesc;
 						//weenie->m_ObjDesc.paletteID = scg->basePalette;
 
-						cg.hairStyle = max(0, min(scg->mHairStyleList.num_used - 1, cg.hairStyle));
+						cg.hairStyle = max(0, min((int)scg->mHairStyleList.num_used - 1, cg.hairStyle));
 						HairStyle_CG *hairStyle = &scg->mHairStyleList.array_data[cg.hairStyle];
+						weenie->m_ObjDescOverride += hairStyle->objDesc;
 						//weenie->m_ObjDesc += hairStyle->objDesc;
 
-						if (hairStyle->objDesc.firstAPChange)
-							weenie->m_Qualities.SetDataID(HEAD_OBJECT_DID, hairStyle->objDesc.firstAPChange->part_id);
+						AnimPartChange *change = hairStyle->objDesc.GetAnimPartChange(CharacterPartIndex::Head);
+						if (change)
+							weenie->m_Qualities.SetDataID(HEAD_OBJECT_DID, change->part_id);
+
+						//if (hairStyle->objDesc.firstAPChange)
+						//	weenie->m_Qualities.SetDataID(HEAD_OBJECT_DID, hairStyle->objDesc.firstAPChange->part_id);
+
+						if (hairStyle->alternateSetup)
+							weenie->m_Qualities.SetDataID(SETUP_DID, hairStyle->alternateSetup);
+
+						// fix Gearknight and olthoi head_object_did
+						//if (cg.heritageGroup == Gearknight_HeritageGroup) 
+						//	weenie->m_Qualities.SetDataID(HEAD_OBJECT_DID, hairStyle->objDesc.lastAPChange->part_id);
+						//if (cg.heritageGroup == Olthoi_HeritageGroup)
+						//	weenie->m_Qualities.SetDataID(HEAD_OBJECT_DID, 0x010045f0);
+						//if (cg.heritageGroup == OlthoiAcid_HeritageGroup)
+						//	weenie->m_Qualities.SetDataID(HEAD_OBJECT_DID, 0x01004616);
 
 						if (cg.eyesStrip != -1)
 						{
-							cg.eyesStrip = max(0, min(scg->mEyeStripList.num_used - 1, cg.eyesStrip));
+							cg.eyesStrip = max(0, min((int)scg->mEyeStripList.num_used - 1, cg.eyesStrip));
 							EyesStrip_CG *eyesStrip = &scg->mEyeStripList.array_data[cg.eyesStrip];
 							if (eyesStrip)
 							{
@@ -523,7 +638,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 						}
 						if (cg.noseStrip != -1)
 						{
-							cg.noseStrip = max(0, min(scg->mNoseStripList.num_used - 1, cg.noseStrip));
+							cg.noseStrip = max(0, min((int)scg->mNoseStripList.num_used - 1, cg.noseStrip));
 							FaceStrip_CG *faceStrip = &scg->mNoseStripList.array_data[cg.noseStrip];
 							if (faceStrip)
 							{
@@ -534,7 +649,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 						}
 						if (cg.mouthStrip != -1)
 						{
-							cg.mouthStrip = max(0, min(scg->mMouthStripList.num_used - 1, cg.mouthStrip));
+							cg.mouthStrip = max(0, min((int)scg->mMouthStripList.num_used - 1, cg.mouthStrip));
 							FaceStrip_CG *faceStrip = &scg->mMouthStripList.array_data[cg.mouthStrip];
 							if (faceStrip)
 							{
@@ -547,16 +662,16 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 						PalSet *ps;
 						if (ps = PalSet::Get(scg->skinPalSet))
 						{
-							DWORD skinPalette = ps->GetPaletteID(cg.skinShade);
+							uint32_t skinPalette = ps->GetPaletteID(cg.skinShade);
 							weenie->m_Qualities.SetDataID(SKIN_PALETTE_DID, skinPalette);
 							//weenie->m_ObjDesc.AddSubpalette(new Subpalette(skinPalette, 0 << 3, 0x18 << 3));
 							PalSet::Release(ps);
 						}
 
-						cg.hairColor = max(0, min(scg->mHairColorList.num_used - 1, cg.hairColor));
+						cg.hairColor = max(0, min((int)scg->mHairColorList.num_used - 1, cg.hairColor));
 						if (ps = PalSet::Get(scg->mHairColorList.array_data[cg.hairColor]))
 						{
-							DWORD hairPalette = ps->GetPaletteID(cg.hairShade);
+							uint32_t hairPalette = ps->GetPaletteID(cg.hairShade);
 							weenie->m_Qualities.SetDataID(HAIR_PALETTE_DID, hairPalette);
 							//weenie->m_ObjDesc.AddSubpalette(new Subpalette(hairPalette, 0x18 << 3, 0x8 << 3));
 							PalSet::Release(ps);
@@ -564,8 +679,8 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 												
 						if (cg.eyeColor != -1)
 						{
-							cg.eyeColor = max(0, min(scg->mEyeColorList.num_used - 1, cg.eyeColor));
-							DWORD eyesPalette = scg->mEyeColorList.array_data[cg.eyeColor];
+							cg.eyeColor = max(0, min((int)scg->mEyeColorList.num_used - 1, cg.eyeColor));
+							uint32_t eyesPalette = scg->mEyeColorList.array_data[cg.eyeColor];
 							weenie->m_Qualities.SetDataID(EYES_PALETTE_DID, eyesPalette);
 							//weenie->m_ObjDesc.AddSubpalette(new Subpalette(eyesPalette, 0x20 << 3, 0x8 << 3));
 						}
@@ -585,16 +700,36 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 					}
 				}
 
-				for (DWORD i = 0; i < cg.numSkills; i++)
+				for (uint32_t i = 0; i < cg.numSkills; i++)
 				{
 					weenie->m_Qualities.SetSkillAdvancementClass((STypeSkill)i, cg.skillAdvancementClasses[i]);
 					if (cg.skillAdvancementClasses[i] == SKILL_ADVANCEMENT_CLASS::SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
 						weenie->m_Qualities.SetSkillLevel((STypeSkill)i, 10);
 					else if (cg.skillAdvancementClasses[i] == SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
-						weenie->m_Qualities.SetSkillLevel((STypeSkill)i, 5);
+					{
+						Skill trained;
+						weenie->m_Qualities.InqSkill((STypeSkill)i, trained);
+
+						trained._init_level = 0;
+						trained._level_from_pp = 5;
+						trained._pp = 526;
+
+						weenie->m_Qualities.SetSkill((STypeSkill)i, trained);
+					}
 				}
-				
+
+				time_t t = chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+				std::stringstream ss;
+				ss << std::put_time(std::localtime(&t), "%m/%d/%y %I:%M:%S %p."); // convert time to a string of format '01/01/18 11:59:59 AM.'
+				std::string str = ss.str();
+
+				weenie->m_Qualities.SetInt(CREATION_TIMESTAMP_INT, t);
+				weenie->m_Qualities.SetString(DATE_OF_BIRTH_STRING, ss.str());
 				weenie->m_Qualities.SetInt(AGE_INT, 0);
+
+				if (weenie->m_Qualities.GetInt(HERITAGE_GROUP_INT, 0) == Lugian_HeritageGroup)
+					weenie->m_Qualities.SetDataID(MOTION_TABLE_DID, 0x9000216);
 
 				/*
 				cg.startArea = max(0, min(cgd->mStartAreaList.num_used - 1, cg.startArea));
@@ -618,6 +753,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 					{
 						startPos = Position(0xA9B00015, Vector(53.780079f, 105.814995f, 64.005005f), Quaternion(-0.933116f, 0, 0, -0.359575f));
 						//startPos = Position(0xA9B00006, Vector(24.258204f, 123.777000f, 63.060749f), Quaternion(1, 0, 0, 0));
+						//weenie->m_Qualities.SetBool(RECALLS_DISABLED_BOOL, 1); // Cannot use recalls out of the training academy.
 					}
 
 					break;
@@ -630,6 +766,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 					{
 						startPos = Position(0xDE51001D, Vector(87.350517f, 114.857246f, 16.004999f), Quaternion(0.843159f, 0.0, 0.0, 0.537665f));
 						//startPos = Position(0xDE51000C, Vector(26.712753f, 89.279999f, 17.778936f), Quaternion(0.931082f, 0.0, 0.0, -0.364811f));
+						//weenie->m_Qualities.SetBool(RECALLS_DISABLED_BOOL, 1); // Cannot use recalls out of the training academy.
 					}
 
 					break;
@@ -642,6 +779,7 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 					{
 						startPos = Position(0x7D680012, Vector(56.949219f, 29.860384f, 14.981730f), Quaternion(0.475755f, 0.0, 0.0, -0.879578f));
 						//startPos = Position(0x7D680019, Vector(79.102280f, 19.573767f, 12.821287f), Quaternion(-0.656578f, 0.0, 0.0, 0.754258f));
+						//weenie->m_Qualities.SetBool(RECALLS_DISABLED_BOOL, 1); // Cannot use recalls out of the training academy.
 					}
 
 					break;
@@ -655,6 +793,17 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 						//redirect to Holtburg as Sanamar is post-ToD and so incomplete.
 						startPos = Position(0xA9B00015, Vector(53.780079f, 105.814995f, 64.005005f), Quaternion(-0.933116f, 0, 0, -0.359575f));
 						//startPos = Position(0xA9B00006, Vector(24.258204f, 123.777000f, 63.060749f), Quaternion(1, 0, 0, 0));
+						//weenie->m_Qualities.SetBool(RECALLS_DISABLED_BOOL, 1); // Cannot use recalls out of the training academy.
+					}
+
+					break;
+				case 4:
+					// Olthoi Island
+					startPos = Position(g_pConfig->OlthoiStartPosition());
+
+					if (!startPos.objcell_id)
+					{
+						startPos = Position(0xE6D3000E, Vector(40.57f, 138.16f, 218.00f), Quaternion(0, 0, 0, 1));
 					}
 
 					break;
@@ -668,12 +817,68 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 				weenie->SetMaxVitals(false);
 
 				weenie->m_Qualities._create_list->clear(); //Clear the create list as we don't want what's in it.
-				g_pWorld->CreateEntity(weenie); //Briefly add the weenie to the world so we don't get errors when adding the starting gear.
+				if (!g_pWorld->CreateEntity(weenie))
+					return;; //Briefly add the weenie to the world so we don't get errors when adding the starting gear.
 
-				weenie->GiveXP(g_pConfig->OverrideStartingXP()); //Add additional XP Override at character creation 
+				weenie->GiveXP(g_pConfig->GetOverrideStartingXP(), ExperienceHandlingType::QuestXpNoShare, false); //Add additional XP Override at character creation
 
 				//add starter gear
 				GenerateStarterGear(weenie, cg, scg);
+
+				// Set Olthoi starting stats/skills
+				if (cg.heritageGroup == Olthoi_HeritageGroup)
+				{
+					weenie->m_Qualities.SetInt(LEVEL_INT, 180);
+					weenie->m_Qualities.SetAttribute(STRENGTH_ATTRIBUTE, 350);
+					weenie->m_Qualities.SetAttribute(ENDURANCE_ATTRIBUTE, 350);
+					weenie->m_Qualities.SetAttribute(COORDINATION_ATTRIBUTE, 300);
+					weenie->m_Qualities.SetAttribute(QUICKNESS_ATTRIBUTE, 350);
+					weenie->m_Qualities.SetAttribute(FOCUS_ATTRIBUTE, 200);
+					weenie->m_Qualities.SetAttribute(SELF_ATTRIBUTE, 200);
+					weenie->m_Qualities.SetAttribute2nd(HEALTH_ATTRIBUTE_2ND, 325);
+					weenie->m_Qualities.SetAttribute2nd(STAMINA_ATTRIBUTE_2ND, 325);
+
+					weenie->m_Qualities.SetInt(PLAYER_KILLER_STATUS_INT, PK_PKStatus); // Olthoi are always Red
+				}
+
+				if (cg.heritageGroup == OlthoiAcid_HeritageGroup)
+				{
+					weenie->m_Qualities.SetInt(LEVEL_INT, 180);
+					weenie->m_Qualities.SetAttribute(STRENGTH_ATTRIBUTE, 200);
+					weenie->m_Qualities.SetAttribute(ENDURANCE_ATTRIBUTE, 200);
+					weenie->m_Qualities.SetAttribute(COORDINATION_ATTRIBUTE, 300);
+					weenie->m_Qualities.SetAttribute(QUICKNESS_ATTRIBUTE, 250);
+					weenie->m_Qualities.SetAttribute(FOCUS_ATTRIBUTE, 400);
+					weenie->m_Qualities.SetAttribute(SELF_ATTRIBUTE, 400);
+					weenie->m_Qualities.SetAttribute2nd(HEALTH_ATTRIBUTE_2ND, 400);
+					weenie->m_Qualities.SetAttribute2nd(STAMINA_ATTRIBUTE_2ND, 400);
+					weenie->m_Qualities.SetAttribute2nd(MANA_ATTRIBUTE_2ND, 400);
+
+					weenie->m_Qualities.SetInt(PLAYER_KILLER_STATUS_INT, PK_PKStatus); // Olthoi are always Red
+				}
+
+				// add racial augmentations
+				//switch (cg.heritageGroup)
+				//{
+				//case Shadowbound_HeritageGroup:
+				//case Penumbraen_HeritageGroup:
+				//	weenie->m_Qualities.SetInt(AUGMENTATION_CRITICAL_EXPERTISE_INT, 1); break;
+				//case Gearknight_HeritageGroup:
+				//	weenie->m_Qualities.SetInt(AUGMENTATION_DAMAGE_REDUCTION_INT, 1); break;
+				//case Tumerok_HeritageGroup:
+				//	weenie->m_Qualities.SetInt(AUGMENTATION_CRITICAL_POWER_INT, 1); break;
+				//case Lugian_HeritageGroup:
+				//	weenie->m_Qualities.SetInt(AUGMENTATION_INCREASED_CARRYING_CAPACITY_INT, 1); break;
+				//case Empyrean_HeritageGroup:
+				//	weenie->m_Qualities.SetInt(AUGMENTATION_INFUSED_LIFE_MAGIC_INT, 1); break;
+				//case Undead_HeritageGroup:
+				//	weenie->m_Qualities.SetInt(AUGMENTATION_CRITICAL_DEFENSE_INT, 1); break;
+				//case Olthoi_HeritageGroup:
+				//case OlthoiAcid_HeritageGroup:
+				//	break; // none
+				//default: // sho, aluv, gharu, viamont
+				//	weenie->m_Qualities.SetInt(AUGMENTATION_JACK_OF_ALL_TRADES_INT, 1); break;
+				//}
 
 				weenie->Save();
 
@@ -681,59 +886,57 @@ void CClient::CreateCharacter(BinaryReader *pReader)
 				//delete weenie; //RemoveEntity already performs the deletion.
 
 				BinaryWriter response;
-				response.Write<DWORD>(0xF643);
-				response.Write<DWORD>(1);
-				response.Write<DWORD>(newCharacterGUID);
+				response.Write<uint32_t>(0xF643);
+				response.Write<uint32_t>(1);
+				response.Write<uint32_t>(newCharacterGUID);
 				response.WriteString(cg.name.c_str());
-				response.Write<DWORD>(0);
+				response.Write<uint32_t>(0);
 				SendNetMessage(response.GetData(), response.GetSize(), PRIVATE_MSG);
 			}
 			else
 			{
-				LOG(Client, Error, "Failed to create character.\n");
-				BinaryWriter response;
-				response.Write<DWORD>(0xF643);
-				response.Write<DWORD>(CG_VERIFICATION_RESPONSE_DATABASE_DOWN); // update this error number
-				SendNetMessage(response.GetData(), response.GetSize(), PRIVATE_MSG);
+				SERVER_ERROR << "Failed to create character.";
+				badData(CG_VERIFICATION_RESPONSE_DATABASE_DOWN);
 			}
 		}
 		else
 		{		
-			LOG(Client, Normal, "Character name already exists.\n");
-			BinaryWriter response;
-			response.Write<DWORD>(0xF643);
-			response.Write<DWORD>(CG_VERIFICATION_RESPONSE_NAME_IN_USE); // name already exists
-			SendNetMessage(response.GetData(), response.GetSize(), PRIVATE_MSG);
+			SERVER_INFO << "Character name already exists.";
+			badData(CG_VERIFICATION_RESPONSE_NAME_IN_USE);
 		}
 
 	}
 	return;
-
-BadData:
-	{
-		BinaryWriter response;
-		response.Write<DWORD>(0xF643);
-		response.Write<DWORD>(errorCode);
-		SendNetMessage(response.GetData(), response.GetSize(), PRIVATE_MSG);
-	}
 }
 
-void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult cg, Sex_CG *scg)
+void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult &cg, Sex_CG *scg)
 {
+	if (!weenieObject)
+		return;
 	CMonsterWeenie *weenie = weenieObject->AsMonster();
 	if (weenie == NULL)
 		return;
 
-	if (cg.headgearStyle != UINT_MAX)
-		weenie->SpawnWielded(cg.headgearStyle, scg->mHeadgearList, cg.headgearColor, scg->mClothingColorsList, cg.headgearShade);	
-	weenie->SpawnWielded(cg.shirtStyle, scg->mShirtList, cg.shirtColor, scg->mClothingColorsList, cg.shirtShade);
-	weenie->SpawnWielded(cg.trousersStyle, scg->mPantsList, cg.trousersColor, scg->mClothingColorsList, cg.trousersShade);
-	weenie->SpawnWielded(cg.footwearStyle, scg->mFootwearList, cg.footwearColor, scg->mClothingColorsList, cg.footwearShade);
+	if (cg.heritageGroup != Gearknight_HeritageGroup && cg.heritageGroup < 12) // Gearknights and olthoi don't get clothes to start.
+	{
+		if (cg.headgearStyle != UINT_MAX)
+			weenie->SpawnWielded(cg.headgearStyle, scg->mHeadgearList, cg.headgearColor, scg->mClothingColorsList, cg.headgearShade);
 
-	//weenie->m_Qualities.SetInt(COIN_VALUE_INT, GetAccessLevel() >= ADMIN_ACCESS ? 500000000 : 10000);
-	weenie->SpawnInContainer(W_COINSTACK_CLASS, 500);
-	weenie->SpawnInContainer(W_TUTORIALBOOK_CLASS, 1);
+		weenie->SpawnWielded(cg.shirtStyle, scg->mShirtList, cg.shirtColor, scg->mClothingColorsList, cg.shirtShade);
+		weenie->SpawnWielded(cg.trousersStyle, scg->mPantsList, cg.trousersColor, scg->mClothingColorsList, cg.trousersShade);
+		weenie->SpawnWielded(cg.footwearStyle, scg->mFootwearList, cg.footwearColor, scg->mClothingColorsList, cg.footwearShade);
+	}
 
+	if (cg.heritageGroup < 12) // Olthoi get their own set of starting items.
+	{
+		//weenie->m_Qualities.SetInt(COIN_VALUE_INT, GetAccessLevel() >= ADMIN_ACCESS ? 500000000 : 10000);
+		weenie->SpawnInContainer(W_COINSTACK_CLASS, 500);
+		weenie->SpawnInContainer(W_TUTORIALBOOK_CLASS, 1);
+		weenie->SpawnInContainer(W_SACK_CLASS, 1);
+		weenie->SpawnInContainer(W_CALLINGSTONE_CLASS, 1);
+	}
+	
+	
 	if (cg.skillAdvancementClasses[ALCHEMY_SKILL] >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
 		weenie->SpawnInContainer(W_MORTARANDPESTLE_CLASS, 1);
 	if (cg.skillAdvancementClasses[ALCHEMY_SKILL] >= SKILL_ADVANCEMENT_CLASS::SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
@@ -873,9 +1076,6 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 
 		break;
 	}
-
-	weenie->SpawnInContainer(W_SACK_CLASS, 1);
-	weenie->SpawnInContainer(W_CALLINGSTONE_CLASS, 1);
 
 	CContainerWeenie *sack = NULL;
 	for (auto pack : weenie->m_Packs)
@@ -1851,10 +2051,10 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult c
 		weenie->m_Qualities.AddSpell(LightningStreak7_SpellID);
 	}
 
-	weenie->RecalculateCoinAmount();
+	weenie->RecalculateCoinAmount(W_COINSTACK_CLASS);
 }
 
-void CClient::SendLandblock(DWORD dwFileID)
+void CClient::SendLandblock(uint32_t dwFileID)
 {
 	TURBINEFILE* pLandData = g_pCell->GetFile(dwFileID);
 	if (!pLandData)
@@ -1869,35 +2069,35 @@ void CClient::SendLandblock(DWORD dwFileID)
 
 	if ((dwFileID & 0xFFFF) != 0xFFFF)
 	{
-		LOG(Client, Warning, "Client requested Landblock 0x%08X - should end pReader 0xFFFF\n", dwFileID);
+		SERVER_WARN << "Client requested Landblock" << dwFileID << "-should end pReader 0xFFFF";
 	}
 
 	if (pLandData)
 	{
 		BinaryWriter BlockPackage;
 
-		BlockPackage.Write<DWORD>(0xF7E2);
+		BlockPackage.Write<uint32_t>(0xF7E2);
 
-		DWORD dwFileSize = pLandData->GetLength();
+		uint32_t dwFileSize = pLandData->GetLength();
 		BYTE* pbFileData = pLandData->GetData();
 
-		DWORD dwPackageSize = (DWORD)((dwFileSize * 1.02f) + 12 + 1);
+		uLongf dwPackageSize = (uint32_t)((dwFileSize * 1.02f) + 12 + 1);
 		BYTE* pbPackageData = new BYTE[dwPackageSize];
 
 		if (Z_OK != compress2(pbPackageData, &dwPackageSize, pbFileData, dwFileSize, Z_BEST_COMPRESSION))
 		{
-			LOG(Client, Error, "Error compressing LandBlock package!\n");
+			SERVER_ERROR << "Error compressing LandBlock package!";
 		}
 
-		BlockPackage.Write<DWORD>(1); //the resource type: 1 for 0xFFFF, 2 for 0xFFFE, 3 for 0x100
-		BlockPackage.Write<DWORD>(2); //1 = client_portal / 2 = client_cell_1 / 3 = client_local_English
-		BlockPackage.Write<DWORD>(1); //?
-		BlockPackage.Write<DWORD>(dwFileID); //the resource ID number
-		BlockPackage.Write<DWORD>(1); //the file version number
+		BlockPackage.Write<uint32_t>(1); //the resource type: 1 for 0xFFFF, 2 for 0xFFFE, 3 for 0x100
+		BlockPackage.Write<uint32_t>(2); //1 = client_portal / 2 = client_cell_1 / 3 = client_local_English
+		BlockPackage.Write<uint32_t>(1); //?
+		BlockPackage.Write<uint32_t>(dwFileID); //the resource ID number
+		BlockPackage.Write<uint32_t>(1); //the file version number
 		BlockPackage.Write<BYTE>(1); // 0 = uncompressed / 1 = compressed
-		BlockPackage.Write<DWORD>(2); //?
-		BlockPackage.Write<DWORD>(dwPackageSize + sizeof(DWORD) * 2); //the number of bytes required for the remainder of this message, including this DWORD
-		BlockPackage.Write<DWORD>(dwFileSize); //the size of the uncompressed file
+		BlockPackage.Write<uint32_t>(2); //?
+		BlockPackage.Write<uint32_t>(dwPackageSize + sizeof(uint32_t) * 2); //the number of bytes required for the remainder of this message, including this uint32_t
+		BlockPackage.Write<uint32_t>(dwFileSize); //the size of the uncompressed file
 		BlockPackage.Write(pbPackageData, dwPackageSize); //bytes of zlib compressed file data
 		BlockPackage.Align();
 
@@ -1908,11 +2108,11 @@ void CClient::SendLandblock(DWORD dwFileID)
 	}
 }
 
-void CClient::SendLandblockInfo(DWORD dwFileID)
+void CClient::SendLandblockInfo(uint32_t dwFileID)
 {
 	if ((dwFileID & 0xFFFF) != 0xFFFE)
 	{
-		LOG(Client, Warning, "Client requested LandblockInfo 0x%08X - should end pReader 0xFFFE\n", dwFileID);
+		SERVER_WARN << "Client requested LandblockInfo" << dwFileID << "should end pReader 0xFFFE";
 		return;
 	}
 
@@ -1925,28 +2125,28 @@ void CClient::SendLandblockInfo(DWORD dwFileID)
 	if (pObjData)
 	{
 		BinaryWriter BlockInfoPackage;
-		BlockInfoPackage.Write<DWORD>(0xF7E2);
+		BlockInfoPackage.Write<uint32_t>(0xF7E2);
 
-		DWORD dwFileSize = pObjData->GetLength();
+		uint32_t dwFileSize = pObjData->GetLength();
 		BYTE* pbFileData = pObjData->GetData();
 
-		DWORD dwPackageSize = (DWORD)((dwFileSize * 1.02f) + 12 + 1);
+		uLongf dwPackageSize = (uint32_t)((dwFileSize * 1.02f) + 12 + 1);
 		BYTE* pbPackageData = new BYTE[dwPackageSize];
 
 		if (Z_OK != compress2(pbPackageData, &dwPackageSize, pbFileData, dwFileSize, Z_BEST_COMPRESSION))
 		{
-			LOG(Client, Error, "Error compressing LandBlockInfo package!\n");
+			SERVER_ERROR << "Error compressing LandBlockInfo package!";
 		}
 
-		BlockInfoPackage.Write<DWORD>(2); // 1 for 0xFFFF, 2 for 0xFFFE, 3 for 0x100
-		BlockInfoPackage.Write<DWORD>(2);
-		BlockInfoPackage.Write<DWORD>(1);
-		BlockInfoPackage.Write<DWORD>(dwFileID);
-		BlockInfoPackage.Write<DWORD>(1);
+		BlockInfoPackage.Write<uint32_t>(2); // 1 for 0xFFFF, 2 for 0xFFFE, 3 for 0x100
+		BlockInfoPackage.Write<uint32_t>(2);
+		BlockInfoPackage.Write<uint32_t>(1);
+		BlockInfoPackage.Write<uint32_t>(dwFileID);
+		BlockInfoPackage.Write<uint32_t>(1);
 		BlockInfoPackage.Write<BYTE>(1);
-		BlockInfoPackage.Write<DWORD>(2);
-		BlockInfoPackage.Write<DWORD>(dwPackageSize + sizeof(DWORD) * 2);
-		BlockInfoPackage.Write<DWORD>(dwFileSize);
+		BlockInfoPackage.Write<uint32_t>(2);
+		BlockInfoPackage.Write<uint32_t>(dwPackageSize + sizeof(uint32_t) * 2);
+		BlockInfoPackage.Write<uint32_t>(dwFileSize);
 		BlockInfoPackage.Write(pbPackageData, dwPackageSize);
 		BlockInfoPackage.Align();
 
@@ -1957,7 +2157,7 @@ void CClient::SendLandblockInfo(DWORD dwFileID)
 	}
 }
 
-void CClient::SendLandcell(DWORD dwFileID)
+void CClient::SendLandcell(uint32_t dwFileID)
 {
 	TURBINEFILE* pCellData = g_pCell->GetFile(dwFileID);
 	if (!pCellData)
@@ -1974,29 +2174,29 @@ void CClient::SendLandcell(DWORD dwFileID)
 	{
 		BinaryWriter CellPackage;
 
-		CellPackage.Write<DWORD>(0xF7E2);
+		CellPackage.Write<uint32_t>(0xF7E2);
 
-		DWORD dwFileSize = pCellData->GetLength();
+		uint32_t dwFileSize = pCellData->GetLength();
 		BYTE* pbFileData = pCellData->GetData();
 
-		DWORD dwPackageSize = (DWORD)((dwFileSize * 1.02f) + 12 + 1);
+		uLongf dwPackageSize = (uint32_t)((dwFileSize * 1.02f) + 12 + 1);
 		BYTE* pbPackageData = new BYTE[dwPackageSize];
 
 		if (Z_OK != compress2(pbPackageData, &dwPackageSize, pbFileData, dwFileSize, Z_BEST_COMPRESSION))
 		{
 			// These are CEnvCell if I recall correctly
-			LOG(Client, Error, "Error compressing landcell package!\n");
+			SERVER_ERROR << "Error compressing landcell package!";
 		}
 
-		CellPackage.Write<DWORD>(3); // 1 for 0xFFFF, 2 for 0xFFFE, 3 for 0x100
-		CellPackage.Write<DWORD>(2);
-		CellPackage.Write<DWORD>(1);
-		CellPackage.Write<DWORD>(dwFileID);
-		CellPackage.Write<DWORD>(1);
+		CellPackage.Write<uint32_t>(3); // 1 for 0xFFFF, 2 for 0xFFFE, 3 for 0x100
+		CellPackage.Write<uint32_t>(2);
+		CellPackage.Write<uint32_t>(1);
+		CellPackage.Write<uint32_t>(dwFileID);
+		CellPackage.Write<uint32_t>(1);
 		CellPackage.Write<BYTE>(1);
-		CellPackage.Write<DWORD>(2);
-		CellPackage.Write<DWORD>(dwPackageSize + sizeof(DWORD) * 2);
-		CellPackage.Write<DWORD>(dwFileSize);
+		CellPackage.Write<uint32_t>(2);
+		CellPackage.Write<uint32_t>(dwPackageSize + sizeof(uint32_t) * 2);
+		CellPackage.Write<uint32_t>(dwFileSize);
 		CellPackage.Write(pbPackageData, dwPackageSize);
 		CellPackage.Align();
 
@@ -2012,17 +2212,17 @@ void CClient::SendLandcell(DWORD dwFileID)
 	//	m_pEvents->SendText(csprintf("The server has sent you cell #%04X!", dwFileID >> 16), LTT_DEFAULT);
 }
 
-void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
+void CClient::ProcessMessage(BYTE *data, uint32_t length, WORD group)
 {
 	if (g_bDebugToggle)
 	{
-		LOG(Network, Normal, "%.03f Received response (group %u):\n", g_pGlobals->Time(), group);
-		LOG_BYTES(Network, Normal, data, length);
+		NETWORK_DEBUG << "Received response(group" << group << ")";
+		NETWORK_DEBUG << data;
 	}
 
 	BinaryReader in(data, length);
 
-	DWORD dwMessageCode = in.ReadDWORD();
+	uint32_t dwMessageCode = in.ReadUInt32();
 
 #ifdef _DEBUG
 	// LOG(Client, Normal, "Processing response 0x%X (size %d):\n", dwMessageCode, length);
@@ -2030,7 +2230,7 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 
 	if (in.GetLastError())
 	{
-		LOG(Client, Warning, "Error processing response.\n");
+		NETWORK_ERROR << "Error processing response." << dwMessageCode;
 		return;
 	}
 	switch (dwMessageCode)
@@ -2039,7 +2239,7 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 		{
 			if (m_vars.bInWorld)
 			{
-				m_pEvents->BeginLogout();
+				m_pEvents->ForceLogout();
 			}
 
 			break;
@@ -2063,11 +2263,21 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 			break;
 		}
 
+		case 0xF7D9: // Restore Character
+		{
+			if (!m_vars.bInWorld)
+			{
+				RestoreCharacter(&in);
+			}
+
+			break;
+		}
+
 		case 0xF6EA: // Request Object
 		{
 			if (m_vars.bInWorld)
 			{
-				DWORD dwEID = in.ReadDWORD();
+				uint32_t dwEID = in.ReadUInt32();
 				if (in.GetLastError()) break;
 
 				CPlayerWeenie *pPlayer;
@@ -2077,7 +2287,7 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 					CWeenieObject *pTarget = g_pWorld->FindWithinPVS(pPlayer, dwEID);
 									
 					if (pTarget)
-						pPlayer->MakeAware(pTarget);
+						pPlayer->MakeAware(pTarget, true);
 					else
 					{
 						pTarget = g_pWorld->FindObject(dwEID);
@@ -2094,15 +2304,65 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 
 		case 0xF7E6://DDD_InterrogationResponseMessage
 		{
-			DWORD clientLanguage = in.ReadDWORD();
-			PackableList<DWORD> fileIds;
-			fileIds.UnPack(&in);
+			uint32_t clientLanguage = in.ReadUInt32();
+			int32_t fileCount = in.ReadInt32();
+			bool allMatch = true;
+
+			for (int i = 0; i < fileCount; i++)
+			{
+				// file info contains
+				// int int <file 0xffff0001>
+				// dataset datasubset <file 0xffff0001>
+				int32_t ds = in.ReadInt32();
+				int32_t dss = in.ReadInt32();
+				BYTE *itr = in.GetDataPtr();
+				int match = 0;
+
+				in.SetOffset(in.GetOffset() + sizeof(int32_t) * 3);
+
+				switch (ds)
+				{
+				case 0:
+					// portal
+					if (dss == 1)
+						match = g_pPortal->CompareIteration(itr);
+					break;
+
+				case 1:
+					switch (dss)
+					{
+					case 2:	// cell
+						match = g_pCell->CompareIteration(itr);
+						break;
+					case 3:	// local_english
+						break;
+					}
+					break;
+				}
+
+				if (match != 0)
+				{
+					allMatch = false;
+					// NETWORK_DEBUG << "Client DAT Mismatch: " << ds << dss;
+				}
+			}
+
+			if (!allMatch)
+			{
+				// error with wrong version
+				GetPacketController()->SendCriticalError(ST_SERVER_ERRORS, STR_LOGIN_CLIENT_VERSION);
+			}
+
+			// ends with 0
+
+			//PackableList<uint32_t> fileIds;
+			//fileIds.UnPack(&in);
 				
 			if (in.GetLastError())
 				break;
 
 			BinaryWriter EndDDD;
-			EndDDD.Write<long>(0xF7EA);
+			EndDDD.Write<int32_t>(0xF7EA);
 			SendNetMessage(EndDDD.GetData(), EndDDD.GetSize(), EVENT_MSG);
 			break;
 		}
@@ -2110,7 +2370,7 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 		case 0xF7EA: //DDD_OnEndDDD
 		{
 			//BinaryWriter EndDDD;
-			//EndDDD.Write<DWORD>(0xF7EA);
+			//EndDDD.Write<uint32_t>(0xF7EA);
 			//SendNetMessage(EndDDD.GetData(), EndDDD.GetSize(), EVENT_MSG);
 
 			break;
@@ -2120,8 +2380,8 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 		{
 			if (m_vars.bInWorld)
 			{
-				DWORD dwFileClass = in.ReadDWORD();
-				DWORD dwFileID = in.ReadDWORD();
+				uint32_t dwFileClass = in.ReadUInt32();
+				uint32_t dwFileID = in.ReadUInt32();
 				if (in.GetLastError()) break;
 
 				//disabled downloading files.
@@ -2176,7 +2436,7 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 		{
 			if (m_vars.bInWorld)
 			{
-				DWORD dwGUID = in.ReadDWORD();
+				uint32_t dwGUID = in.ReadUInt32();
 				char* szName = in.ReadString();
 				if (in.GetLastError()) break;
 
@@ -2189,15 +2449,15 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 		// modified cmoski code
 		case 0xF7DE:
 		{ //Gets data from /general here to rebroadcast as a world message below \o/
-			DWORD size = in.ReadDWORD();
-			DWORD TurbineChatType = in.ReadDWORD(); //0x1 Inbound, 0x3 Outbound, 0x5 Outbound Ack
-			DWORD unk1 = in.ReadDWORD();
-			DWORD unk2 = in.ReadDWORD();
-			DWORD unk3 = in.ReadDWORD();
-			DWORD unk4 = in.ReadDWORD();
-			DWORD unk5 = in.ReadDWORD();
-			DWORD unk6 = in.ReadDWORD();
-			DWORD payload = in.ReadDWORD();
+			uint32_t size = in.ReadUInt32();
+			uint32_t TurbineChatType = in.ReadUInt32(); //0x1 Inbound, 0x3 Outbound, 0x5 Outbound Ack
+			uint32_t unk1 = in.ReadUInt32();
+			uint32_t unk2 = in.ReadUInt32();
+			uint32_t unk3 = in.ReadUInt32();
+			uint32_t unk4 = in.ReadUInt32();
+			uint32_t unk5 = in.ReadUInt32();
+			uint32_t unk6 = in.ReadUInt32();
+			uint32_t payload = in.ReadUInt32();
 
 			if (in.GetLastError())
 				break;
@@ -2207,36 +2467,37 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 				if (!m_pEvents->GetPlayer() || !m_pEvents->CheckForChatSpam())
 					break;
 				
-				DWORD serial = in.ReadDWORD(); // serial of this character's chat
-				DWORD channel_unk = in.ReadDWORD();
-				DWORD channel_unk2 = in.ReadDWORD();
-				DWORD listening_channel = in.ReadDWORD(); // ListeningChannel in SetTurbineChatChannels (0x000BEEF0-9)
-				std::string message = in.ReadWStringToString();
-				DWORD payloadSize = in.ReadDWORD();
-				DWORD playerGUID = in.ReadDWORD();
-				DWORD ob_unknown = in.ReadDWORD(); //Always 0?
-				DWORD ob_unknown2 = in.ReadDWORD();
+				uint32_t serial = in.ReadUInt32(); // serial of this character's chat
+				uint32_t channel_unk = in.ReadUInt32();
+				uint32_t channel_unk2 = in.ReadUInt32();
+				uint32_t listening_channel = in.ReadUInt32(); // ListeningChannel in SetTurbineChatChannels (0x000BEEF0-9)
+				//std::string message = in.ReadWStringToString();
+				std::u16string message = in.ReadString16();
+				uint32_t payloadSize = in.ReadUInt32();
+				uint32_t playerGUID = in.ReadUInt32();
+				uint32_t ob_unknown = in.ReadUInt32(); //Always 0?
+				uint32_t ob_unknown2 = in.ReadUInt32();
 
-				std::string filteredText = FilterBadChatCharacters(message.c_str());
+				std::u16string filteredText = FilterBadChatCharacters(message);
 
 				if (in.GetLastError() || !filteredText.size())
 					break;
 
 				BinaryWriter chatAck;
-				chatAck.Write<DWORD>(0xF7DE);
-				chatAck.Write<DWORD>(0x30); // Size
-				chatAck.Write<DWORD>(0x05); // Type 05 - ACK
-				chatAck.Write<DWORD>(0x02); // ??
-				chatAck.Write<DWORD>(0x01); // ??
-				chatAck.Write<DWORD>(0xB0045); // bitfield?
-				chatAck.Write<DWORD>(0x01);
-				chatAck.Write<DWORD>(0xB0045); // bitfield?
-				chatAck.Write<DWORD>(0x00);
-				chatAck.Write<DWORD>(0x10);   // Payload size
-				chatAck.Write<DWORD>(serial); // serial
-				chatAck.Write<DWORD>(0x02);
-				chatAck.Write<DWORD>(0x02);
-				chatAck.Write<DWORD>(0x00);
+				chatAck.Write<uint32_t>(0xF7DE);
+				chatAck.Write<uint32_t>(0x30); // Size
+				chatAck.Write<uint32_t>(0x05); // Type 05 - ACK
+				chatAck.Write<uint32_t>(0x02); // ??
+				chatAck.Write<uint32_t>(0x01); // ??
+				chatAck.Write<uint32_t>(0xB0045); // bitfield?
+				chatAck.Write<uint32_t>(0x01);
+				chatAck.Write<uint32_t>(0xB0045); // bitfield?
+				chatAck.Write<uint32_t>(0x00);
+				chatAck.Write<uint32_t>(0x10);   // Payload size
+				chatAck.Write<uint32_t>(serial); // serial
+				chatAck.Write<uint32_t>(0x02);
+				chatAck.Write<uint32_t>(0x02);
+				chatAck.Write<uint32_t>(0x00);
 				SendNetMessage(&chatAck, 0x04, FALSE, FALSE);
 
 				if (filteredText.c_str()[0] == '!' || filteredText.c_str()[0] == '@' || filteredText.c_str()[0] == '/')
@@ -2245,17 +2506,30 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 				}
 				else
 				{
-					switch (listening_channel)
+					if (!m_pEvents->GetPlayer()->IsPlayerSquelched(playerGUID))
 					{
-					case General_ChatChannel:
-					case Trade_ChatChannel:
-					case LFG_ChatChannel:
-					case Roleplay_ChatChannel:
-					case Allegiance_ChatChannel:
-					// case Olthoi_ChatChannel:
-					// case Society_ChatChannel:
-						g_pWorld->BroadcastChatChannel(listening_channel, m_pEvents->GetPlayer(), filteredText);
-						break;
+
+						switch (listening_channel)
+						{
+						case General_ChatChannel:
+						case Trade_ChatChannel:
+						case LFG_ChatChannel:
+						case Roleplay_ChatChannel:
+						case Allegiance_ChatChannel:
+						// case Olthoi_ChatChannel:
+						case Society_ChatChannel:
+							if (listening_channel > 1 && !g_pConfig->AllowGeneralChat())
+								break;
+
+							if (m_pEvents->IsServerGagged() && listening_channel != Allegiance_ChatChannel)
+								break;
+
+							if (m_pEvents->IsAllegGagged() && listening_channel == Allegiance_ChatChannel)
+								break;
+
+							g_pWorld->BroadcastChatChannel(listening_channel, m_pEvents->GetPlayer(), filteredText);
+							break;
+						}
 					}
 				}
 			}
@@ -2263,9 +2537,7 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 			break;
 		}
 		default:
-#ifdef _DEBUG
-			LOG(Client, Warning, "Unhandled response %08X from the client.\n", dwMessageCode);
-#endif
+			SERVER_INFO << "Unhandled response" << dwMessageCode << "from the client.";
 			break;
 	}
 
@@ -2275,7 +2547,7 @@ void CClient::ProcessMessage(BYTE *data, DWORD length, WORD group)
 
 BOOL CClient::CheckAccount(const char* cmp)
 {
-	return !_stricmp(m_vars.account.c_str(), cmp);
+	return !stricmp(m_vars.account.c_str(), cmp);
 }
 
 int CClient::GetAccessLevel()
@@ -2290,7 +2562,7 @@ void CClient::SetAccessLevel(unsigned int access)
 
 BOOL CClient::CheckAddress(SOCKADDR_IN *peer)
 {
-	return !memcmp(GetHostAddress(), peer, sizeof(SOCKADDR_IN));
+	return !memcmp(&GetHostAddress()->sin_addr, &peer->sin_addr, sizeof(in_addr));
 }
 
 WORD CClient::GetSlot()
@@ -2309,7 +2581,7 @@ const char *CClient::GetDescription()
 	return csprintf("#%u %s \"%s\"", m_vars.slot, inet_ntoa(m_vars.addr.sin_addr), m_vars.account.c_str());
 }
 
-void CClient::SetLoginData(DWORD dwUnixTime, DWORD dwPortalStamp, DWORD dwCellStamp)
+void CClient::SetLoginData(uint32_t dwUnixTime, uint32_t dwPortalStamp, uint32_t dwCellStamp)
 {
 	m_vars.fLoginTime = g_pGlobals->Time();
 

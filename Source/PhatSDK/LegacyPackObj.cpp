@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "LegacyPackObj.h"
 
 LegacyPackObj::LegacyPackObj()

@@ -4,15 +4,15 @@
 class TurbineFile
 {
 public:
-	TurbineFile(DWORD dwID);
-	TurbineFile(DWORD dwID, BYTE *data, DWORD length);
+	TurbineFile(uint32_t dwID);
+	TurbineFile(uint32_t dwID, BYTE *data, uint32_t length);
 	~TurbineFile();
 
 	BYTE *GetData();
-	DWORD GetLength();
+	uint32_t GetLength();
 
 private:
-	DWORD m_dwID;
+	uint32_t m_dwID;
 	BYTE *m_pbData;
-	DWORD m_dwLength;
+	uint32_t m_dwLength;
 };

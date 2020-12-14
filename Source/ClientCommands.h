@@ -1,3 +1,4 @@
+#pragma once
 
 using namespace std;
 
@@ -39,6 +40,17 @@ enum AccessFlags
 	InvincibleCommands_Flag = 0x400
 };
 
+enum CommandCategory
+{
+	HIDDEN_CATEGORY = 0,
+	GENERAL_CATEGORY,
+	EXPLORE_CATEGORY,
+	SPAWN_CATEGORY,
+	CHARACTER_CATEGORY,
+	SERVER_CATEGORY,
+
+};
+
 #define MAX_ARGUMENTS 12
 
 struct CommandEntry {
@@ -47,6 +59,7 @@ struct CommandEntry {
 	const char* help;
 	pfnCommandCallback func;
 	int access;
+	int category;
 	bool source;
 };
 typedef map<string, CommandEntry> CommandMap;
@@ -60,44 +73,55 @@ public:
 	static bool Execute(char *command, CClient *client);
 
 protected:
-	static void Create(const char* szName, const char* szArguments, const char* szHelp, pfnCommandCallback pCallback, int iAccessLevel, bool bSource);
+	CommandBase()
+	{
+	}
+
+	static void Create(const char* szName, const char* szArguments, const char* szHelp, pfnCommandCallback pCallback, int iAccessLevel, int iCategory, bool bSource);
 	static const char* Info(CommandEntry* pCommand);
 	static CommandEntry* FindCommand(const char* szName, int iAccessLevel = -1);
 
-	static CommandMap m_mCommands;
+	static void PrintCommandList(CWeenieObject* sendto, int category, int access_level, char* cmdName);
+
+	//static CommandMap m_mCommands;
+	static CommandMap& GetCommandMap()
+	{
+		static CommandMap commands;
+		return commands;
+	}
 };
 
 class ClientCommand : CommandBase
 {
 	friend class CommandBase;
 public:
-	ClientCommand(const char* szName, const char* szArguments, const char* szHelp, pfnCommandCallback pCallback, int iAccessLevel);
+	ClientCommand(const char* szName, const char* szArguments, const char* szHelp, pfnCommandCallback pCallback, int iAccessLevel, int iCategory);
 };
 
 class ServerCommand : CommandBase
 {
 	friend class CommandBase;
 public:
-	ServerCommand(const char* szName, const char* szArguments, const char* szHelp, pfnCommandCallback pCallback, int iAccessLevel);
+	ServerCommand(const char* szName, const char* szArguments, const char* szHelp, pfnCommandCallback pCallback, int iAccessLevel, int iCategory);
 };
 
-#define CLIENT_COMMAND( name, args, help, access ) \
+#define CLIENT_COMMAND( name, args, help, access, category ) \
  static bool name(CClient *player_client, CPlayerWeenie *pPlayer, CPhysicsObj *player_physobj, char* argv[], int argc); \
- static ClientCommand name##_command( #name, args, help, name, access ); \
+ static ClientCommand name##_command( #name, args, help, name, access, category ); \
  static bool name(CClient *player_client, CPlayerWeenie *pPlayer, CPhysicsObj *player_physobj, char* argv[], int argc)
 
-#define CLIENT_COMMAND_WITH_CUSTOM_NAME( name, command, args, help, access ) \
+#define CLIENT_COMMAND_WITH_CUSTOM_NAME( name, command, args, help, access, category ) \
  static bool name(CClient *player_client, CPlayerWeenie *pPlayer, CPhysicsObj *player_physobj, char* argv[], int argc); \
- static ClientCommand name##_command( #command, args, help, name, access ); \
+ static ClientCommand name##_command( #command, args, help, name, access, category  ); \
  static bool name(CClient *player_client, CPlayerWeenie *pPlayer, CPhysicsObj *player_physobj, char* argv[], int argc)
 
-#define SERVER_COMMAND( name, args, help, access ) \
+#define SERVER_COMMAND( name, args, help, access, category ) \
  static bool name(CClient *player_client, CPlayerWeenie *pPlayer, CPhysicsObj *player_physobj, char* argv[], int argc); \
- static ServerCommand name##_command( #name, args, help, name, access ); \
+ static ServerCommand name##_command( #name, args, help, name, access, category  ); \
  static bool name(CClient *player_client, CPlayerWeenie *pPlayer, CPhysicsObj *player_physobj, char* argv[], int argc)
 
-#define SERVER_COMMAND_WITH_CUSTOM_NAME( name, command, args, help, access ) \
+#define SERVER_COMMAND_WITH_CUSTOM_NAME( name, command, args, help, access, category ) \
  static bool name(CClient *player_client, CPlayerWeenie *pPlayer, CPhysicsObj *player_physobj, char* argv[], int argc); \
- static ServerCommand name##_command( #command, args, help, name, access ); \
+ static ServerCommand name##_command( #command, args, help, name, access, category  ); \
  static bool name(CClient *player_client, CPlayerWeenie *pPlayer, CPhysicsObj *player_physobj, char* argv[], int argc)
 

@@ -13,6 +13,10 @@
 #include "PhatSDK.h"
 
 #include "NetworkDefs.h"
+
+#pragma pack(pop)
+#pragma warning(default: 4200)
+
 #include "GameEnums.h"
 #include "Killable.h"
 #include "Util.h"

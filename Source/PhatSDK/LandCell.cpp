@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "LandDefs.h"
 #include "LandCell.h"
 #include "Polygon.h"
@@ -29,7 +29,7 @@ BOOL CLandCell::IsInView(void)
 
 BOOL CLandCell::find_terrain_poly(const Vector &origin, CPolygon **walkable)
 {
-	for (DWORD i = 0; i < 2; i++)
+	for (uint32_t i = 0; i < 2; i++)
 	{
 		if (polygons[i]->point_in_poly2D(origin, Sidedness::POSITIVE))
 		{
@@ -47,7 +47,7 @@ BOOL CLandCell::point_in_cell(const Vector &point)
 	return find_terrain_poly(point, (CPolygon **)&poly) != 0;
 }
 
-CLandCell *CLandCell::Get(DWORD cell_id)
+CLandCell *CLandCell::Get(uint32_t cell_id)
 {
 #if PHATSDK_IS_SERVER
 	return (CLandCell *) g_pCellManager->GetObjCell(cell_id);
@@ -62,7 +62,7 @@ void CLandCell::add_outside_cell(CELLARRAY *cell_array, int x, int y)
 {
 	if (x >= 0 && y >= 0 && x < 2040 && y < 2040)
 	{
-		DWORD cell_id = (((y >> 3) | 32 * (x & 0xFFFFFFF8)) << 16) | ((y & 7) + 8 * (x & 7) + 1);
+		uint32_t cell_id = (((y >> 3) | 32 * (x & 0xFFFFFFF8)) << 16) | ((y & 7) + 8 * (x & 7) + 1);
 
 		CLandCell *pLandCell = CLandCell::Get(cell_id);
 		cell_array->add_cell(cell_id, pLandCell);
@@ -101,10 +101,10 @@ void CLandCell::add_all_outside_cells(Position *p, const unsigned int num_sphere
 	{
 		if (num_sphere)
 		{
-			for (DWORD i = 0; i < num_sphere; i++)
+			for (uint32_t i = 0; i < num_sphere; i++)
 			{
 				Vector point = sphere[i].center;
-				DWORD pt_cell = p->objcell_id;
+				uint32_t pt_cell = p->objcell_id;
 				if (!LandDefs::adjust_to_outside(&pt_cell, &point))
 					break;
 
@@ -114,7 +114,7 @@ void CLandCell::add_all_outside_cells(Position *p, const unsigned int num_sphere
 				float min_rad = sphere[i].radius;
 				float max_rad = 24.0 - min_rad;
 				
-				long x, y;
+				int32_t x, y;
 				if (LandDefs::gid_to_lcoord(pt_cell, x, y))
 				{
 					add_outside_cell(cell_array, x, y);
@@ -125,11 +125,11 @@ void CLandCell::add_all_outside_cells(Position *p, const unsigned int num_sphere
 		else
 		{
 			Vector point = p->frame.m_origin;
-			DWORD pt_cell = p->objcell_id;
+			uint32_t pt_cell = p->objcell_id;
 
 			if (LandDefs::adjust_to_outside(&pt_cell, &point))
 			{
-				long x, y;
+				int32_t x, y;
 				if (LandDefs::gid_to_lcoord(pt_cell, x, y))
 				{
 					add_outside_cell(cell_array, x, y);
@@ -152,25 +152,25 @@ void CLandCell::add_all_outside_cells(const unsigned int num_parts, CPhysicsPart
 			int max_x = 0;
 			int max_y = 0;
 			
-			for (DWORD i = 0; i < num_parts; i++)
+			for (uint32_t i = 0; i < num_parts; i++)
 			{
 				if (parts[i])
 				{
 					Vector loc = parts[i]->pos.frame.m_origin;
-					DWORD pt_id = parts[i]->pos.objcell_id;
+					uint32_t pt_id = parts[i]->pos.objcell_id;
 					if (!LandDefs::adjust_to_outside(&pt_id, &loc))
 						pt_id = 0;
 
 					CLandCell *cell = CLandCell::Get(pt_id);
 					if (cell)
 					{
-						long x, y;
+						int32_t x, y;
 						if (LandDefs::gid_to_lcoord(pt_id, x, y))
 						{
-							int lx = ((unsigned int)(unsigned __int16)pt_id - 1) >> 3;
+							int lx = ((unsigned int)(uint16_t)pt_id - 1) >> 3;
 							int ly = ((unsigned char)pt_id - 1) & 7;
 
-							for (DWORD j = 0; j < num_parts; j++)
+							for (uint32_t j = 0; j < num_parts; j++)
 							{
 								if (parts[j])
 								{
@@ -234,7 +234,7 @@ void CLandCell::add_cell_block(int min_x, int min_y, int max_x, int max_y, CELLA
 		{
 			if (i >= 0 && j >= 0 && i < 2040 && j < 2040)
 			{
-				DWORD cell_id = (((j >> 3) | 32 * (i & 0xFFFFFFF8)) << 16) | ((j & 7) + 8 * (i & 7) + 1);
+				uint32_t cell_id = (((j >> 3) | 32 * (i & 0xFFFFFFF8)) << 16) | ((j & 7) + 8 * (i & 7) + 1);
 				CLandCell *pLandCell = CLandCell::Get(cell_id);
 				cell_array->add_cell(cell_id, pLandCell);
 			}
@@ -266,11 +266,11 @@ TransitionState CLandCell::find_env_collisions(CTransition *transition)
 
 			float water_depth = get_water_depth(&local_point);
 
-			CSphere check_pos = transition->sphere_path.global_sphere[0];
-			check_pos.center -= LandDefs::get_block_offset(transition->sphere_path.check_pos.objcell_id, GetID());
+			CSphere* check_pos = &transition->sphere_path.global_sphere[0];
+			check_pos->center -= LandDefs::get_block_offset(transition->sphere_path.check_pos.objcell_id, GetID());
 
 			ts = transition->object_info.validate_walkable(
-				&check_pos,
+				check_pos,
 				&walkable->plane,
 				water_type != 0,
 				water_depth,

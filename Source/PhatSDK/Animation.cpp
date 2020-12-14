@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "AnimHooks.h"
 #include "Animation.h"
 
@@ -25,9 +25,9 @@ BOOL AnimData::UnPack(BYTE **ppData, ULONG iSize)
     if (iSize < pack_size())
         return FALSE;
 
-    UNPACK(DWORD, anim_id);
-    UNPACK(long, low_frame);
-    UNPACK(long, high_frame);
+    UNPACK(uint32_t, anim_id);
+    UNPACK(int32_t, low_frame);
+    UNPACK(int32_t, high_frame);
     UNPACK(float, framerate);
 
     return TRUE;
@@ -67,11 +67,11 @@ BOOL AnimSequenceNode::UnPack(BYTE **ppData, ULONG iSize)
     if (iSize < pack_size())
         return FALSE;
 
-    DWORD AnimID;
-    UNPACK(DWORD, AnimID);
+    uint32_t AnimID;
+    UNPACK(uint32_t, AnimID);
 
-    UNPACK(long, low_frame);
-    UNPACK(long, high_frame);
+    UNPACK(int32_t, low_frame);
+    UNPACK(int32_t, high_frame);
     UNPACK(float, framerate);
 
     set_animation_id(AnimID);
@@ -113,12 +113,12 @@ float AnimSequenceNode::get_ending_frame()
         return (float)(low_frame);
 }
 
-long AnimSequenceNode::get_low_frame()
+int32_t AnimSequenceNode::get_low_frame()
 {
     return low_frame;
 }
 
-long AnimSequenceNode::get_high_frame()
+int32_t AnimSequenceNode::get_high_frame()
 {
     return high_frame;
 }
@@ -133,7 +133,7 @@ AnimSequenceNode *AnimSequenceNode::GetPrev()
     return(static_cast<AnimSequenceNode *>(dllist_prev));
 }
 
-AnimFrame *AnimSequenceNode::get_part_frame(long index)
+AnimFrame *AnimSequenceNode::get_part_frame(int32_t index)
 {
     if (!anim)
         return NULL;
@@ -144,7 +144,7 @@ AnimFrame *AnimSequenceNode::get_part_frame(long index)
     return(&anim->part_frames[ index ]);
 }
 
-AFrame *AnimSequenceNode::get_pos_frame(long index)
+AFrame *AnimSequenceNode::get_pos_frame(int32_t index)
 {
     if (!anim)
         return NULL;
@@ -155,7 +155,7 @@ AFrame *AnimSequenceNode::get_pos_frame(long index)
     return(&anim->pos_frames[ index ]);
 }
 
-void AnimSequenceNode::set_animation_id(DWORD AnimID)
+void AnimSequenceNode::set_animation_id(uint32_t AnimID)
 {
     if (anim)
         CAnimation::Release(anim);
@@ -167,10 +167,10 @@ void AnimSequenceNode::set_animation_id(DWORD AnimID)
         if (high_frame < 0)
             high_frame = anim->num_frames - 1;
         
-        if (((DWORD)low_frame) >= anim->num_frames)
+        if (((uint32_t)low_frame) >= anim->num_frames)
             low_frame = anim->num_frames - 1;
 
-        if (((DWORD)high_frame) >= anim->num_frames)
+        if (((uint32_t)high_frame) >= anim->num_frames)
             high_frame = anim->num_frames - 1;
 
         if (low_frame > high_frame)
@@ -202,7 +202,7 @@ void CAnimation::Destroyer(DBObj *pAnimation)
     delete((CAnimation *)pAnimation);
 }
 
-CAnimation *CAnimation::Get(DWORD ID)
+CAnimation *CAnimation::Get(uint32_t ID)
 {
     return (CAnimation *)ObjCaches::Animations->Get(ID);
 }
@@ -235,20 +235,20 @@ BOOL CAnimation::UnPack(BYTE **ppData, ULONG iSize)
 {
     Destroy();
 
-    UNPACK(DWORD, id);
+    UNPACK(uint32_t, id);
 
-    DWORD PackFlags;
+    uint32_t PackFlags;
 
-    UNPACK(DWORD, PackFlags);
+    UNPACK(uint32_t, PackFlags);
 
-    UNPACK(DWORD, num_parts);
-    UNPACK(DWORD, num_frames);
+    UNPACK(uint32_t, num_parts);
+    UNPACK(uint32_t, num_frames);
 
     if (PackFlags & 1)
     {
         pos_frames = new AFrame[ num_frames ];
 
-        for (DWORD i = 0; i < num_frames; i++)
+        for (uint32_t i = 0; i < num_frames; i++)
             UNPACK_OBJ_READER(pos_frames[i]);
     }
 
@@ -256,7 +256,7 @@ BOOL CAnimation::UnPack(BYTE **ppData, ULONG iSize)
 
     part_frames = new AnimFrame[ num_frames ];
 
-    for (DWORD i = 0; i < num_frames; i++)
+    for (uint32_t i = 0; i < num_frames; i++)
         part_frames[i].UnPack(num_parts, ppData, iSize);
 
     return TRUE;

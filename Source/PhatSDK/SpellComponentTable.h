@@ -15,7 +15,7 @@ public:
 
 	std::string _name;
 	SpellComponentCategory _category = SpellComponentCategory::Undef_SpellComponentCategory;
-	DWORD _iconID = 0;
+	uint32_t _iconID = 0;
 	SpellComponentType _type = SpellComponentType::Undef_SpellComponentType;
 	unsigned int _gesture = 0;
 	float _time = 0.0f;
@@ -33,8 +33,8 @@ public:
 	DECLARE_PACKABLE()
 	DECLARE_LEGACY_PACK_MIGRATOR()
 
-	static ITEM_TYPE GetTargetTypeFromComponentID(DWORD scid);
-	const SpellComponentBase *InqSpellComponentBase(DWORD key);
+	static ITEM_TYPE GetTargetTypeFromComponentID(uint32_t scid);
+	const SpellComponentBase *InqSpellComponentBase(uint32_t key);
 
-	PackableHashTable<DWORD, SpellComponentBase> _spellComponentBaseHash;
+	PackableHashTable<uint32_t, SpellComponentBase> _spellComponentBaseHash;
 };

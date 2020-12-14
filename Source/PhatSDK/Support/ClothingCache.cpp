@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "PhatSDK.h"
 #include "ClothingCache.h"
 #include "ClothingTable.h"
@@ -17,7 +17,7 @@ void CClothingCache::ReleaseAll()
 {
 }
 
-void CClothingCache::ParseClothingFileStatic(void *argument, DWORD id, BTEntry *entry)
+void CClothingCache::ParseClothingFileStatic(void *argument, uint32_t id, BTEntry *entry)
 {
 	if (argument && entry)
 	{
@@ -26,7 +26,7 @@ void CClothingCache::ParseClothingFileStatic(void *argument, DWORD id, BTEntry *
 	}
 }
 
-void CClothingCache::ParseClothing(DWORD id)
+void CClothingCache::ParseClothing(uint32_t id)
 {
 	ClothingTable *clothingTable = ClothingTable::Get(id);
 	if (clothingTable)
@@ -53,17 +53,17 @@ void CClothingCache::ParseClothing(DWORD id)
 	}
 }
 
-DWORD CClothingCache::GetNumTablesOfSetupID(DWORD setup_id)
+uint32_t CClothingCache::GetNumTablesOfSetupID(uint32_t setup_id)
 {
 	CLOTHINGBYSETUPIDMAP::iterator result = m_SetupIDToClothingTableID.find(setup_id);
 
 	if (result != m_SetupIDToClothingTableID.end())
-		return (DWORD) result->second.size();
+		return (uint32_t) result->second.size();
 	
 	return 0;
 }
 
-ClothingTable *CClothingCache::GetTableByIndexOfSetupID(DWORD setup_id, DWORD index)
+ClothingTable *CClothingCache::GetTableByIndexOfSetupID(uint32_t setup_id, uint32_t index)
 {
 	if (index >= 1000)
 		return NULL; // don't go crazy
@@ -72,8 +72,8 @@ ClothingTable *CClothingCache::GetTableByIndexOfSetupID(DWORD setup_id, DWORD in
 
 	if (result != m_SetupIDToClothingTableID.end())
 	{
-		std::set<DWORD> tableIDs = result->second;
-		DWORD i = 0;
+		std::set<uint32_t> tableIDs = result->second;
+		uint32_t i = 0;
 
 		for (const auto &id : tableIDs)
 		{
@@ -90,17 +90,17 @@ ClothingTable *CClothingCache::GetTableByIndexOfSetupID(DWORD setup_id, DWORD in
 	return NULL;
 }
 
-DWORD CClothingCache::GetNumTablesOfIconID(DWORD icon_id)
+uint32_t CClothingCache::GetNumTablesOfIconID(uint32_t icon_id)
 {
 	CLOTHINGBYICONIDMAP::iterator result = m_IconIDToClothingTableID.find(icon_id);
 
 	if (result != m_IconIDToClothingTableID.end())
-		return (DWORD) result->second.size();
+		return (uint32_t) result->second.size();
 
 	return 0;
 }
 
-ClothingTable *CClothingCache::GetTableByIndexOfIconID(DWORD icon_id, DWORD index, DWORD *palette_key)
+ClothingTable *CClothingCache::GetTableByIndexOfIconID(uint32_t icon_id, uint32_t index, uint32_t *palette_key)
 {
 	if (index >= 1000)
 		return NULL; // don't go crazy
@@ -109,8 +109,8 @@ ClothingTable *CClothingCache::GetTableByIndexOfIconID(DWORD icon_id, DWORD inde
 
 	if (result != m_IconIDToClothingTableID.end())
 	{
-		std::set<DWORD> tableIDs = result->second;
-		DWORD i = 0;
+		std::set<uint32_t> tableIDs = result->second;
+		uint32_t i = 0;
 
 		for (const auto &id : tableIDs)
 		{
@@ -250,7 +250,7 @@ bool CClothingCache::TryToMatchByObjDescWithPaletteTemplateAndGetShades(CloPalet
 {
 	bool bFoundAll = true;
 
-	DWORD numMatches = 0;
+	uint32_t numMatches = 0;
 
 	CloSubpalEffect *se = pt->subpalEffects;
 	for (unsigned int i = 0; i < pt->numSubpalEffects; i++)
@@ -263,10 +263,10 @@ bool CClothingCache::TryToMatchByObjDescWithPaletteTemplateAndGetShades(CloPalet
 			/*
 			if (shade > 0)
 			{
-				DWORD palette_id = palSet->GetPaletteID(shade);
+				uint32_t palette_id = palSet->GetPaletteID(shade);
 
 				bool bFound = true;
-				for (DWORD k = 0; k < se[i].numRanges; k++)
+				for (uint32_t k = 0; k < se[i].numRanges; k++)
 				{
 					if (!od.ContainsSubpalette(palette_id, se[i].rangeStart[k], se[i].rangeLength[k]))
 					{
@@ -283,12 +283,12 @@ bool CClothingCache::TryToMatchByObjDescWithPaletteTemplateAndGetShades(CloPalet
 			*/
 				// go through all of them
 
-				for (DWORD j = 0; j < palSet->numPals; j++)
+				for (uint32_t j = 0; j < palSet->numPals; j++)
 				{
-					DWORD palette_id = palSet->palette_IDs[j];
+					uint32_t palette_id = palSet->palette_IDs[j];
 
 					bool bFound = true;
-					for (DWORD k = 0; k < se[i].numRanges; k++)
+					for (uint32_t k = 0; k < se[i].numRanges; k++)
 					{
 						if (!od.ContainsSubpalette(palette_id, se[i].rangeStart[k], se[i].rangeLength[k]))
 						{
@@ -333,7 +333,7 @@ bool CClothingCache::TryToMatchByObjDescWithPaletteTemplateAndGetShades(CloPalet
 	return bFoundAll;
 }
 
-bool CClothingCache::TryToMatchBySetupAndObjDesc(DWORD setup_id, ClothingTable *ct, ObjDesc &od, DWORD *pt, double *shades)
+bool CClothingCache::TryToMatchBySetupAndObjDesc(uint32_t setup_id, ClothingTable *ct, ObjDesc &od, uint32_t *pt, double *shades)
 {
 	const ClothingBase *cb = ct->_cloBaseHash.lookup(setup_id);
 	if (!cb)
@@ -345,7 +345,7 @@ bool CClothingCache::TryToMatchBySetupAndObjDesc(DWORD setup_id, ClothingTable *
 		if (!od.ContainsAnimPartChange(partNum, cb->objectEffects[i].objectID))
 			return false;
 
-		DWORD numTextureEffects = cb->objectEffects[i].numTextureEffects;
+		uint32_t numTextureEffects = cb->objectEffects[i].numTextureEffects;
 		CloTextureEffect *te = cb->objectEffects[i].textureEffects;
 
 		for (unsigned int j = 0; j < numTextureEffects; j++)
@@ -392,7 +392,7 @@ bool CClothingCache::TryToMatchBySetupAndObjDesc(DWORD setup_id, ClothingTable *
 	return false;
 }
 
-bool CClothingCache::TryToMatchBySetupAndObjDesc(DWORD setup_id, ObjDesc &od, DWORD *table_id, DWORD *pt, double *shades)
+bool CClothingCache::TryToMatchBySetupAndObjDesc(uint32_t setup_id, ObjDesc &od, uint32_t *table_id, uint32_t *pt, double *shades)
 {
 	*table_id = 0;
 	*pt = 0;

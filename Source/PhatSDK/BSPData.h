@@ -93,7 +93,7 @@ public:
 	BOOL UnPack(BYTE** ppData, ULONG iSize);
 	void Destroy();
 
-	long portal_index; //0x00
+	int32_t portal_index; //0x00
 	CPolygon *portal; //0x04
 };
 
@@ -111,7 +111,7 @@ public:
 #if PHATSDK_RENDER_AVAILABLE
 	// Draw routines
 	void draw_no_check();
-	void draw_check(DWORD unknown);
+	void draw_check(uint32_t unknown);
 #endif
 
 	/*
@@ -133,21 +133,21 @@ public:
 	BOOL point_inside_cell_bsp(const Vector& point);
 	BoundingType sphere_intersects_cell_bsp(CSphere *sphere);
 	int box_intersects_cell_bsp(BBox *box);
-	void DetachPortalsAndPurgeNodes(SmartArray<BSPNODE *> *io_PortalsToKeep);
-	void LinkPortalNodeChain(SmartArray<BSPNODE *> *_Portals);
+	void DetachPortalsAndPurgeNodes(std::vector<BSPNODE*> &keep);//SmartArray<BSPNODE *> *io_PortalsToKeep);
+	void LinkPortalNodeChain(std::vector<BSPNODE*> &portal);//SmartArray<BSPNODE *> *_Portals);
 
 	CSphere sphere; //0x04 (size: 0x10)
 	Plane splitting_plane; //0x14 (size: 0x10)
 	union {
-		DWORD type; // 0x24
+		uint32_t type; // 0x24
 		char type_string[4]; // 0x24
 	};
-	DWORD num_polys; //0x28
+	uint32_t num_polys; //0x28
 	CPolygon **in_polys; //0x2C
 	BSPNODE *pos_node;
 	BSPNODE *neg_node;
 
-	static DWORD pack_tree_type;
+	static uint32_t pack_tree_type;
 	static CPolygon *pack_poly;
 };
 
@@ -166,8 +166,8 @@ public:
 	virtual void find_walkable(SPHEREPATH *path, CSphere *valid_pos, CPolygon **polygon, Vector *movement, Vector *up, BOOL *changed);
 	virtual int sphere_intersects_solid_poly(CSphere *check_pos, float radius, BOOL *center_solid, CPolygon **hit_poly, BOOL check_center);
 
-	DWORD leaf_index; //0x38
-	DWORD solid; //0x3C
+	uint32_t leaf_index; //0x38
+	uint32_t solid; //0x3C
 };
 
 class BSPPORTAL : public BSPNODE
@@ -179,7 +179,7 @@ public:
 	void Destroy();
 	BOOL UnPackPortal(BYTE** ppData, ULONG iSize);
 
-	DWORD num_portals; //0x38
+	uint32_t num_portals; //0x38
 	CPortalPoly **in_portals; //0x3C
 };
 

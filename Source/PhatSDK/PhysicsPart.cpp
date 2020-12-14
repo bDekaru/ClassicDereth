@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Material.h"
 #include "GfxObj.h"
 #include "Surface.h"
@@ -11,7 +11,7 @@
 #include "Render.h"
 #endif
 
-DWORD CPhysicsPart::player_iid = -1;
+uint32_t CPhysicsPart::player_iid = -1;
 
 CPhysicsPart::CPhysicsPart()
 {
@@ -65,7 +65,7 @@ CPhysicsPart::~CPhysicsPart()
 #endif
 }
 
-CPhysicsPart *CPhysicsPart::makePhysicsPart(DWORD ID)
+CPhysicsPart *CPhysicsPart::makePhysicsPart(uint32_t ID)
 {
     CPhysicsPart *pPart = new CPhysicsPart();
 
@@ -78,7 +78,7 @@ CPhysicsPart *CPhysicsPart::makePhysicsPart(DWORD ID)
     return pPart;
 }
 
-BOOL CPhysicsPart::SetPart(DWORD ID)
+BOOL CPhysicsPart::SetPart(uint32_t ID)
 {
     if (!ID)
         return FALSE;
@@ -102,7 +102,7 @@ void CPhysicsPart::RestoreSurfaces()
         {
             if (gfxobj[0]->m_rgSurfaces != surfaces)
             {
-                for (DWORD i = 0; i < gfxobj[0]->num_surfaces; i++)
+                for (uint32_t i = 0; i < gfxobj[0]->num_surfaces; i++)
                     CSurface::releaseCustomSurface(surfaces[i]);
 
                 delete [] surfaces;
@@ -116,7 +116,7 @@ void CPhysicsPart::RestoreSurfaces()
 void CPhysicsPart::DetermineBasePal()
 {
 #if PHATSDK_LOAD_SURFACES
-    for (DWORD i = 0; i < gfxobj[0]->num_surfaces; i++)
+    for (uint32_t i = 0; i < gfxobj[0]->num_surfaces; i++)
     {
         if (surfaces[i] && surfaces[i]->GetOriginalPaletteID())
         {
@@ -138,7 +138,7 @@ BOOL CPhysicsPart::UsePalette(Palette *pPalette)
     if (surfaces == gfxobj[0]->m_rgSurfaces && !CopySurfaces())
         return FALSE;
 
-    for (DWORD i = 0; i < gfxobj[0]->num_surfaces; i++)
+    for (uint32_t i = 0; i < gfxobj[0]->num_surfaces; i++)
         surfaces[i]->UsePalette(pPalette);
 
     if (shiftPal)
@@ -161,7 +161,7 @@ BOOL CPhysicsPart::CopySurfaces()
     if (!surfaces)
         return FALSE;
 
-    for (DWORD i = 0; i < gfxobj[0]->num_surfaces; i++)
+    for (uint32_t i = 0; i < gfxobj[0]->num_surfaces; i++)
     {
         surfaces[i] = CSurface::makeCustomSurface(gfxobj[0]->m_rgSurfaces[i]);
 
@@ -199,7 +199,7 @@ void CPhysicsPart::SetGfxObjArray(GfxObjDegradeInfo *DegradeInfo, CGfxObj **Obje
 #endif
 }
 
-BOOL CPhysicsPart::LoadGfxObjArray(DWORD ID, GfxObjDegradeInfo*& DegradeInfo, CGfxObj**& Objects)
+BOOL CPhysicsPart::LoadGfxObjArray(uint32_t ID, GfxObjDegradeInfo*& DegradeInfo, CGfxObj**& Objects)
 {
 #if PHATSDK_RENDER_AVAILABLE
 
@@ -220,7 +220,7 @@ BOOL CPhysicsPart::LoadGfxObjArray(DWORD ID, GfxObjDegradeInfo*& DegradeInfo, CG
     {
         Objects = new CGfxObj*[DegradeInfo->num_degrades];
 
-        for (DWORD i = 0; i < DegradeInfo->num_degrades; i++)
+        for (uint32_t i = 0; i < DegradeInfo->num_degrades; i++)
             Objects[i] = CGfxObj::Get(DegradeInfo->degrades[i].gfxobj_id);
     }
     else
@@ -245,7 +245,7 @@ BOOL CPhysicsPart::LoadGfxObjArray(DWORD ID, GfxObjDegradeInfo*& DegradeInfo, CG
 
 void CPhysicsPart::ReleaseGfxObjArray(GfxObjDegradeInfo*& DegradeInfo, CGfxObj**& Objects)
 {
-    DWORD ObjCount;
+    uint32_t ObjCount;
 
     if (DegradeInfo)
     {
@@ -260,7 +260,7 @@ void CPhysicsPart::ReleaseGfxObjArray(GfxObjDegradeInfo*& DegradeInfo, CGfxObj**
     
     if (Objects)
     {
-        for (DWORD i = 0; i < ObjCount; i++)
+        for (uint32_t i = 0; i < ObjCount; i++)
         {
             if (Objects[i])
             {
@@ -320,7 +320,7 @@ void CPhysicsPart::SetTranslucency(float Amount)
 
                 if (gfxobj[0]->m_rgSurfaces != surfaces || CopySurfaces())
                 {
-                    for (DWORD i = 0; i < gfxobj[0]->num_surfaces; i++)
+                    for (uint32_t i = 0; i < gfxobj[0]->num_surfaces; i++)
                         surfaces[i]->SetTranslucency(Amount);
                 }
             }
@@ -330,7 +330,7 @@ void CPhysicsPart::SetTranslucency(float Amount)
 }
 
 // Probably inlined.
-DWORD CPhysicsPart::GetObjectIID(void) const
+uint32_t CPhysicsPart::GetObjectIID(void) const
 {
     return (physobj ? physobj->GetID() : 0);
 }
@@ -391,7 +391,7 @@ void CPhysicsPart::Draw(BOOL bIsBuilding)
     if (draw_state & NODRAW_DS)
          return;
 
-    DWORD activeindex = (degrades && (deg_level < degrades->num_degrades)) ? deg_level : 0;
+    uint32_t activeindex = (degrades && (deg_level < degrades->num_degrades)) ? deg_level : 0;
 
     if (!gfxobj[activeindex])
         return;

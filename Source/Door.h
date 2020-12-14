@@ -7,9 +7,9 @@ public:
 	CBaseDoor();
 	virtual ~CBaseDoor() override;
 	
-	virtual class CBaseDoor *AsDoor() { return this; }
+	virtual class CBaseDoor *AsDoor() override { return this; }
 
-	virtual int Activate(DWORD activator_id) override;
+	virtual int Activate(uint32_t activator_id) override;
 	virtual int Use(CPlayerWeenie *) override;
 
 	virtual void PostSpawn() override;

@@ -8,14 +8,18 @@
 */
 #include <stdlib.h>
 
-// #include <sys/time.h>
+#if defined(_WINDOWS)
+#include <time.h>
+#else
+#include <sys/time.h>
+#endif
 
 #ifndef __ISAAC64
 // typedef unsigned long int UINT32;
 const UINT32 GOLDEN_RATIO = UINT32(0x9e3779b9);
 typedef UINT32 ISAAC_INT;
 #else   // __ISAAC64
-typedef unsigned __int64 UINT64;
+typedef uint64_t UINT64;
 const UINT64 GOLDEN_RATIO = UINT64(0x9e3779b97f4a7c13);
 typedef UINT64 ISAAC_INT;
 #endif  // __ISAAC64

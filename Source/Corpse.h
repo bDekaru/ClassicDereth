@@ -9,7 +9,7 @@ public:
 	CCorpseWeenie();
 	virtual ~CCorpseWeenie() override;
 
-	virtual class CCorpseWeenie *AsCorpse() { return this; }
+	virtual class CCorpseWeenie *AsCorpse() override { return this; }
 
 	virtual void Tick() override;
 	virtual void ApplyQualityOverrides() override;
@@ -25,8 +25,10 @@ public:
 	virtual void OnContainerClosed(CWeenieObject *other) override;
 	
 	virtual void SaveEx(class CWeenieSave &save) override;
+	void RemoveEx();
 	virtual void LoadEx(class CWeenieSave &save) override;
 	virtual bool ShouldSave() override;
+	bool ContainsDecayableItems();
 
 	bool _shouldSave = false;
 	double _begin_destroy_at = FLT_MAX;

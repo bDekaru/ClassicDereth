@@ -1,19 +1,21 @@
 
 #pragma once
 
+#include <filesystem>
+
 #if PHATSDK_INCLUDE_PHATDATABIN
 
 void InitPhatDataBin(const char *path);
 void CleanupPhatDataBin();
-bool LoadDataFromPhatDataBin(DWORD data_id, BYTE **data, DWORD *length, DWORD magic1, DWORD magic2);
+bool LoadDataFromPhatDataBin(uint32_t data_id, BYTE **data, uint32_t *length, uint32_t magic1, uint32_t magic2);
 
 class CPhatDataBinData : public PackObj
 {
 public:
 	virtual ~CPhatDataBinData() override { }
 
-	virtual bool RetrieveData(BYTE **data, DWORD *length) = 0;
-	virtual bool StoreData(BYTE *data, DWORD length) = 0;
+	virtual bool RetrieveData(BYTE **data, uint32_t *length) = 0;
+	virtual bool StoreData(BYTE *data, uint32_t length) = 0;
 };
 
 class CPhatDataBinCompressedData : public CPhatDataBinData
@@ -23,14 +25,14 @@ public:
 
 	void Destroy();
 
-	virtual bool RetrieveData(BYTE **data, DWORD *length) override;
-	virtual bool StoreData(BYTE *data, DWORD length) override;
+	virtual bool RetrieveData(BYTE **data, uint32_t *length) override;
+	virtual bool StoreData(BYTE *data, uint32_t length) override;
 
 	DECLARE_PACKABLE()
 
-	DWORD _compressedLength = 0;
+	uint32_t _compressedLength = 0;
 	BYTE *_compressedData = NULL;
-	DWORD _uncompressedLength = 0;
+	uint32_t _uncompressedLength = 0;
 };
 
 class CPhatDataBinEntry : public PackObj
@@ -40,15 +42,15 @@ public:
 
 	void Destroy();
 
-	virtual bool RetrieveData(BYTE **data, DWORD *length);
-	virtual bool StoreData(BYTE *data, DWORD length);
+	virtual bool RetrieveData(BYTE **data, uint32_t *length);
+	virtual bool StoreData(BYTE *data, uint32_t length);
 
 	DECLARE_PACKABLE()
 
-	DWORD _fileID = 0;
-	DWORD _magic1 = 0;
-	DWORD _magic2 = 0;
-	DWORD _magic3 = 0;
+	uint32_t _fileID = 0;
+	uint32_t _magic1 = 0;
+	uint32_t _magic2 = 0;
+	uint32_t _magic3 = 0;
 	CPhatDataBinData *_data = NULL;
 };
 
@@ -62,15 +64,27 @@ public:
 	bool Load(const char *filepath);
 	bool Save(const char *filepath);
 
-	bool Add(DWORD data_id, CPhatDataBinEntry *entry);
-	bool Add(DWORD data_id, BYTE *data, DWORD length);
-	bool Add(DWORD data_id, const char *filepath);
-	bool Remove(DWORD data_id);
+	bool Add(uint32_t data_id, CPhatDataBinEntry *entry);
+	bool Add(uint32_t data_id, BYTE *data, uint32_t length);
+	bool Add(uint32_t data_id, const char *filepath);
+	bool Remove(uint32_t data_id);
 
-	bool Get(DWORD data_id, BYTE **data, DWORD *length);
+	bool Get(uint32_t data_id, BYTE **data, uint32_t *length);
 
 protected:
-	std::map<DWORD, CPhatDataBinEntry *> _entries;
+	std::map<uint32_t, CPhatDataBinEntry *> _entries;
+};
+
+class InferredData
+{
+protected:
+
+	using load_func_t = std::function<void(json&)>;
+
+	bool LoadJsonData(fs::path path, load_func_t cb);
+	bool LoadJsonData(fs::path path, PackableJson &data);
+	bool LoadCacheData(uint32_t id, uint32_t magic1, uint32_t magic2, PackObj &data);
+	void SaveJsonData(fs::path path, PackableJson &data);
 };
 
 #endif

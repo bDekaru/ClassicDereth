@@ -52,6 +52,21 @@
     <Filter Include="PhatSDK\Support\Random">
       <UniqueIdentifier>{3824ef06-3648-4292-b40c-6d5bc8e074fb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Messages">
+      <UniqueIdentifier>{fbe6edaa-c3b3-49bd-9435-dde2e03bbdb9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Messages\ClientToServer">
+      <UniqueIdentifier>{aebfe921-cac6-4039-8649-37aea84ae258}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Object Capabilities\Combat">
+      <UniqueIdentifier>{00c5a251-396e-4e91-8a5e-33da1d3d1fd3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Command">
+      <UniqueIdentifier>{d8d37e2e-1e30-44c7-8b81-97cf55b5e6ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Command\Admin">
+      <UniqueIdentifier>{a0a42351-c66f-40bb-9c1d-269622e176b7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\PhatAC.cpp">
@@ -588,6 +603,165 @@
     <ClCompile Include="Source\BindStone.cpp">
       <Filter>Source Files\Objects\Weenie Types</Filter>
     </ClCompile>
+    <ClCompile Include="Source\AugmentationDevice.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\easylogging++.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ManaStone.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TradeManager.cpp">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\EnumUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ChessManager.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ChessMatch.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GamePiece.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\RecipeFactory.cpp">
+      <Filter>Source Files\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceApprovedVassalSet_0040.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceBanAdd_02A1.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceBanList_02A3.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceBanRemove_02A2.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceBoot_0277.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceBreak_001E.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceChatBoot_02A0.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceChatGag_0041.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceHouseAction_0042.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceInfoRequest_027B.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceLockAction_003F.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceMOTDClear_0256.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceMOTDQuery_0255.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceMOTDSet_0254.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceNameClear_0031.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceNameQuery_0030.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceNameSet_0033.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceOfficerRemove_02A5.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceOfficersClear_02A7.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceOfficerSet_003B.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceOfficersList_02A6.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceOfficerTitlesClear_003E.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceOfficerTitleSet_003C.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceOfficerTitlesList_003D.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceRecallHometown_02AB.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceSwear_001D.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Messages\Client to Server\AllegianceUpdate_001F.cpp">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\combat\AttackEventData.cpp">
+      <Filter>Source Files\Object Capabilities\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\combat\DualWieldAttackEventData.cpp">
+      <Filter>Source Files\Object Capabilities\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\combat\MeleeAttackEventData.cpp">
+      <Filter>Source Files\Object Capabilities\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\combat\MissileAttackEventData.cpp">
+      <Filter>Source Files\Object Capabilities\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\command\admin\SetStats.cpp">
+      <Filter>Source Files\Command\Admin</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\weenie\PetDevice.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\HouseManager.cpp">
+      <Filter>Source Files\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\command\admin\Alleg.cpp">
+      <Filter>Source Files\Command\Admin</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\command\ClientBugs.cpp">
+      <Filter>Source Files\Command</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\command\admin\HouseCmd.cpp">
+      <Filter>Source Files\Command\Admin</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\command\admin\TestCmd.cpp">
+      <Filter>Source Files\Command\Admin</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\command\admin\LandBlocks.cpp">
+      <Filter>Source Files\Command\Admin</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\command\admin\ConfigCommands.cpp">
+      <Filter>Source Files\Command\Admin</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\WeenieObject_Generate.cpp">
+      <Filter>Source Files\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="ChatCommands.cpp">
+      <Filter>Source Files\Command\Admin</Filter>
+    </ClCompile>
+    <ClCompile Include="PkCommands.cpp">
+      <Filter>Source Files\Command\Admin</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\crcwheel.h">
@@ -858,9 +1032,6 @@
       <Filter>PhatSDK</Filter>
     </ClInclude>
     <ClInclude Include="Source\PhatSDK\SkyDesc.h">
-      <Filter>PhatSDK</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\PhatSDK\SmartArray.h">
       <Filter>PhatSDK</Filter>
     </ClInclude>
     <ClInclude Include="Source\PhatSDK\SmartBox.h">
@@ -1193,6 +1364,147 @@
     <ClInclude Include="Lib\zlib\zlib.h">
       <Filter>Source Files\ZLib</Filter>
     </ClInclude>
+    <ClInclude Include="Source\AugmentationDevice.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\easylogging++.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ManaStone.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TradeManager.h">
+      <Filter>Source Files\Object Capabilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EnumUtil.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\SmartArray.h">
+      <Filter>PhatSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ChessMatch.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ChessManager.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ChessDefines.h">
+      <Filter>Source Files\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GamePiece.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\RecipeFactory.h">
+      <Filter>Source Files\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\IClientMessage.h">
+      <Filter>Source Files\Messages</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages.h">
+      <Filter>Source Files\Messages</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceApprovedVassalSet_0040.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceBanAdd_02A1.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceBanList_02A3.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceBanRemove_02A2.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceBoot_0277.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceBreak_001E.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceChatBoot_02A0.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceChatGag_0041.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceHouseAction_0042.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceInfoRequest_027B.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceLockAction_003F.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceMOTDClear_0256.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceMOTDQuery_0255.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceMOTDSet_0254.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceNameClear_0031.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceNameQuery_0030.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceNameSet_0033.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceOfficerRemove_02A5.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceOfficersClear_02A7.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceOfficerSet_003B.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceOfficersList_02A6.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceOfficerTitlesClear_003E.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceOfficerTitleSet_003C.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceOfficerTitlesList_003D.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceRecallHometown_02AB.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceSwear_001D.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Messages\Client to Server\AllegianceUpdate_001F.h">
+      <Filter>Source Files\Messages\ClientToServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\combat\AttackEventData.h">
+      <Filter>Source Files\Object Capabilities\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\combat\DualWieldAttackEventData.h">
+      <Filter>Source Files\Object Capabilities\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\combat\MeleeAttackEventData.h">
+      <Filter>Source Files\Object Capabilities\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\combat\MissileAttackEventData.h">
+      <Filter>Source Files\Object Capabilities\Combat</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\DatabaseUtil.h">
+      <Filter>Source Files\Database</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\weenie\PetDevice.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Resource\client.ico">
@@ -1206,5 +1518,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
+    <None Include="LoggerReademe.md" />
+    <None Include="Source\HouseManager.h">
+      <Filter>Source Files\World</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Source\GDLELogging.conf" />
   </ItemGroup>
 </Project>

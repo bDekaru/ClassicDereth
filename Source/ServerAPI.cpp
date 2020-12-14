@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "ServerAPI.h"
 #include "Server.h"
 
@@ -14,7 +14,7 @@ HINSTANCE g_hInstance = NULL;
 HANDLE g_hQuitEvent = NULL;
 HANDLE g_hServerThread = NULL;
 
-DWORD WINAPI MainServerThread(LPVOID)
+uint32_t WINAPI MainServerThread(LPVOID)
 {
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 	srand((unsigned int)time(NULL));
@@ -29,10 +29,10 @@ DWORD WINAPI MainServerThread(LPVOID)
 
 	InitPhatSDK();
 
-	extern DWORD64 g_RandomAdminPassword;
-	g_RandomAdminPassword = ((DWORD64)Random::GenUInt(0, 0xFFFFFFF0) << 32) | Random::GenUInt(0, 0xFFFFFFF0);
+	extern uint64_t g_RandomAdminPassword;
+	g_RandomAdminPassword = ((uint64_t)Random::GenUInt(0, 0xFFFFFFF0) << 32) | Random::GenUInt(0, 0xFFFFFFF0);
 
-	LOG(UserInterface, Normal, "Welcome to GDL - Classic Dereth!\n");
+	LOG(UserInterface, Normal, "Welcome to GDLE - Classic Dereth!\n");
 
 	unsigned long serverIP = GetLocalIP();
 	int serverPort = 9050;
@@ -113,7 +113,7 @@ extern "C"
 	}
 }
 
-BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD reason, LPVOID your_mom)
+BOOL WINAPI DllMain(HINSTANCE hInstance, uint32_t reason, LPVOID your_mom)
 {
 	BOOL success = TRUE;
 

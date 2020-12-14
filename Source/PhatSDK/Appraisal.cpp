@@ -1,5 +1,5 @@
 
-#include "StdAfx.h"
+#include <StdAfx.h>
 #include "Appraisal.h"
 
 DEFINE_PACK(WeaponProfile)
@@ -94,7 +94,7 @@ AppraisalProfile::~AppraisalProfile()
 
 DEFINE_PACK(AppraisalProfile)
 {
-	DWORD flags = 0;
+	uint32_t flags = 0;
 
 	BinaryWriter content;
 
@@ -156,17 +156,17 @@ DEFINE_PACK(AppraisalProfile)
 	if (armor_ench_bitfield)
 	{
 		flags |= 0x200;
-		content.Write<DWORD>(armor_ench_bitfield);
+		content.Write<uint32_t>(armor_ench_bitfield);
 	}
 	if (weapon_ench_bitfield)
 	{
 		flags |= 0x800;
-		content.Write<DWORD>(weapon_ench_bitfield);
+		content.Write<uint32_t>(weapon_ench_bitfield);
 	}
 	if (resist_ench_bitfield)
 	{
 		flags |= 0x400;
-		content.Write<DWORD>(resist_ench_bitfield);
+		content.Write<uint32_t>(resist_ench_bitfield);
 	}
 
 	if (base_armor_head
@@ -180,25 +180,25 @@ DEFINE_PACK(AppraisalProfile)
 		|| base_armor_foot)
 	{
 		flags |= 0x4000;
-		content.Write<DWORD>(base_armor_head);
-		content.Write<DWORD>(base_armor_chest);
-		content.Write<DWORD>(base_armor_groin);
-		content.Write<DWORD>(base_armor_bicep);
-		content.Write<DWORD>(base_armor_wrist);
-		content.Write<DWORD>(base_armor_hand);
-		content.Write<DWORD>(base_armor_thigh);
-		content.Write<DWORD>(base_armor_shin);
-		content.Write<DWORD>(base_armor_foot);
+		content.Write<uint32_t>(base_armor_head);
+		content.Write<uint32_t>(base_armor_chest);
+		content.Write<uint32_t>(base_armor_groin);
+		content.Write<uint32_t>(base_armor_bicep);
+		content.Write<uint32_t>(base_armor_wrist);
+		content.Write<uint32_t>(base_armor_hand);
+		content.Write<uint32_t>(base_armor_thigh);
+		content.Write<uint32_t>(base_armor_shin);
+		content.Write<uint32_t>(base_armor_foot);
 	}
 
-	pWriter->Write<DWORD>(flags);
+	pWriter->Write<uint32_t>(flags);
 	pWriter->Write<int>(success_flag);
 	pWriter->Write(&content);
 }
 
 DEFINE_UNPACK(AppraisalProfile)
 {
-	DWORD flags = pReader->Read<DWORD>();
+	uint32_t flags = pReader->Read<uint32_t>();
 	success_flag = pReader->Read<int>();
 
 	if (flags & 1)
@@ -208,7 +208,7 @@ DEFINE_UNPACK(AppraisalProfile)
 	}
 	if (flags & 0x2000)
 	{
-		_int64StatsTable = new PackableHashTableWithJson<STypeInt64, __int64>();
+		_int64StatsTable = new PackableHashTableWithJson<STypeInt64, int64_t>();
 		_int64StatsTable->UnPack(pReader);
 	}
 	if (flags & 2)
@@ -228,12 +228,12 @@ DEFINE_UNPACK(AppraisalProfile)
 	}
 	if (flags & 0x1000)
 	{
-		_didStatsTable = new PackableHashTableWithJson<STypeDID, DWORD>();
+		_didStatsTable = new PackableHashTableWithJson<STypeDID, uint32_t>();
 		_didStatsTable->UnPack(pReader);
 	}
 	if (flags & 0x10)
 	{
-		_spellBook = new SmartArray<DWORD>();
+		_spellBook = new SmartArray<uint32_t>();
 		_spellBook->UnPack(pReader);
 	}
 	if (flags & 0x80)
@@ -260,28 +260,28 @@ DEFINE_UNPACK(AppraisalProfile)
 	}
 	if (flags & 0x200)
 	{
-		armor_ench_bitfield = pReader->Read<DWORD>();
+		armor_ench_bitfield = pReader->Read<uint32_t>();
 	}
 	if (flags & 0x800)
 	{
-		weapon_ench_bitfield = pReader->Read<DWORD>();
+		weapon_ench_bitfield = pReader->Read<uint32_t>();
 	}
 	if (flags & 0x400)
 	{
-		resist_ench_bitfield = pReader->Read<DWORD>();
+		resist_ench_bitfield = pReader->Read<uint32_t>();
 	}
 
 	if (flags & 0x4000)
 	{
-		base_armor_head = pReader->Read<DWORD>();
-		base_armor_chest = pReader->Read<DWORD>();
-		base_armor_groin = pReader->Read<DWORD>();
-		base_armor_bicep = pReader->Read<DWORD>();
-		base_armor_wrist = pReader->Read<DWORD>();
-		base_armor_hand = pReader->Read<DWORD>();
-		base_armor_thigh = pReader->Read<DWORD>();
-		base_armor_shin = pReader->Read<DWORD>();
-		base_armor_foot = pReader->Read<DWORD>();
+		base_armor_head = pReader->Read<uint32_t>();
+		base_armor_chest = pReader->Read<uint32_t>();
+		base_armor_groin = pReader->Read<uint32_t>();
+		base_armor_bicep = pReader->Read<uint32_t>();
+		base_armor_wrist = pReader->Read<uint32_t>();
+		base_armor_hand = pReader->Read<uint32_t>();
+		base_armor_thigh = pReader->Read<uint32_t>();
+		base_armor_shin = pReader->Read<uint32_t>();
+		base_armor_foot = pReader->Read<uint32_t>();
 	}
 
 	return true;
@@ -289,31 +289,31 @@ DEFINE_UNPACK(AppraisalProfile)
 
 DEFINE_PACK(CreatureAppraisalProfile)
 {
-	DWORD flags = 0;
+	uint32_t flags = 0;
 	BinaryWriter content;
 
 	if (max_stamina)
 	{
 		flags |= 8;
-		content.Write<DWORD>(strength);
-		content.Write<DWORD>(endurance);
-		content.Write<DWORD>(quickness);
-		content.Write<DWORD>(coordination);
-		content.Write<DWORD>(focus);
-		content.Write<DWORD>(self);
-		content.Write<DWORD>(stamina);
-		content.Write<DWORD>(mana);
-		content.Write<DWORD>(max_stamina);
-		content.Write<DWORD>(max_mana);
+		content.Write<uint32_t>(strength);
+		content.Write<uint32_t>(endurance);
+		content.Write<uint32_t>(quickness);
+		content.Write<uint32_t>(coordination);
+		content.Write<uint32_t>(focus);
+		content.Write<uint32_t>(self);
+		content.Write<uint32_t>(stamina);
+		content.Write<uint32_t>(mana);
+		content.Write<uint32_t>(max_stamina);
+		content.Write<uint32_t>(max_mana);
 	}
 
 	if (enchantment_bitfield)
 	{
 		flags |= 1;
-		content.Write<DWORD>(enchantment_bitfield);
+		content.Write<uint32_t>(enchantment_bitfield);
 	}
 
-	pWriter->Write<DWORD>(flags);
+	pWriter->Write<uint32_t>(flags);
 	pWriter->Write<int>(health);
 	pWriter->Write<int>(max_health);
 	pWriter->Write(&content);
@@ -321,22 +321,22 @@ DEFINE_PACK(CreatureAppraisalProfile)
 
 DEFINE_UNPACK(CreatureAppraisalProfile)
 {
-	DWORD flags = pReader->Read<DWORD>();
-	health = pReader->Read<DWORD>();
-	max_health = pReader->Read<DWORD>();
+	uint32_t flags = pReader->Read<uint32_t>();
+	health = pReader->Read<uint32_t>();
+	max_health = pReader->Read<uint32_t>();
 
 	if (flags & 8)
 	{
-		strength = pReader->Read<DWORD>();
-		endurance = pReader->Read<DWORD>();
-		quickness = pReader->Read<DWORD>();
-		coordination = pReader->Read<DWORD>();
-		focus = pReader->Read<DWORD>();
-		self = pReader->Read<DWORD>();
-		stamina = pReader->Read<DWORD>();
-		mana = pReader->Read<DWORD>();
-		max_stamina = pReader->Read<DWORD>();
-		max_mana = pReader->Read<DWORD>();
+		strength = pReader->Read<uint32_t>();
+		endurance = pReader->Read<uint32_t>();
+		quickness = pReader->Read<uint32_t>();
+		coordination = pReader->Read<uint32_t>();
+		focus = pReader->Read<uint32_t>();
+		self = pReader->Read<uint32_t>();
+		stamina = pReader->Read<uint32_t>();
+		mana = pReader->Read<uint32_t>();
+		max_stamina = pReader->Read<uint32_t>();
+		max_mana = pReader->Read<uint32_t>();
 	}
 	else
 	{
@@ -354,7 +354,7 @@ DEFINE_UNPACK(CreatureAppraisalProfile)
 
 	if (flags & 1)
 	{
-		enchantment_bitfield = pReader->Read<DWORD>();
+		enchantment_bitfield = pReader->Read<uint32_t>();
 	}
 	else
 	{
