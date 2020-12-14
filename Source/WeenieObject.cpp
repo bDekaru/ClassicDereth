@@ -6901,22 +6901,25 @@ void CWeenieObject::CalculateStaminaLossFromAttack(STypeSkill skill)
 	SKILL_ADVANCEMENT_CLASS defenseSkillSAC = SKILL_ADVANCEMENT_CLASS::UNTRAINED_SKILL_ADVANCEMENT_CLASS;
 	m_Qualities.InqSkillAdvancementClass(skill, defenseSkillSAC);
 
-	if (defenseSkillSAC >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
+	if (get_minterp()->interpreted_state.current_style != Motion_NonCombat) //no stamina usage if we're out of combat mode.
 	{
-		uint32_t endurance = 0;
-		m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
-
-		float noStamUseChance = 0;
-		if (endurance >= 50)
+		if (defenseSkillSAC >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
 		{
-			noStamUseChance = ((float)(endurance * endurance) * 0.000005) + ((float)endurance * 0.00124) - 0.07; // Better curve and caps at 300 End vs 400 End
+			uint32_t endurance = 0;
+			m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
+
+			float noStamUseChance = 0;
+			if (endurance >= 50)
+			{
+				noStamUseChance = ((float)(endurance * endurance) * 0.000005) + ((float)endurance * 0.00124) - 0.07; // Better curve and caps at 300 End vs 400 End
+			}
+			noStamUseChance = min(noStamUseChance, 0.75f);
+			if (Random::RollDice(0.0, 1.0) > noStamUseChance)
+				AdjustStamina(-1); // failed the roll, use stamina.
 		}
-		noStamUseChance = min(noStamUseChance, 0.75f);
-		if (Random::RollDice(0.0, 1.0) > noStamUseChance)
-			AdjustStamina(-1); // failed the roll, use stamina.
+		else
+			AdjustStamina(-1); // defense skill not trained/specialized, use stamina.
 	}
-	else
-		AdjustStamina(-1); // defense skill not trained/specialized, use stamina.
 }
 
 float CWeenieObject::CalculateLoadImpactOnDefense()

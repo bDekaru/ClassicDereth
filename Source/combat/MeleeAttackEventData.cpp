@@ -11,30 +11,13 @@
 // TODO: Move these up to AttackEventData?
 void CMeleeAttackEvent::CalculateAtt(CWeenieObject *weapon, STypeSkill& weaponSkill, uint32_t& weaponSkillLevel)
 {
-	if (weapon->AsMonster())
-	{
-		uint32_t bustedMobSkillHack = 0;
-		if (weapon->InqSkill(UNARMED_COMBAT_SKILL, bustedMobSkillHack, false) && bustedMobSkillHack > 0)
-		{
-			weaponSkill = UNARMED_COMBAT_SKILL;
-			weaponSkillLevel = bustedMobSkillHack;
-		}
-		else
-		{
-			weaponSkill = UNARMED_COMBAT_SKILL;
-			_weenie->InqSkill(weaponSkill, weaponSkillLevel, FALSE);
-		}
-	}
-	else
-	{
-		float offenseMod = weapon->GetOffenseMod();
-		weaponSkill = (STypeSkill)weapon->InqIntQuality(WEAPON_SKILL_INT, STypeSkill::UNDEF_SKILL, TRUE);
-		weaponSkillLevel = 0;
+	float offenseMod = weapon->GetOffenseMod();
+	weaponSkill = (STypeSkill)weapon->InqIntQuality(WEAPON_SKILL_INT, STypeSkill::UNDEF_SKILL, TRUE);
+	weaponSkillLevel = 0;
 
-		if (_weenie->InqSkill(weaponSkill, weaponSkillLevel, FALSE))
-		{
-			weaponSkillLevel = (uint32_t)(weaponSkillLevel * offenseMod);
-		}
+	if (_weenie->InqSkill(weaponSkill, weaponSkillLevel, FALSE))
+	{
+		weaponSkillLevel = (uint32_t)(weaponSkillLevel * offenseMod);
 	}
 }
 
@@ -72,7 +55,7 @@ void CMeleeAttackEvent::Setup()
 
 			if (attack_type == (Thrust_AttackType | Slash_AttackType))
 			{
-				if (_attack_power >= 0.75f)
+				if (_attack_power >= 0.25f)
 					attack_type = Slash_AttackType;
 				else
 					attack_type = Thrust_AttackType;
@@ -272,7 +255,7 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 	if (damageType == (DAMAGE_TYPE::SLASH_DAMAGE_TYPE | DAMAGE_TYPE::PIERCE_DAMAGE_TYPE))
 	{
 		// Damage type should always be Pierce for multi-strike Thrust animations, not slashing.
-		if (_attack_power >= 0.75f && !(_do_attack_animation >= Motion_DoubleThrustLow && _do_attack_animation <= Motion_TripleThrustHigh))
+		if (_attack_power >= 0.25f && !(_do_attack_animation >= Motion_DoubleThrustLow && _do_attack_animation <= Motion_TripleThrustHigh))
 			damageType = DAMAGE_TYPE::SLASH_DAMAGE_TYPE;
 		else
 			damageType = DAMAGE_TYPE::PIERCE_DAMAGE_TYPE;
@@ -281,7 +264,7 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 	{
 		//todo: as far as I know only the Mattekar Claw had this, figure out what it did exactly, was it like this? or was it a bit of both damages?
 		//or even a chance for fire damage?
-		if (_attack_power >= 0.75f)
+		if (_attack_power >= 0.25f)
 			damageType = DAMAGE_TYPE::SLASH_DAMAGE_TYPE;
 		else
 			damageType = DAMAGE_TYPE::FIRE_DAMAGE_TYPE;
@@ -310,10 +293,15 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 		//This benefit is tied to Endurance only, and it caps out at around 50% less stamina used per attack. 
 		//The minimum stamina used per attack remains one. 
 		uint32_t endurance = 0;
+		float necStamMod = 1.0;
 		_weenie->m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
-		float necStamMod = 1.0 - ((float)endurance - 100.0) / 600.0; //made up formula: 50% reduction at 400 endurance.
-		necStamMod = min(max(necStamMod, 0.5f), 1.0f);
-		necessaryStam = round((float)necessaryStam * necStamMod);
+
+		if (endurance >= 50)
+		{
+			necStamMod = ((float)(endurance * endurance) * -0.000003175) - ((float)endurance * 0.0008889) + 1.052;
+			necStamMod = min(max(necStamMod, 0.5f), 1.0f);
+			necessaryStam = (int)(necessaryStam * necStamMod + Random::RollDice(0.0, 1.0)); // little sprinkle of luck 
+		}
 	}
 	necessaryStam = max(necessaryStam, 1);
 
