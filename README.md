@@ -1,6 +1,6 @@
 # Classic Dereth
 Classic Asheron's Call Emulator based on the GDL project and updated to GDLEnhanced.
-Classic Dereth attempts to emulate the game as it was in February 2005, during the Infiltration patch, the last patch before the Throne of Destiny was released.
+Classic Dereth attempts to emulate the game as it was in February 2005, during the Infiltration patch, the last patch before the Throne of Destiny expansion was released.
 
 GDLE: https://gdleac.com/
 GDL Github: https://github.com/GamesDeadLol/GDL
