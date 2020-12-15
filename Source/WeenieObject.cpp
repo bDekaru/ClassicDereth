@@ -2772,6 +2772,19 @@ void CWeenieObject::CheckForExpiredEnchantments()
 				SendNetMessage(&expireMessage, PRIVATE_MSG, TRUE, FALSE);
 				EmitSound(Sound_SpellExpire, 1.0f, true);
 			}
+			else if (CWeenieObject *topMostOwner = GetWorldTopLevelOwner())
+			{
+				if (topMostOwner->AsPlayer())
+				{
+					for (auto spellExpired : expired)
+					{
+						const CSpellBase *spellBase = MagicSystem::GetSpellTable()->_spellBaseHash.lookup(spellExpired);
+						if (spellBase)
+							topMostOwner->SendText(csprintf("The spell %s on %s has expired.", spellBase->_name.c_str(), GetName().c_str()), LTT_MAGIC);
+					}
+					topMostOwner->EmitSound(Sound_SpellExpire, 1.0f, true);
+				}
+			}
 	
 			CheckVitalRanges();
 		}
