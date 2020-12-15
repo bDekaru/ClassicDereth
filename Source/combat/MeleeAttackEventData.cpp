@@ -11,14 +11,17 @@
 // TODO: Move these up to AttackEventData?
 void CMeleeAttackEvent::CalculateAtt(CWeenieObject *weapon, STypeSkill& weaponSkill, uint32_t& weaponSkillLevel)
 {
-	float offenseMod = weapon->GetOffenseMod();
-	weaponSkill = (STypeSkill)weapon->InqIntQuality(WEAPON_SKILL_INT, STypeSkill::UNDEF_SKILL, TRUE);
+	//Default values:
+	float offenseMod = 1.0f;
+	weaponSkill = UNARMED_COMBAT_SKILL; 
 	weaponSkillLevel = 0;
 
+	if(!weapon->AsMonster()) //If we're the weapon(unarmed) we don't have an offenseMod! So don't try to get it or our weaponSkillLevel will be zeroed!
+		offenseMod = weapon->GetOffenseMod();
+
+	weaponSkill = (STypeSkill)weapon->InqIntQuality(WEAPON_SKILL_INT, UNARMED_COMBAT_SKILL, TRUE);
 	if (_weenie->InqSkill(weaponSkill, weaponSkillLevel, FALSE))
-	{
 		weaponSkillLevel = (uint32_t)(weaponSkillLevel * offenseMod);
-	}
 }
 
 //float CMeleeAttackEvent::CalculateDef()
