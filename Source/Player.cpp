@@ -5313,7 +5313,7 @@ std::string CPlayerWeenie::GetTitleStringById(int titleId)
 	case 94: return "Morale Smasher"; break;
 	case 95: return "Mosswart Worshipper Whipper"; break;
 	case 96: return "Mottled Carenzi Mauler"; break;
-	case 97: return "Mud Slinger"; break;
+	case 97: return "Mudslinger"; break;
 	case 98: return "Naughty Skeleton Snuffer"; break;
 	case 99: return "Olthoi Ripper Reducer"; break;
 	case 100: return "Paragon of Death"; break;
