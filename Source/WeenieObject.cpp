@@ -29,6 +29,7 @@
 #include "Config.h"
 #include "House.h"
 #include "Ammunition.h"
+#include "Clothing.h"
 
 
 
@@ -736,22 +737,49 @@ void CWeenieObject::ReleaseFromBlock()
 		pBlock->Release(this);
 }
 
-void CWeenieObject::TryIdentify(CWeenieObject *source)
+void CWeenieObject::TryIdentify(CPlayerWeenie *source)
 {
 	bool success = false;
 	bool bShowLevel = false;
+	bool needAssess = true; // i.e. was this a cache hit.
+	CPlayerWeenie* asPlayer = this->AsPlayer();
+	STypeSkill skill = STypeSkill::UNDEF_SKILL;
+	uint32_t skill_level = 0;
 
 	if (source == this)
 	{
 		success = true;
+		needAssess = false;
 	}
-	else if (AsPlayer() && source->AsPlayer())
+	else if (asPlayer && source->AsPlayer())
 	{
-		if (!(AsPlayer()->GetCharacterOptions() & UseDeception_CharacterOption))
+		if (!(asPlayer->GetCharacterOptions() & UseDeception_CharacterOption))
+		{
 			success = true;
+			needAssess = false;
+		}
 	}
 
-	if (!success)
+	RecentlyAssessed ra;
+	if(source->CheckForRecentlyAssessed(this->GetID(), ra)) {
+		needAssess = false;
+		success = ra.successLevel == 2;
+		bShowLevel = ra.successLevel == 1;
+		skill = ra.skill;
+
+		//If not successful and skill level has improved, allow another shot.
+		if(!success) {
+			uint32_t currentLevel = 0;
+			source->m_Qualities.InqSkill(skill, currentLevel, FALSE);
+
+			if(currentLevel > ra.skill_level) {
+				needAssess = true;
+				source->RemoveRecentlyAssessed(this->GetID());
+			}
+		}
+	}
+
+	if (needAssess && !success)
 	{
 		uint32_t deceptionSkill = 0;
 
@@ -825,6 +853,7 @@ void CWeenieObject::TryIdentify(CWeenieObject *source)
 
 					if (AppraisalSkillCheck(appraiseSkill, deceptionSkill))
 					{
+						source->MaybeGiveSkillUsageXP(sourceSkillType, deceptionSkill);//Grant appraiser some level of XP for this
 						success = true;
 					}
 				}
@@ -836,6 +865,7 @@ void CWeenieObject::TryIdentify(CWeenieObject *source)
 		}
 		else
 		{
+			needAssess = false; //don't cache zero resistance assesses.
 			success = true;
 		}
 	}
@@ -853,8 +883,15 @@ void CWeenieObject::TryIdentify(CWeenieObject *source)
 		if (AsPlayer())
 		{
 			SendText(csprintf("%s tried and failed to assess you!", source->GetName().c_str()), LTT_APPRAISAL_CHANNEL);
+			asPlayer->MaybeGiveSkillUsageXP(STypeSkill::DECEPTION_SKILL, skill_level);
 		}
 	}
+
+	//Cache assess result if we did one.
+	if(needAssess) {
+		source->AddRecentlyAssessed(this, success, bShowLevel, skill, skill_level);
+	}
+
 }
 
 void CWeenieObject::Identify(CWeenieObject *source, uint32_t overrideId)
@@ -3313,32 +3350,26 @@ void CWeenieObject::CheckRegeneration(double rate, STypeAttribute2nd currentAttr
 		break;
 	}
 
-	int regenAmount = floor(rate);
-	double accumulated = rate - regenAmount;
+	//Split into whole and fractional parts.
+	double whole;
+	double frac = modf(rate, &whole);
 
 	switch (currentAttrib)
 	{
-	case HEALTH_ATTRIBUTE_2ND:
-		accumulatedHealthRegen = accumulated;
-		break;
-	case STAMINA_ATTRIBUTE_2ND:
-		accumulatedStaminaRegen = accumulated;
-		break;
-	case MANA_ATTRIBUTE_2ND:
-		accumulatedManaRegen = accumulated;
-		break;
+		case HEALTH_ATTRIBUTE_2ND: accumulatedHealthRegen = frac; break;
+		case STAMINA_ATTRIBUTE_2ND: accumulatedStaminaRegen = frac; break;
+		case MANA_ATTRIBUTE_2ND: accumulatedManaRegen = frac; break;
 	}
 
-	if (regenAmount > 0)
+	if (whole > 0)
 	{
 		uint32_t currentVital = 0, maxVital = 0;
 		if (m_Qualities.InqAttribute2nd(currentAttrib, currentVital, FALSE) && m_Qualities.InqAttribute2nd(maxAttrib, maxVital, FALSE))
 		{
 			if (currentVital < maxVital)
 			{
+				int regenAmount = (int)whole;
 				currentVital += regenAmount;
-
-				//currentVital += (uint32_t)(ceil(rate) + F_EPSILON); //previously
 
 				if (currentVital > maxVital)
 				{
@@ -3638,7 +3669,7 @@ uint32_t CWeenieObject::GetIcon()
 
 std::string CWeenieObject::GetName()
 {
-	if (!_IsPlayer())
+	if (!_IsPlayer() && !AsGem()) //Gems shouldn't be called "Ruby Ruby" (i.e. material + name)
 	{
 		if (MaterialType type = (MaterialType)InqIntQuality(MATERIAL_TYPE_INT, 0))
 		{
@@ -3745,9 +3776,14 @@ void CWeenieObject::DoCollisionEnd(uint32_t object_id)
 
 const char *CWeenieObject::GetLongDescription()
 {
-	std::string longDesc;
-	m_Qualities.InqString(LONG_DESC_STRING, longDesc);
-	return longDesc.c_str();
+	if(m_Qualities.m_StringStats) {
+		std::string* str = m_Qualities.m_StringStats->lookup(LONG_DESC_STRING);
+		if(str) {
+			return str->c_str();
+		}
+	}
+
+	return "";
 }
 
 int CWeenieObject::InqIntQuality(STypeInt key, int defaultValue, BOOL raw)
@@ -4225,38 +4261,92 @@ void CWeenieObject::TryToDealDamage(DamageEventData &data)
 	data.target->TakeDamage(data);
 }
 
+void GetOverkillDeathMessage(const std::string& killerName, const std::string& victimName, std::string& killerMessage, std::string& victimMessage, std::string& otherMessage, bool pvp) {
+	
+	const int limit = (pvp? 7 : 5); //PVP has two extra death messages.
+	
+	switch(Random::GenInt(0, limit))
+	{
+		case 0:
+			killerMessage = victimName + " is utterly destroyed by your attack!";
+			victimMessage = "You are utterly destroyed by " + killerName + "'s attack!";
+			otherMessage = victimName + " is utterly destroyed by " + killerName + "'s attack!";
+			break;
+
+		case 1:
+			killerMessage = "You knock " + victimName + " into next Morningthaw!";
+			victimMessage = killerName + " knocks you into next Morningthaw!";
+			otherMessage = killerName + " knocks " + victimName + " into next Morningthaw!";
+			break;
+
+		case 2: //Martine obliterates Brian the Swordsman!
+			killerMessage = "You obliterate "+victimName+"!";
+			victimMessage = killerName + " obliterates you!";
+			otherMessage = killerName + " obliterates "+victimName+"!";
+			break;
+
+		case 3: //Martine slays X'nedra of Riva viciously enough to impart death several times over! 
+			killerMessage = "You slay "+victimName+" viciously enough to impart death several times over!";
+			victimMessage = killerName + " slays you viciously enough to impart death several times over!";
+			otherMessage = killerName + " slays "+victimName+" viciously enough to impart death several times over!";
+			break;
+
+		case 4: //Lou Cypher catches Martine's attack, with dire consequences! 
+			killerMessage = victimName+" catches your attack, with dire consequences!";
+			victimMessage = "You catch "+killerName+"'s attack, with dire consequences!";
+			otherMessage = victimName+" catches "+killerName+"'s attack, with dire consequences!";
+			break;
+
+		case 5: //Martine smites Caziopia mightily! 
+			killerMessage = "You smite "+victimName+" mightily!";
+			victimMessage = killerName+" smites you mightily!";
+			otherMessage = killerName+" smites "+victimName+" mightily";
+			break;
+
+		//PVP ONLY
+		//===================
+
+		case 6: //Dread Og sends you to death so violently that even the lifestone flinches!
+			killerMessage = "You send "+victimName+" to death so violently that even the lifestone flinches!";
+			victimMessage = killerName+" sends you to death so violently that even the lifestone flinches!";
+			otherMessage = killerName+" sends "+victimName+" to death so violently that even the lifestone flinches!";
+			break;
+
+		case 7: //The deadly force of Rawzz's attack is so strong that Mage the Brutal's ancestors feel it!
+			killerMessage = "The deadly force of your attack is so strong that "+victimName+"'s ancestors feel it!";
+			victimMessage = "The deadly force of "+killerName+"'s attack is so strong that your ancestors feel it!";
+			otherMessage = "The deadly force of "+killerName+"'s attack is so strong that "+victimName+"'s ancestors feel it!";
+			break;
+	}
+
+}
 
 void GetDeathMessage(DAMAGE_TYPE dt, const std::string &killerName, const std::string &victimName, std::string &killerMessage, std::string &victimMessage, std::string &otherMessage)
 {
 	switch (dt)
 	{
 	case BLUDGEON_DAMAGE_TYPE:
-		switch (Random::GenInt(0, 4))
+		switch (Random::GenInt(0, 3))
 		{
 		case 0:
-			killerMessage = victimName + " is utterly destroyed by your attack!";
-			victimMessage = "You are utterly destroyed by " + killerName + "'s attack!";
-			otherMessage = victimName + " is utterly destroyed by " + killerName + "'s attack!";
+			killerMessage = victimName +"'s body is shattered by your assault!";
+			victimMessage = "Your body is shattered by "+killerName+"'s assault!";
+			otherMessage = victimName +"'s body is shattered by "+killerName+"'s assault!";
 			break;
 		case 1:
-			killerMessage = "You knock " + victimName + " into next Morningthaw!";
-			victimMessage = killerName + " knocks you into next Morningthaw!";
-			otherMessage = killerName + " knocks " + victimName + " into next Morningthaw!";
+			killerMessage = "You flatten " + victimName + "'s body with the force of your assault!";
+			victimMessage = "The force of "+killerName+"'s assualt flattens you!";
+			otherMessage = "The force of "+killerName+"'s assault flattens "+victimName+"!";
 			break;
 		case 2:
-			killerMessage = "You flatten " + victimName + "'s body with the force of your assault!";
-			victimMessage = killerName + " knocks you into next Morningthaw!";
-			otherMessage = killerName + " knocks " + victimName + " into next Morningthaw!";
-			break;
-		case 3:
 			killerMessage = "You beat " + victimName + " to a lifeless pulp!";
 			victimMessage = killerName + " beats you to a lifeless pulp!";
 			otherMessage = killerName + " beats " + victimName + " to a lifeless pulp!";
 			break;
-		case 4:
+		case 3:
 			killerMessage = "The thunder of crushing " + victimName + " is followed by the deafening silence of death!";
-			victimMessage = killerName + "'s thunder of crushing you is followed by the deafening silence of death!";
-			otherMessage = killerName + "'s thunder of crushing " + victimName + " is followed by the deafening silence of death!";
+			victimMessage =  "The thunder of "+killerName + " crushing you is followed by the deafening silence of death!";
+			otherMessage =  "The thunder of "+killerName+" crushing " + victimName + " is followed by the deafening silence of death!";
 			break;
 		}
 		break;
@@ -4295,12 +4385,12 @@ void GetDeathMessage(DAMAGE_TYPE dt, const std::string &killerName, const std::s
 			break;
 		case 1:
 			killerMessage = victimName + "'s death is preceded by a sharp, stabbing pain!";
-			victimMessage = "Your death is preceded by a sharp, stabbing pain!";
+			victimMessage = "Your death is preceded by a sharp, stabbing pain courtesy of " + killerName + "!";
 			otherMessage = victimName + "'s death is preceded by a sharp, stabbing pain courtesy of " + killerName + "!";
 			break;
 		case 2:
 			killerMessage = victimName + " is fatally punctured!";
-			victimMessage = "You were fatally punctured!";
+			victimMessage = "You were fatally punctured by " + killerName + "!";
 			otherMessage = victimName + " is fatally punctured by " + killerName + "!";
 			break;
 		case 3:
@@ -4311,22 +4401,30 @@ void GetDeathMessage(DAMAGE_TYPE dt, const std::string &killerName, const std::s
 		}
 		break;
 	case SLASH_DAMAGE_TYPE:
-		switch (Random::GenInt(0, 2))
+		switch (Random::GenInt(0, 3))
 		{
 		case 0:
 			killerMessage = "You split " + victimName + " apart!";
 			victimMessage = killerName + " splits you apart!";
 			otherMessage = killerName + " splits " + victimName + " apart!";
 			break;
+
 		case 1:
 			killerMessage = "You cleave " + victimName + " in twain!";
 			victimMessage = killerName + " cleaves you in twain!";
 			otherMessage = killerName + " cleaves " + victimName + " in twain!";
 			break;
+
 		case 2:
-			killerMessage = "You slay " + victimName + " viciously enough to impart death several times over!";
-			victimMessage = killerName + " slays you viciously enough to impart death several times over!";
-			otherMessage = killerName + " slays " + victimName + " viciously enough to impart death several times over!";
+			killerMessage = victimName + " is torn to ribbons by your assault!";
+			victimMessage = killerName + " tears you to ribbons!";
+			otherMessage = victimName+ " is torn to ribbons by "+killerName;
+			break;
+
+		case 3: //Your killing blow nearly turns Fragment inside-out!
+			killerMessage = "Your killing blow nearly turns "+victimName+" inside-out!";
+			victimMessage = killerName+"'s killing blow nearly turns you inside-out!";
+			otherMessage = killerName+"'s killing blow nearly turns "+victimName+" inside-out!";
 			break;
 		}
 		break;
@@ -4393,19 +4491,21 @@ void GetDeathMessage(DAMAGE_TYPE dt, const std::string &killerName, const std::s
 		break;
 
 	case ELECTRIC_DAMAGE_TYPE:
-		switch (Random::GenInt(0, 1))
+		switch (Random::GenInt(0, 2))
 		{
 		case 0:
 			killerMessage = "Your lightning coruscates over " + victimName + "'s mortal remains!";
 			victimMessage = killerName + "'s lightning coruscates over your mortal remains!";
 			otherMessage = killerName + "'s lightning coruscates over " + victimName + "'s mortal remains!";
 			break;
-			/*
-			case 1:
-			killerMessage = "Blistered by lightning, " + victimName + " falls!";
-			break;
-			*/
+			
 		case 1:
+			killerMessage = "Blistered by lightning, " + victimName + " falls!";
+			victimMessage = "Blistered by "+killerName+"'s lightning, you fall!";
+			otherMessage = "Blistered by "+killerName+"'s lightning, "+victimName+" falls!";
+			break;
+			
+		case 2:
 			killerMessage = "Electricity tears " + victimName + " apart!";
 			victimMessage = killerName + "'s electricity tears you apart!";
 			otherMessage = killerName + "'s electricity tears " + victimName + " apart!";
@@ -4626,34 +4726,52 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 			damageFactor = (1.0 + (-armorLevel / (190.0 / 3.0)));
 
 		damageData.damageAfterMitigation *= damageFactor;
+		//Check for less than 1 damage. Only high armor levels (>187) should result in zeros.
+		if(damageData.damageAfterMitigation < 1.0) { //Bias by 0.25, then round. If damage was < 0.25, this will stay 0.
+			damageData.damageAfterMitigation = round(0.25 + damageData.damageAfterMitigation);
+		}
 	}
 
-	if (damageData.damage_form & DF_MAGIC && damageData.isProjectileSpell)
+	if(damageData.damage_form & DF_MAGIC && damageData.isProjectileSpell)
 	{
-		// check for magic absorption
-		CWeenieObject *shieldOrMissileWeapon = GetWieldedCombat(COMBAT_USE::COMBAT_USE_SHIELD);
-		if (!shieldOrMissileWeapon)
-			shieldOrMissileWeapon = GetWieldedCombat(COMBAT_USE::COMBAT_USE_MISSILE);
+		double maxReduction = 0.0;
 
-		if (shieldOrMissileWeapon && shieldOrMissileWeapon->GetImbueEffects() & ImbuedEffectType::IgnoreSomeMagicProjectileDamage_ImbuedEffectType)
-		{
-			double reduction = (0.25 * GetMagicDefense() * 0.003) - (0.25 * 0.3);
-
-			if (reduction > 0.0)
-			{
-				if (reduction > 0.25)
-					reduction = 0.25;
-
-				if (damageData.source && damageData.target)
-				{
-					bool isPvP = damageData.source->AsPlayer() && damageData.target->AsPlayer();
-
-					if (isPvP)
-						reduction *= 0.72;
-
-					damageData.damageAfterMitigation *= 1.0 - reduction;
-				}
+		// Check for magic absorption. Can be on a wand (e.g Tome of Chill), shield (e.g. Sanguinary Aegis)
+		// or missile weapon (Fetish of the Dark Idols)
+		CWeenieObject* check[3];
+		CWeenieObject* absorber = NULL;
+		check[0] = GetWieldedCombat(COMBAT_USE::COMBAT_USE_MISSILE);
+		check[1] = GetWieldedCombat(COMBAT_USE::COMBAT_USE_SHIELD);
+		check[2] = GetWieldedCaster();
+		for(size_t i=0; i<3; i++) {
+			if(check[i] && check[i]->GetImbueEffects() & ImbuedEffectType::IgnoreSomeMagicProjectileDamage_ImbuedEffectType) {
+				check[i]->m_Qualities.InqFloat(ABSORB_MAGIC_DAMAGE_FLOAT, maxReduction);
+				absorber = check[i];
+				break;
 			}
+		}
+
+		if(maxReduction > 0.0) {
+			// From AC wiki:
+			// For a 25% maximum item: (magic absorbing %) = 25 - (0.1 * (319 - base magic defense))
+			// For a 10% maximum item: (magic absorbing %) = 10 - (0.04 * (319 - base magic defense))
+			uint32_t magicDefenseBase;
+			this->m_Qualities.InqSkillLevel(MAGIC_DEFENSE_SKILL, magicDefenseBase);
+			this->InqSkill(MAGIC_DEFENSE_SKILL, magicDefenseBase, TRUE);
+
+			//CONTENT TODO: fix items with absurd ABSORB_MAGIC_DAMAGE_FLOAT. Value should be 0.1 - 0.25.
+			if(maxReduction > 0.25) {
+				WINLOG(Data, Warning, "Broken ABSORB_MAGIC_DAMAGE_FLOAT on item \"%s\", value is %f (%d%%). Reducing to 25%", absorber->GetName().c_str(), maxReduction, (int)(maxReduction * 100.0));
+				maxReduction = 0.25;
+			}
+
+			// Solving this for zero, i.e. 0 = 25 - (0.1 * (319 - base magic defense)), we can see that a base magic defense of 69 turns into zero reduction.
+			// So then we can map [69,319] (i.e. 250 total points) magic defense to a scalar [0.0, 1.0] to multiply with the reduction %.
+			double scale = ((double)magicDefenseBase - 69.0) / 250.0;
+
+			// Using this formula, compute the new reduction. Clamp to 0.0/1.0
+			double reduction = min(1.0, max(0.0, maxReduction * scale));
+			damageData.damageAfterMitigation *= 1.0 - reduction;
 		}
 
 		//CWeenieObject *shield = GetWieldedCombat(COMBAT_USE::COMBAT_USE_SHIELD);
@@ -4858,6 +4976,7 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 		AsMonster()->UpdateDamageList(damageData);
 	}
 
+	bool wasOverkill = false;
 	if (vitalNewValue != vitalStartValue)
 	{
 		m_Qualities.SetAttribute2nd(vitalAffected, vitalNewValue);
@@ -4867,40 +4986,40 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 		{
 			if (vitalNewValue <= 0)
 			{
+				SecondaryAttribute health;
+				m_Qualities.InqAttribute2nd(HEALTH_ATTRIBUTE_2ND, health);
+
+				//Chance to display an overkill message, but must be a hard hit (>10%), with that chance increasing depending on how hard the hit was (max 75% chance)
+				if(damageData.outputDamageFinalPercent > 0.1f && min(damageData.outputDamageFinalPercent, 0.75f) > Random::GenFloat(0.0f,1.0f)) {
+					wasOverkill = true;
+				}
+
 				damageData.killingBlow = true;
 				OnDeath(damageData.source ? damageData.source->GetID() : 0);
 			}
 			else
 			{
-				if (damageData.damage_form & DF_IMPACT)
-				{
-					if (damageData.outputDamageFinalPercent >= 0.1f)
+				if (damageData.damage_form & DF_IMPACT) {
+					EmitSound(Sound_Wound3, 1.0f);
+				} else if (damageData.outputDamageFinalPercent >= 0.2f && damageData.damage_form & DF_PHYSICAL) {
+					uint32_t soundIndex;
+					switch (damageData.damage_type)
 					{
-						EmitSound(13, 1.0f);
-					}
-					else
-					{
-						EmitSound(14, 1.0f);
-					}
-				}
-				else
-				{
-					if (damageData.outputDamageFinalPercent >= 0.1f)
-					{
-						if (damageData.damage_form & DF_PHYSICAL)
-						{
-							switch (damageData.damage_type)
-							{
-							case DAMAGE_TYPE::BLUDGEON_DAMAGE_TYPE:
-								EmitSound(Random::GenInt(13, 14), 1.0f);
-								break;
+						case DAMAGE_TYPE::SLASH_DAMAGE_TYPE:
+						case DAMAGE_TYPE::PIERCE_DAMAGE_TYPE:
+							soundIndex = Sound_Wound3;
+							break;
 
-							default:
-								EmitSound(12, 1.0f);
-								break;
-							}
-						}
+						case DAMAGE_TYPE::BLUDGEON_DAMAGE_TYPE:
+							soundIndex = Sound_Wound2;
+							break;
+
+						//Elemental
+						default:
+							soundIndex = Sound_Wound1;
+							break;
 					}
+					EmitSound(soundIndex, 1.0f);
 				}
 
 
@@ -4910,14 +5029,24 @@ void CWeenieObject::TakeDamage(DamageEventData &damageData)
 
 	if (damageData.killingBlow && (damageData.source && damageData.source->IsCreature()))
 	{
-		std::string kmsg, vmsg, omsg;
-		GetDeathMessage(
-			damageData.damage_type,
-			damageData.GetSourceName(),
-			damageData.GetTargetName(),
-			damageData.killer_msg,
-			damageData.victim_msg,
-			damageData.other_msg);
+		const bool wasPvP = (this->AsPlayer() && damageData.source->AsPlayer());
+
+		if(wasOverkill) {
+			GetOverkillDeathMessage(damageData.GetSourceName(),
+				damageData.GetTargetName(),
+				damageData.killer_msg,
+				damageData.victim_msg,
+				damageData.other_msg,
+				wasPvP);
+		} else {
+			GetDeathMessage(
+				damageData.damage_type,
+				damageData.GetSourceName(),
+				damageData.GetTargetName(),
+				damageData.killer_msg,
+				damageData.victim_msg,
+				damageData.other_msg);
+		}
 	}
 	else
 	{
@@ -5010,23 +5139,24 @@ void CWeenieObject::NotifyDeathMessage(uint32_t killer_id, const char *message)
 	}
 }
 
-PScriptType CWeenieObject::GetScriptByHitLoc(DamageEventData &damageData)
+PScriptType CWeenieObject::GetScriptByHitLoc(DamageEventData &damageData, bool metal)
 {
+	DAMAGE_QUADRANT dq = damageData.hit_quadrant;
 	PScriptType ps = PS_Invalid;
-	switch (damageData.hit_quadrant)
+	switch (dq)
 	{
-	case DQ_HLF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterUpLeftFront : PS_SparkUpLeftFront; break;
-	case DQ_MLF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterMidLeftFront : PS_SparkMidLeftFront; break;
-	case DQ_LLF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterLowLeftFront : PS_SparkLowLeftFront; break;
-	case DQ_HRF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterUpRightFront : PS_SparkUpRightFront; break;
-	case DQ_MRF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterMidRightFront : PS_SparkMidRightFront; break;
-	case DQ_LRF: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterLowRightFront : PS_SparkLowRightFront; break;
-	case DQ_HLB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterUpLeftBack : PS_SparkUpLeftBack; break;
-	case DQ_MLB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterMidLeftBack : PS_SparkMidLeftBack; break;
-	case DQ_LLB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterLowLeftBack : PS_SparkLowLeftBack; break;
-	case DQ_HRB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterUpRightBack : PS_SparkUpRightBack; break;
-	case DQ_MRB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterMidRightBack : PS_SparkMidRightBack; break;
-	case DQ_LRB: ps = damageData.outputDamageFinalPercent > 0.05f ? PS_SplatterLowRightBack : PS_SparkLowRightBack; break;
+	case DQ_HLF: ps = metal ? PS_SparkUpLeftFront : PS_SplatterUpLeftFront; break;
+	case DQ_MLF: ps = metal ? PS_SparkMidLeftFront : PS_SplatterMidLeftFront; break;
+	case DQ_LLF: ps = metal ? PS_SparkLowLeftFront : PS_SplatterLowLeftFront; break;
+	case DQ_HRF: ps = metal ? PS_SparkUpRightFront: PS_SplatterUpRightFront; break;
+	case DQ_MRF: ps = metal ? PS_SparkMidRightFront : PS_SplatterMidRightFront; break;
+	case DQ_LRF: ps = metal ? PS_SparkLowRightFront : PS_SplatterLowRightFront; break;
+	case DQ_HLB: ps = metal ? PS_SparkUpLeftBack : PS_SplatterUpLeftBack; break;
+	case DQ_MLB: ps = metal ? PS_SparkMidLeftBack : PS_SplatterMidLeftBack ; break;
+	case DQ_LLB: ps = metal ? PS_SparkLowLeftBack : PS_SplatterLowLeftBack; break;
+	case DQ_HRB: ps = metal ? PS_SparkUpRightBack : PS_SplatterUpRightBack; break;
+	case DQ_MRB: ps = metal ? PS_SparkMidRightBack : PS_SplatterMidRightBack; break;
+	case DQ_LRB: ps = metal ? PS_SparkLowRightBack : PS_SplatterLowRightBack; break;
 	}
 	return ps;
 }
@@ -5100,9 +5230,54 @@ bool CWeenieObject::IsValidPkAction(bool helpful, PKStatusEnum attacker, PKStatu
 
 void CWeenieObject::OnTookDamage(DamageEventData &data)
 {
-	if (data.damage_form & DF_PHYSICAL && data.outputDamageFinal >= 0)
+	if (data.damage_form & DF_PHYSICAL && AsMonster())
 	{
-		EmitEffect(GetScriptByHitLoc(data), data.outputDamageFinalPercent);
+		CMonsterWeenie* monster = this->AsMonster();
+		std::list<CWeenieObject *> wielded;
+		monster->Container_GetWieldedByMask(wielded, ARMOR_LOC | HEAD_WEAR_LOC | HAND_WEAR_LOC | FOOT_WEAR_LOC);
+
+		bool metal = false;
+		SoundType soundType = Sound_HitFlesh1;
+
+		
+		for(auto weenie : wielded) {
+			if(weenie->AsClothing()) {
+				float factor = 1.0;
+				CClothingWeenie* armor = weenie->AsClothing();
+				if(armor->CoversBodyPart(data.hitPart,&factor)) {
+					int type = armor->InqIntQuality(ARMOR_TYPE_INT, 0);
+
+					switch(type) {
+						case 1: //"Light Cloth", used by robes, clothing, etc.
+							//use default value of Sound_HitFlesh1
+							break;
+
+						case 2: //"Heavy Cloth", used by leather armor
+						case 4:	//"Light Leather", used by studded leather armor
+							soundType = Sound_HitLeather1;
+							break;
+
+						case 8: //"Heavy Lather", used by scale armor
+						case 16: //"Light Armor", used by chain armor
+							soundType = Sound_HitChain1;
+							metal = true;
+							break;
+
+						case 32: //"Heavy Armor", used by plate, yoroi
+							soundType = Sound_HitPlate1;
+							metal = true;
+							break;
+					}
+
+					//Found piece that was hit, stop here.
+					break;
+				}
+
+			}
+
+		}
+		EmitSound(soundType, max(1.0f, 0.5f+data.outputDamageFinalPercent));
+		EmitEffect(GetScriptByHitLoc(data, metal), data.outputDamageFinalPercent);
 	}
 
 	if (data.killingBlow)
@@ -5173,9 +5348,9 @@ void CWeenieObject::OnTookDamage(DamageEventData &data)
 		{
 			std::string single_adj;
 			if (data.outputDamageFinalPercent > 0.5)
-				single_adj = "massive";
-			else if (data.outputDamageFinalPercent > 0.25)
 				single_adj = "crushing";
+			else if (data.outputDamageFinalPercent > 0.25)
+				single_adj = "massive";
 			else if (data.outputDamageFinalPercent > 0.1)
 				single_adj = "heavy";
 			else
@@ -6406,7 +6581,7 @@ uint32_t CWeenieObject::GetMagicDefense()
 	return defenseSkill;
 }
 
-bool CWeenieObject::TryMagicResist(uint32_t magicSkill)
+bool CWeenieObject::TryMagicResist(uint32_t magicSkill, uint32_t* defenseSkillReturn)
 {
 	uint32_t defenseSkill = GetMagicDefense();
 
@@ -6420,8 +6595,18 @@ bool CWeenieObject::TryMagicResist(uint32_t magicSkill)
 		}
 	}
 	defenseSkill = (int)round((double)defenseSkill * defenseMod);
+	
+	if(defenseSkillReturn)
+		*defenseSkillReturn = defenseSkill;
+		
 
-	return ::TryMagicResist(magicSkill, defenseSkill);
+	const bool resisted = ::TryMagicResist(magicSkill, defenseSkill);
+
+	CPlayerWeenie* player = this->AsPlayer();
+	if(resisted && player)
+		player->MaybeGiveSkillUsageXP(MAGIC_DEFENSE_SKILL, defenseSkill);
+
+	return resisted;
 }
 
 double CWeenieObject::GetMeleeDefenseModUsingWielded()
@@ -6509,7 +6694,7 @@ double CWeenieObject::GetMagicDefenseMod()
 
 double CWeenieObject::GetOffenseMod()
 {
-	double mod = InqFloatQuality(WEAPON_OFFENSE_FLOAT, 0.0, TRUE);
+	double mod = InqFloatQuality(WEAPON_OFFENSE_FLOAT, 1.0, TRUE);
 
 	// Don't enchant Ammunition
 	if (m_Qualities.m_WeenieType == Ammunition_WeenieType)
@@ -6520,7 +6705,7 @@ double CWeenieObject::GetOffenseMod()
 
 	if (_IsPlayer())
 	{
-		mod = 0.0;
+		mod = 1.0;
 		if (m_Qualities._enchantment_reg && m_Qualities._enchantment_reg->EnchantFloat(WEAPON_AURA_OFFENSE_FLOAT, &mod))
 		{
 			return mod;
@@ -6530,7 +6715,7 @@ double CWeenieObject::GetOffenseMod()
 	CWeenieObject *wielder = GetWorldWielder();
 	if (wielder && InqIntQuality(RESIST_MAGIC_INT, 0, FALSE) < 9999)
 	{
-		mod += (wielder->GetOffenseMod());
+		mod += (wielder->GetOffenseMod() - 1.0);
 	}
 
 	return mod;
@@ -6819,7 +7004,7 @@ bool CWeenieObject::IsInPeaceMode()
 	return get_minterp()->interpreted_state.current_style == Motion_NonCombat;
 }
 
-bool CWeenieObject::TryAttackEvade(uint32_t attackSkill, STypeSkill defSkill)
+bool CWeenieObject::TryAttackEvade(uint32_t attackSkill, STypeSkill defSkill, uint32_t* defenseSkillReturn)
 {
 	if (GetStamina() < 1) // when we're out of stamina our defense skill is lowered to 0.
 		return false;
@@ -6846,10 +7031,16 @@ bool CWeenieObject::TryAttackEvade(uint32_t attackSkill, STypeSkill defSkill)
 
 	defenseSkill = (int)round((double)defenseSkill * defenseMod * CalculateLoadImpactOnDefense());
 	bool success = ::TryMeleeEvade(attackSkill, defenseSkill);
+	
+	if(defenseSkillReturn)
+		*defenseSkillReturn = defenseSkill;
+		
+	CPlayerWeenie* player = this->AsPlayer();
 
-	if (success && _IsPlayer())
+	if (success && player)
 	{
 		CalculateStaminaLossFromAttack(defSkill);
+		player->MaybeGiveSkillUsageXP(defSkill, attackSkill); //XP for either missile or melee def
 	}
 	else
 		AdjustStamina(-1); // while in combat all evasion failures consume 1 stamina.
@@ -6914,7 +7105,7 @@ void CWeenieObject::CalculateStaminaLossFromAttack(STypeSkill skill)
 	SKILL_ADVANCEMENT_CLASS defenseSkillSAC = SKILL_ADVANCEMENT_CLASS::UNTRAINED_SKILL_ADVANCEMENT_CLASS;
 	m_Qualities.InqSkillAdvancementClass(skill, defenseSkillSAC);
 
-	if (get_minterp()->interpreted_state.current_style != Motion_NonCombat) //no stamina usage if we're out of combat mode.
+	if (!IsInPeaceMode()) //no stamina usage if we're out of combat mode.
 	{
 		if (defenseSkillSAC >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
 		{
@@ -7403,6 +7594,8 @@ void CWeenieObject::CheckVitalRanges()
 
 uint32_t CWeenieObject::GetRating(STypeInt rating)
 {
+	return 0; //disabled
+
 	uint32_t ratingValue = 0;
 	int currentRating = 0;
 	switch (rating)

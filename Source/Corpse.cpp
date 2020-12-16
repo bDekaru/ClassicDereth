@@ -4,7 +4,8 @@
 #include "DatabaseIO.h"
 #include "WorldLandBlock.h"
 
-#define CORPSE_EXIST_TIME 180
+#define CORPSE_EXIST_TIME 180		//Amount of time a monster corpse exists.
+#define CORPSE_MONSTER_OPEN_TIME 60 //Amount of time before a monster corpse becomes lootable.
 
 CCorpseWeenie::CCorpseWeenie()
 {
@@ -49,7 +50,10 @@ int CCorpseWeenie::CheckOpenContainer(CWeenieObject *looter)
 
 		CPlayerWeenie *corpsePlayer = g_pWorld->FindPlayer(victimId);
 
-		if (!corpsePlayer && _begin_destroy_at - (CORPSE_EXIST_TIME / 2) <= Timer::cur_time) // corpse isn't of a player so allow it to open after a certain time
+		//The destroy time was some time T + CORPSE_EXIST_TIME. To find T + CORPSE_MONSTER_OPEN_TIME, subtract CORPSE_EXIST_TIME
+		//to get the original value T then add CORPSE_MONSTER_OPEN_TIME.
+		double openTime = (_begin_destroy_at - CORPSE_EXIST_TIME) + CORPSE_MONSTER_OPEN_TIME;
+		if (!corpsePlayer && openTime <= Timer::cur_time) // corpse isn't of a player so allow it to open after a certain time
 		{
 			return WERROR_NONE;
 		}
@@ -157,7 +161,7 @@ void CCorpseWeenie::LoadEx(class CWeenieSave &save)
 
 	_objDesc = save.m_ObjDesc;
 	double dbTimeToRot = m_Qualities.GetFloat(TIME_TO_ROT_FLOAT, 0.0);
-	_begin_destroy_at = Timer::cur_time + (dbTimeToRot == 0 ? 60 * 60 : dbTimeToRot);
+	_begin_destroy_at = Timer::cur_time + (dbTimeToRot == 0 ? 60.0 * 60.0 : dbTimeToRot);
 	_shouldSave = true;
 	m_bDontClear = true;
 

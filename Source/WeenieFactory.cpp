@@ -1189,10 +1189,10 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 	case ScatterTreasure_RegenLocationType:
 	{
 		float genRadius = (float)parent->InqFloatQuality(GENERATOR_RADIUS_FLOAT, 0.0f);
-		float random_x = Random::GenFloat(-genRadius, genRadius);
-		float random_y = Random::GenFloat(-genRadius, genRadius);
+		float randomAngle = Random::GenFloat(0, 2.0f*(float)M_PI);
+		float randomRadius = Random::GenFloat(0, genRadius);
 
-		pos.frame.m_origin += Vector(random_x, random_y, 0.05f);
+		pos.frame.m_origin += Vector(cosf(randomAngle) * randomRadius, sinf(randomAngle) * randomRadius, 0.05f);
 
 		weenie->SetInitialPosition(pos);
 		if (!g_pWorld->CreateEntity(weenie))
@@ -1201,8 +1201,8 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 			return;
 		}
 
+		break;
 	}
-	break;
 	case OnTop_RegenLocationType:
 	case OnTopTreasure_RegenLocationType:
 		//untested

@@ -20,7 +20,7 @@
 #include "DatabaseIO.h"
 #include "Scene.h"
 
-const double LANDBLOCK_DORMANCY_DELAY = 120.0;
+const double LANDBLOCK_DORMANCY_DELAY = 600.0;
 const double LANDBLOCK_DORMANCY_TICK_INTERVAL = 10.0;
 
 CWorldLandBlock::CWorldLandBlock(CWorld *pWorld, WORD wHeader) : m_pWorld(pWorld), m_wHeader(wHeader)

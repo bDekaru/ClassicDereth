@@ -206,7 +206,7 @@ void Frame::euler_set_rotate(Vector Angles, int order)
 	set_rotate(qu);
 }
 
-void Frame::set_rotate(Quaternion angles)
+void Frame::set_rotate(const Quaternion& angles)
 {
 	m_angles = angles;
 	m_angles.normalize();
@@ -811,9 +811,9 @@ float Position::heading_diff(const Position &p)
 	return heading(p) - frame.get_heading();
 }
 
-uint32_t Position::determine_quadrant(float height, Position *p) const
+uint32_t Position::determine_quadrant(float height, const Position& p) const
 {
-	Vector hitpoint = localtolocal(*p, Vector(0, 0, 0));
+	Vector hitpoint = localtolocal(p, Vector(0, 0, 0));
 	
 	uint32_t quadrant;
 

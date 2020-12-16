@@ -863,7 +863,7 @@ void CPhysicsObj::update_object()
 		while (timeElapsed > MAX_QUANTUM)
 		{
 			PhysicsTimer::curr_time += MAX_QUANTUM;
-			UpdateObjectInternal(MAX_QUANTUM);
+			UpdateObjectInternal((float)MAX_QUANTUM);
 			timeElapsed -= MAX_QUANTUM;
 		}
 
@@ -2256,7 +2256,7 @@ int CPhysicsObj::report_object_collision(CPhysicsObj *object, int prev_has_conta
 				AtkCollisionProfile prof;
 				prof.id = object->id;
 				prof.part = -1;
-				prof.location = object->m_Position.determine_quadrant(object->GetHeight(), &m_Position);
+				prof.location = object->m_Position.determine_quadrant(object->GetHeight(), m_Position);
 				weenie_obj->DoCollision(prof);
 			}
 			else
@@ -2287,7 +2287,7 @@ int CPhysicsObj::report_object_collision(CPhysicsObj *object, int prev_has_conta
 			AtkCollisionProfile prof;
 			prof.id = id;
 			prof.part = -1;
-			prof.location = m_Position.determine_quadrant(GetHeight(), &object->m_Position);
+			prof.location = m_Position.determine_quadrant(GetHeight(), object->m_Position);
 			object->weenie_obj->DoCollision(prof);
 		}
 		else

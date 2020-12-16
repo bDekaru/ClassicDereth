@@ -46,6 +46,10 @@ void CalculateDamage(DamageEventData *dmgEvent, SpellCastData *spellData)
 	damageCalc += dmgEvent->skillDamageBonus;
 	damageCalc += dmgEvent->slayerDamageBonus;
 
+	//Don't let low power bar + low damage weapon result in constantly hitting for zero.
+	if (damageCalc < 1.0)
+		damageCalc = 1.0;
+
 	if (dmgEvent->wasCrit)
 	{
 		if (!dmgEvent->critDefended)
@@ -144,6 +148,40 @@ void CalculateSkillDamageBonus(DamageEventData *dmgEvent, SpellCastData *spellDa
 	switch (dmgEvent->damage_form)
 	{
 	case DF_MELEE:
+		if (dmgEvent->attackSkill == UNARMED_COMBAT_SKILL && dmgEvent->source->AsPlayer())
+		{
+			/*
+				Page 148 of Sybex Strategy Guide gives this note:
+
+				"The base damage done by punching and kicking is calculated using the attacker's
+				Unarmed Combat skill modified by the type of armor they are wearing:
+
+				BaseDmg = 1 + ArmorDmg + (Skill/20)
+
+				_not rounded_, where "Skill" is the attacker's Unarmed Combat skill and "ArmorDmg" is
+				the amount of damage the armor (or clothing) the character is wearing adds to the equation,
+				as follows [...]"
+
+				They continue:
+				"Note that if you are wielding an unarmed combat weapon such as a Katar or Nekode, this [guantlet/boot] damage bonus does not apply;
+				the damage and other statistics of the weapon, plus your Unarmed Combat skill, determine the type and amount of damage you do."
+
+				This implies that the UA skill bonus is also attached to weapons.
+
+				However, this does mean that the skill bonus _is_ affected by the variance roll because it is part of the base damage before variance
+				is computed. It's somewhat vague about whether UA damage bonus is applied pre- or post-variance roll when wielding a weapon, but
+				a rational reading of it would be that it should be pre-variance (i.e. exactly as punching without a weapon), otherwise, wielding
+				a weapon would essentially get a zero variance damage bonus.
+
+				An old forum post (not authoritative) also mentions this formula, but of course the official
+				strategy guide is a better source.
+				https://forums.penny-arcade.com/discussion/35347/asherons-call-nine-years-of-killing-olthoi/p12
+
+				Note that "BaseDmg"
+			*/
+			dmgEvent->skillDamageBonus = (double)dmgEvent->attackSkillLevel / 20.0;
+		}
+		return;
 	case DF_MISSILE:
 		return;
 	case DF_MAGIC:

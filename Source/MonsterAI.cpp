@@ -228,7 +228,7 @@ bool MonsterAIManager::SeekTarget()
 		std::list<CWeenieObject *> results;
 		g_pWorld->EnumNearby(m_pWeenie, _cachedVisualAwarenessRange, &results);
 
-		std::list<CWeenieObject *> validTargets;
+		std::vector<CWeenieObject *> validTargets;
 
 		CWeenieObject *pClosestWeenie = NULL;
 		double fClosestWeenieDist = FLT_MAX;
@@ -311,7 +311,7 @@ bool MonsterAIManager::SeekTarget()
 
 			if (!target) // Random target if no target found by now
 			{
-				std::list<CWeenieObject *>::iterator i = validTargets.begin();
+				auto i = validTargets.begin();
 				std::advance(i, Random::GenInt(0, (unsigned int)(validTargets.size() - 1)));
 				SetNewTarget(*i);
 			}
@@ -468,66 +468,46 @@ void MonsterAIManager::GenerateRandomAttack(uint32_t *motion, ATTACK_HEIGHT *hei
 
 	if (m_pWeenie->_combatTable)
 	{
-		if (weapon == NULL)
-		{
-			if (!m_pWeenie->GetWieldedCombat(COMBAT_USE_TWO_HANDED))
-				weapon = m_pWeenie->GetWieldedCombat(COMBAT_USE_MELEE);
-			else
-				weapon = m_pWeenie->GetWieldedCombat(COMBAT_USE_TWO_HANDED);
-		}
-		if (weapon)
-		{
+		std::vector<const CombatManeuver*> candidates;
+		candidates.reserve(m_pWeenie->_combatTable->_num_combat_maneuvers);
+
+		if(weapon == NULL)
+			weapon = m_pWeenie->GetWieldedCombat(COMBAT_USE_MELEE);
+		if (weapon) {
 			AttackType attackType = (AttackType)weapon->InqIntQuality(ATTACK_TYPE_INT, 0);
 			uint32_t style = m_pWeenie->get_minterp()->InqStyle();
 
 			if (attackType == (Thrust_AttackType | Slash_AttackType))
 			{
-				if (*power >= 0.75f)
+				if (*power >= 0.25f)
 					attackType = Slash_AttackType;
 				else
 					attackType = Thrust_AttackType;
 			}
-
-			CombatManeuver *combatManeuver = NULL;
-
-			for (uint32_t i = 0; i < m_pWeenie->_combatTable->_num_combat_maneuvers; i++)
-			{
-				int m = Random::GenInt(0, m_pWeenie->_combatTable->_num_combat_maneuvers - 1);
-
-				if (m_pWeenie->_combatTable->_cmt[m].style == style && m_pWeenie->_combatTable->_cmt[m].attack_type & attackType)
-				{
-					combatManeuver = &m_pWeenie->_combatTable->_cmt[m];
-					break;
+			
+			//Find maneuvers that match the request attack style / type
+			for (uint32_t i = 0; i < m_pWeenie->_combatTable->_num_combat_maneuvers; i++) {
+				if (m_pWeenie->_combatTable->_cmt[i].style == style && m_pWeenie->_combatTable->_cmt[i].attack_type & attackType) {
+					candidates.push_back(&m_pWeenie->_combatTable->_cmt[i]);
 				}
 			}
 
-			if (combatManeuver)
-			{
-				*motion = combatManeuver->motion;
-				*height = combatManeuver->attack_height;
-			}
-		}
-		else
-		{
-			CombatManeuver *combatManeuver = NULL;
-
-			for (uint32_t i = 0; i < m_pWeenie->_combatTable->_num_combat_maneuvers; i++)
-			{
-				int m = Random::GenInt(0, m_pWeenie->_combatTable->_num_combat_maneuvers - 1);
-
-				if (m_pWeenie->_combatTable->_cmt[m].style == Motion_HandCombat)
-				{
-					combatManeuver = &m_pWeenie->_combatTable->_cmt[m];
-					break;
+		} else {
+			//Find maneuvers that match Motion_HandCombat
+			for (uint32_t i = 0; i < m_pWeenie->_combatTable->_num_combat_maneuvers; i++) {
+				if (m_pWeenie->_combatTable->_cmt[i].style == Motion_HandCombat) {
+					candidates.push_back(&m_pWeenie->_combatTable->_cmt[i]);
 				}
 			}
-
-			if (combatManeuver)
-			{
-				*motion = combatManeuver->motion;
-				*height = combatManeuver->attack_height;
-			}
 		}
+
+		unsigned int count = candidates.size();
+		if(count > 0) {
+			const CombatManeuver *combatManeuver = candidates[Random::GenUInt(0, count-1)];
+			*motion = combatManeuver->motion;
+			*height = combatManeuver->attack_height;
+		}
+
 	}
 
 	if (!*motion)

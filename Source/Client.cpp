@@ -319,7 +319,7 @@ BOOL CClient::CheckNameValidity(const char *name, int access, std::string &resul
 	while (i < len)
 	{
 		char letter = name[i];
-		if (!(letter >= 'A' && letter <= 'Z') && !(letter >= 'a' || letter <= 'z') && !(letter == '\'') && !(letter == ' ') && !(letter == '-'))
+		if (!(letter >= 'A' && letter <= 'Z') && !(letter >= 'a' && letter <= 'z') && !(letter == '\'') && !(letter == ' ') && !(letter == '-'))
 			break;
 		i++;
 	}
@@ -1014,15 +1014,15 @@ void CClient::GenerateStarterGear(CWeenieObject *weenieObject, ACCharGenResult &
 		if (cg.skillAdvancementClasses[BOW_SKILL] >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
 		{
 			weenie->SpawnInContainer(W_NEWBIEYAG_CLASS, 1);
-			weenie->SpawnInContainer(W_BOLT_CLASS, 30);
+			weenie->SpawnInContainer(W_ARROW_CLASS, 30);
 		}
 		if (cg.skillAdvancementClasses[CROSSBOW_SKILL] >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
 		{
 			weenie->SpawnInContainer(W_NEWBIECROSSBOW_CLASS, 1);
-			weenie->SpawnInContainer(W_ARROW_CLASS, 30);
+			weenie->SpawnInContainer(W_BOLT_CLASS, 30);
 		}
 		if (cg.skillAdvancementClasses[DAGGER_SKILL] >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
-			weenie->SpawnInContainer(W_JAMBIYA_CLASS, 1);
+			weenie->SpawnInContainer(W_NEWBIEJAMBIYA_CLASS, 1);
 		if (cg.skillAdvancementClasses[MACE_SKILL] >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
 			weenie->SpawnInContainer(W_NEWBIEKASRULLAH_CLASS, 1);
 		if (cg.skillAdvancementClasses[SPEAR_SKILL] >= SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)

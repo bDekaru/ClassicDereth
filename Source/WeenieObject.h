@@ -276,7 +276,7 @@ public:
 	virtual void NotifyGeneratedFailure(CWeenieObject *weenie);
 	virtual void OnGeneratedFailure(CWeenieObject *weenie);
 
-	virtual void TryIdentify(CWeenieObject *other);
+	virtual void TryIdentify(CPlayerWeenie *other);
 	virtual void Identify(CWeenieObject *other, uint32_t overrideId = 0);
 
 	virtual void MarkForDestroy() { m_bDestroyMe = true; }
@@ -640,7 +640,7 @@ public:
 	virtual void OnTookDamage(DamageEventData &damageData);
 	virtual void OnDealtDamage(DamageEventData &damageData);
 	virtual void OnRegen(STypeAttribute2nd currentAttrib, int newAmount);
-	PScriptType GetScriptByHitLoc(DamageEventData &damageData);
+	PScriptType GetScriptByHitLoc(DamageEventData &damageData, bool metal);
 	bool IsValidPkAction(bool helpful, PKStatusEnum attacker, PKStatusEnum defender, WErrorType &attackerError, WErrorType &defenderError);
 
 	virtual float GetEffectiveArmorLevel(DamageEventData &damageData, bool bIgnoreMagicArmor);
@@ -730,8 +730,8 @@ public:
 
 	uint32_t GetMagicDefense();
 
-	bool TryMagicResist(uint32_t magicSkill);
-	bool TryAttackEvade(uint32_t attackSkill, STypeSkill defSkill);
+	bool TryMagicResist(uint32_t magicSkill, uint32_t* defenseSkillReturn = NULL);
+	bool TryAttackEvade(uint32_t attackSkill, STypeSkill defSkill, uint32_t* defenseSkillReturn = NULL);
 	double GetCurrentMotionMod();
 	double GetCurrentTargetMod();
 	void CalculateStaminaLossFromAttack(STypeSkill defenseSkill);

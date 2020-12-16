@@ -16,30 +16,34 @@ ItemProfile::~ItemProfile()
 
 DEFINE_PACK(ItemProfile)
 {
-	int foo = 0;
-	if (pwd)
-		foo = -1;
+	uint32_t amount24 = (uint32_t)amount & 0xFFFFFFu;
 
-	pWriter->Write<uint32_t>((foo << 24)  | amount & 0xFFFFFF);
-	pWriter->Write<uint32_t>(iid);	
-	if (pwd)
+	if(pwd) {
+		pWriter->Write<uint32_t>(0xFF000000u  | amount24);
+		pWriter->Write<uint32_t>(iid);
 		pwd->Pack(pWriter);
+	} else {
+		pWriter->Write<uint32_t>(amount24);
+		pWriter->Write<uint32_t>(iid);
+	}
 }
 
 DEFINE_UNPACK(ItemProfile)
 {
 	SafeDelete(pwd);
 
-	uint32_t foo = pReader->Read<uint32_t>();
+	uint32_t packed = pReader->Read<uint32_t>();
+	bool has_pwd = (packed >> 24) == 0xFFu;
+	this->amount = packed & 0x00FFFFFFu;
 
-	amount = foo;
-	if (amount & 0x800000)
-		amount = ((foo & 0xFFFFFF) | 0xFF000000);
+	//Sign-extend 24-bit value to 32-bit integer
+	if(this->amount & 0x80000u) {
+		this->amount |= 0xFF000000;
+	}
 
 	iid = pReader->Read<uint32_t>();
 
-	int has_pwd = foo >> 24;
-	if (has_pwd == -1)
+	if(has_pwd)
 	{
 		pwd = new PublicWeenieDesc();
 		pwd->UnPack(pReader);

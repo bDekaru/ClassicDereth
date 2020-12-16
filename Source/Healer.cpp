@@ -164,10 +164,14 @@ void CHealerUseEvent::OnUseAnimSuccess(uint32_t motion)
 					healing_skill = (healing_skill + boost_value) * sac_mod;
 					
 					success = Random::RollDice(0.0, 1.0) <= GetSkillChance(healing_skill, difficulty);
+					CPlayerWeenie* player = _weenie->AsPlayer();
 					if (success)
 					{
 						double heal_min = 0;
 						double heal_max = 0;
+
+						if(player)
+							player->MaybeGiveSkillUsageXP(HEALING_SKILL, difficulty);
 
 						if (skill._sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
 						{
@@ -193,15 +197,16 @@ void CHealerUseEvent::OnUseAnimSuccess(uint32_t motion)
 						if (amountHealed > missingVital)
 							amountHealed = missingVital;
 
-						int staminaNecessary = amountHealed / 5; //1 point of stamina used for every 5 health healed.
+						int staminaNecessary = min(1, (int)round(amountHealed / 5.0)); //1 point of stamina used for every 5 health healed.
 
 						if (_weenie->GetStamina() < staminaNecessary)
 						{
 							staminaNecessary = _weenie->GetStamina();
 							amountHealed = staminaNecessary * 5;
-							if (CPlayerWeenie *pPlayer = _weenie->AsPlayer())
+							prefix = ""; //no exhausted experts
+							if (player)
 							{
-								pPlayer->SendText("You're exhausted!", LTT_ERROR);
+								player->SendText("You're exhausted!", LTT_ERROR);
 							}
 						}
 						_weenie->AdjustStamina(-staminaNecessary);
@@ -222,6 +227,12 @@ void CHealerUseEvent::OnUseAnimSuccess(uint32_t motion)
 								target->NotifyAttribute2ndStatUpdated(statType);
 							}
 
+						}
+					} else {
+						//Still use 1 stam for failure.
+						int amountDecreased = _weenie->AdjustStamina(-1);
+						if (amountDecreased == 0 && player) {
+							player->SendText("You're exhausted!", LTT_ERROR);
 						}
 					}
 

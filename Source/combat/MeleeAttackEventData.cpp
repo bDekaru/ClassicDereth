@@ -11,17 +11,14 @@
 // TODO: Move these up to AttackEventData?
 void CMeleeAttackEvent::CalculateAtt(CWeenieObject *weapon, STypeSkill& weaponSkill, uint32_t& weaponSkillLevel)
 {
-	//Default values:
-	float offenseMod = 1.0f;
-	weaponSkill = UNARMED_COMBAT_SKILL; 
+	float offenseMod = weapon->GetOffenseMod();
+	weaponSkill = (STypeSkill)weapon->InqIntQuality(WEAPON_SKILL_INT, UNARMED_COMBAT_SKILL, TRUE);
 	weaponSkillLevel = 0;
 
-	if(!weapon->AsMonster()) //If we're the weapon(unarmed) we don't have an offenseMod! So don't try to get it or our weaponSkillLevel will be zeroed!
-		offenseMod = weapon->GetOffenseMod();
-
-	weaponSkill = (STypeSkill)weapon->InqIntQuality(WEAPON_SKILL_INT, UNARMED_COMBAT_SKILL, TRUE);
 	if (_weenie->InqSkill(weaponSkill, weaponSkillLevel, FALSE))
+	{
 		weaponSkillLevel = (uint32_t)(weaponSkillLevel * offenseMod);
+	}
 }
 
 //float CMeleeAttackEvent::CalculateDef()
@@ -42,7 +39,11 @@ void CMeleeAttackEvent::Setup()
 	uint32_t weapon_id = 0;
 	uint32_t style = _weenie->get_minterp()->InqStyle();
 
-	if (!_do_attack_animation)
+	bool exhausted = _weenie->GetStamina() == 0;
+	float effective_attack_power = (exhausted? 0.0f : _attack_power );
+
+	//Recalculate animation if exhausted because we have an effective attack power much lower than our actual attack power
+	if (exhausted || !_do_attack_animation)
 	{
 		if (_weenie->_combatTable)
 		{
@@ -54,64 +55,82 @@ void CMeleeAttackEvent::Setup()
 
 				weapon_id = weapon->GetID();
 
-				AttackType attack_type = (AttackType)weapon->InqIntQuality(ATTACK_TYPE_INT, 0);
+				AttackType weapon_attack_type = (AttackType)weapon->InqIntQuality(ATTACK_TYPE_INT, 0);
 
-			if (attack_type == (Thrust_AttackType | Slash_AttackType))
-			{
-				if (_attack_power >= 0.25f)
-					attack_type = Slash_AttackType;
-				else
-					attack_type = Thrust_AttackType;
-			}
+				//Need high power for multistrike.
+				const uint32_t anyMultistrike = DoubleThrust_AttackType | DoubleSlash_AttackType |TripleThrust_AttackType | TripleSlash_AttackType;
+				if(weapon_attack_type & anyMultistrike && effective_attack_power < 0.75f) {
+					weapon_attack_type = (AttackType)(weapon_attack_type & ~anyMultistrike);
+				}
 
-			// Different rules for Dual Wield vs Onehand and shield.
-			if (style == Motion_DualWieldCombat)
-			{
-				// Dual Wield can use both slash and thrust animations based on power.
-				switch (attack_type)
-				{
-				case DoubleThrust_AttackType | DoubleSlash_AttackType:
-					if (_attack_power >= 0.25f)
-						attack_type = DoubleSlash_AttackType;
+				AttackType attack_type = weapon_attack_type;
+
+				if (attack_type == (Thrust_AttackType | Slash_AttackType)) {
+					if (effective_attack_power >= 0.25f)
+						attack_type = Slash_AttackType;
 					else
+						attack_type = Thrust_AttackType;
+				}
+				
+				// Different rules for Dual Wield vs Onehand and shield.
+				if (style == Motion_DualWieldCombat)
+				{
+					// Dual Wield can use both slash and thrust animations based on power.
+					switch (attack_type)
+					{
+					case DoubleThrust_AttackType | DoubleSlash_AttackType:
+						if (effective_attack_power >= 0.25f)
+							attack_type = DoubleSlash_AttackType;
+						else
+							attack_type = DoubleThrust_AttackType;
+						break;
+
+					case TripleThrust_AttackType | TripleSlash_AttackType:
+						if (effective_attack_power >= 0.25f)
+							attack_type = TripleSlash_AttackType;
+						else
+							attack_type = TripleThrust_AttackType;
+						break;
+					}
+				}
+				else if (style == Motion_SwordShieldCombat)
+				{
+					// Force Thrust animation when use a shield with a multi-strike weapon.
+					switch (attack_type)
+					{
+					case DoubleThrust_AttackType | DoubleSlash_AttackType:
 						attack_type = DoubleThrust_AttackType;
-					break;
+						break;
 
-				case TripleThrust_AttackType | TripleSlash_AttackType:
-					if (_attack_power >= 0.25f)
-						attack_type = TripleSlash_AttackType;
-					else
+					case TripleThrust_AttackType | TripleSlash_AttackType:
 						attack_type = TripleThrust_AttackType;
-					break;
+						break;
+					}
 				}
-			}
-			else if (style == Motion_SwordShieldCombat)
-			{
-				// Force Thrust animation when use a shield with a multi-strike weapon.
-				switch (attack_type)
+
+
+
+				if (CombatManeuver *combat_maneuver = _weenie->_combatTable->TryGetCombatManuever(style, attack_type, _attack_height))
 				{
-				case DoubleThrust_AttackType | DoubleSlash_AttackType:
-					attack_type = DoubleThrust_AttackType;
-					break;
+					attack_motion = combat_maneuver->motion;
+					CombatStyle cs = (CombatStyle)weapon->m_Qualities.GetInt(DEFAULT_COMBAT_STYLE_INT, 0);
 
-				case TripleThrust_AttackType | TripleSlash_AttackType:
-					attack_type = TripleThrust_AttackType;
-					break;
+					// UA full speed attacks (Low/Medium only) need 3 removed to get the correct animation.
+					if (cs == Unarmed_CombatStyle && effective_attack_power <= 0.25f && (_attack_height == MEDIUM_ATTACK_HEIGHT || _attack_height == LOW_ATTACK_HEIGHT))
+						attack_motion -= 3;
+
+					//Slash_AttackType -> Axes, mace, jitte: use a backhand when using lowish power.
+					//Thrust_AttackType|Slash_AttackType -> staff, dagger, sword: use a backhand when using lowish power but not super low (pierce)
+					//Adding 3 to Motion_Slash[High|Medium|Low] yields Motion_Backhand[High|Medium|Low].
+					//Note that some weapons like sing dagger are (Thrust|Slash|DoubleSlash|DoubleThrust), so use & instead of ==
+					if((weapon_attack_type == Slash_AttackType && effective_attack_power <= 0.33f) ||
+						((weapon_attack_type == (Thrust_AttackType | Slash_AttackType)) && effective_attack_power <= 0.50f && effective_attack_power >= 0.25f)) {
+						attack_motion += 3;
+					}
 				}
-			}
-
-
-
-			if (CombatManeuver *combat_maneuver = _weenie->_combatTable->TryGetCombatManuever(style, attack_type, _attack_height))
-			{
-				attack_motion = combat_maneuver->motion;
-
-				// UA full speed attacks (Low only) need 3 removed to get the correct animation.
-				if (weapon->m_Qualities.GetInt(DEFAULT_COMBAT_STYLE_INT,0) == Unarmed_CombatStyle && _attack_power <= 0.25f && _attack_height == 3)
-					attack_motion -= 3;
+			
 			}
 		}
-	}
 
 		if (!attack_motion)
 		{
@@ -127,9 +146,9 @@ void CMeleeAttackEvent::Setup()
 			}
 			}
 
-			if (_attack_power >= 0.25f)
+			if (effective_attack_power >= 0.25f)
 				attack_motion += 3;
-			if (_attack_power >= 0.75f)
+			if (effective_attack_power >= 0.75f)
 				attack_motion += 3;
 
 			if (_attack_power < 0.0f || _attack_power > 1.0f)
@@ -257,8 +276,14 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 	//todo: maybe handle this differently as to integrate all possible damage type combos
 	if (damageType == (DAMAGE_TYPE::SLASH_DAMAGE_TYPE | DAMAGE_TYPE::PIERCE_DAMAGE_TYPE))
 	{
+		//UA weapons (not hands!) have a quirk that high attack heights use the slashing version, always. Reason: The punching animation
+		//uses the left hand, but the katar/cestus/etc. is in the _RIGHT_ hand. It looks silly, so fix it up here by letting lowest power
+		//attacks use slashing.
+		const CombatStyle cs = (CombatStyle)weapon->m_Qualities.GetInt(DEFAULT_COMBAT_STYLE_INT, 0);
+
 		// Damage type should always be Pierce for multi-strike Thrust animations, not slashing.
-		if (_attack_power >= 0.25f && !(_do_attack_animation >= Motion_DoubleThrustLow && _do_attack_animation <= Motion_TripleThrustHigh))
+		if ((cs == Unarmed_CombatStyle && _attack_height == HIGH_ATTACK_HEIGHT) ||
+			_attack_power >= 0.25f && !(_do_attack_animation >= Motion_DoubleThrustLow && _do_attack_animation <= Motion_TripleThrustHigh))
 			damageType = DAMAGE_TYPE::SLASH_DAMAGE_TYPE;
 		else
 			damageType = DAMAGE_TYPE::PIERCE_DAMAGE_TYPE;
@@ -282,13 +307,13 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 	if (shield != NULL)
 		burden += shield->InqIntQuality(ENCUMB_VAL_INT, 0);
 
-	int necessaryStam;
+	float necessaryStaminaFloat;
 	if (_attack_power < 0.33)
-		necessaryStam = max(round(burden / 900.0f), 1.0f);
+		necessaryStaminaFloat = max(burden / 900.0f, 1.0f);
 	else if (_attack_power < 0.66)
-		necessaryStam = max(round(burden / 600.0f), 1.0f);
+		necessaryStaminaFloat = max(burden / 600.0f, 1.0f);
 	else
-		necessaryStam = max(round(burden / 300.0f), 1.0f);
+		necessaryStaminaFloat = max(burden / 300.0f, 1.0f);
 
 	if (_weenie->AsPlayer())
 	{
@@ -296,17 +321,17 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 		//This benefit is tied to Endurance only, and it caps out at around 50% less stamina used per attack. 
 		//The minimum stamina used per attack remains one. 
 		uint32_t endurance = 0;
-		float necStamMod = 1.0;
+		float necStamMod = 1.0f;
 		_weenie->m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
 
 		if (endurance >= 50)
 		{
-			necStamMod = ((float)(endurance * endurance) * -0.000003175) - ((float)endurance * 0.0008889) + 1.052;
+			necStamMod = ((float)(endurance * endurance) * -0.000003175f) - ((float)endurance * 0.0008889f) + 1.052f;
 			necStamMod = min(max(necStamMod, 0.5f), 1.0f);
-			necessaryStam = (int)(necessaryStam * necStamMod + Random::RollDice(0.0, 1.0)); // little sprinkle of luck 
+			necessaryStaminaFloat = necessaryStaminaFloat * necStamMod + Random::RollDice(0.0f, 1.0f); // little sprinkle of luck 
 		}
 	}
-	necessaryStam = max(necessaryStam, 1);
+	int necessaryStam = max(1, (int)round(necessaryStaminaFloat));
 
 	bool hadEnoughStamina = true;
 	if (_weenie->GetStamina() < necessaryStam)
@@ -325,10 +350,8 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 	if (!hadEnoughStamina)
 	{
 		if (CPlayerWeenie *pPlayer = _weenie->AsPlayer())
-		{
 			pPlayer->SendText("You're exhausted!", LTT_ERROR);
-			weaponSkillLevel *= 0.5; //50% penalty to our attack skill when we don't have enough to perform it.
-		}
+		weaponSkillLevel *= 0.5; //50% penalty to our attack skill when we don't have enough to perform it.
 	}
 
 	DamageEventData dmgEvent;
@@ -379,12 +402,14 @@ void CMeleeAttackEvent::HandleAttackHook(const AttackCone &cone)
 
 void CMeleeAttackEvent::HandlePerformAttack(CWeenieObject *target, DamageEventData dmgEvent)
 {
+	CPlayerWeenie* playerAttacker = _weenie->AsPlayer();
+	CPlayerWeenie* playerDefender = target->AsPlayer();
 
 	// okay, we're attacking. check for pvp interactions
-	if (target->AsPlayer() && _weenie->AsPlayer())
+	if (playerDefender && playerAttacker)
 	{
-		target->AsPlayer()->UpdatePKActivity();
-		_weenie->AsPlayer()->UpdatePKActivity();
+		playerDefender->UpdatePKActivity();
+		playerAttacker->UpdatePKActivity();
 	}
 
 	target->m_Qualities.SetInstanceID(CURRENT_ATTACKER_IID, _weenie->GetID());
@@ -392,17 +417,18 @@ void CMeleeAttackEvent::HandlePerformAttack(CWeenieObject *target, DamageEventDa
 	uint32_t currentEnemy;
 	if (target->m_Qualities.InqInstanceID(CURRENT_ENEMY_IID, currentEnemy))
 	{
-		if(currentEnemy == 0)
+		if (currentEnemy == 0)
 			target->m_Qualities.SetInstanceID(CURRENT_ENEMY_IID, _weenie->GetID());
 	}
 
-	if (_weenie->AsPlayer())
-		_weenie->AsPlayer()->CancelLifestoneProtection();
+	if (playerAttacker)
+		playerAttacker->CancelLifestoneProtection();
 
 	uint32_t meleeDefense = 0;
+	uint32_t evasionDifficulty = 0;
 	if (target->InqSkill(MELEE_DEFENSE_SKILL, meleeDefense, FALSE) && meleeDefense > 0)
 	{
-		if (target->TryAttackEvade(dmgEvent.attackSkillLevel, STypeSkill::MELEE_DEFENSE_SKILL))
+		if (target->TryAttackEvade(dmgEvent.attackSkillLevel, STypeSkill::MELEE_DEFENSE_SKILL, &evasionDifficulty))
 		{
 			target->OnEvadeAttack(_weenie);
 
@@ -431,6 +457,10 @@ void CMeleeAttackEvent::HandlePerformAttack(CWeenieObject *target, DamageEventDa
 		}
 	}
 
+	if(playerAttacker) //Grant attacker some XP in their skill
+		playerAttacker->MaybeGiveSkillUsageXP((STypeSkill)dmgEvent.attackSkill, evasionDifficulty);
+
+
 	DAMAGE_QUADRANT hitQuadrant = DAMAGE_QUADRANT::DQ_UNDEF;
 	switch (_attack_height)
 	{
@@ -447,12 +477,12 @@ void CMeleeAttackEvent::HandlePerformAttack(CWeenieObject *target, DamageEventDa
 	}
 
 	double angle = _weenie->HeadingFrom(_target_id, false);
-	if(angle >= 0 && angle < 180)
+	if (angle >= 0 && angle < 180)
 		hitQuadrant = (DAMAGE_QUADRANT)(hitQuadrant | DAMAGE_QUADRANT::DQ_RIGHT);
 	else
 		hitQuadrant = (DAMAGE_QUADRANT)(hitQuadrant | DAMAGE_QUADRANT::DQ_LEFT);
 
-	if(angle >= 90 && angle < 270)
+	if (angle >= 90 && angle < 270)
 		hitQuadrant = (DAMAGE_QUADRANT)(hitQuadrant | DAMAGE_QUADRANT::DQ_BACK);
 	else
 		hitQuadrant = (DAMAGE_QUADRANT)(hitQuadrant | DAMAGE_QUADRANT::DQ_FRONT);
@@ -463,11 +493,11 @@ void CMeleeAttackEvent::HandlePerformAttack(CWeenieObject *target, DamageEventDa
 
 	CalculateCriticalHitData(&dmgEvent, NULL);
 	dmgEvent.wasCrit = (Random::GenFloat(0.0, 1.0) < dmgEvent.critChance) ? true : false;
-	
+
 	if (dmgEvent.wasCrit)
 		dmgEvent.baseDamage = dmgEvent.preVarianceDamage * (0.5 + _attack_power);//Calculate baseDamage with no variance (uses max dmg on weapon)
 
-	else 
+	else
 		dmgEvent.baseDamage = dmgEvent.preVarianceDamage * (1.0f - Random::GenFloat(0.0f, dmgEvent.variance)) * (0.5 + _attack_power); // not a crit so include variance in base damage
 
 	//cast on strike
@@ -486,7 +516,7 @@ void CMeleeAttackEvent::HandlePerformAttack(CWeenieObject *target, DamageEventDa
 		}
 	}
 
-	if(_weenie && _weenie->AsPlayer())
+	if (_weenie && _weenie->AsPlayer())
 		_weenie->AsPlayer()->HandleAetheriaProc(target->GetID());
 
 	//uint32_t dirtyFighting = 0;

@@ -24,11 +24,13 @@ enum ExperienceHandlingType
 	ApplyToVitae		= 0x10,
 	EarnsCP				= 0x20,
 	ReducedByDistance	= 0x40,
+	NoUnassigned		= 0x80, //Do not grant unassigned XP, only count towards total XP.
 
 	DefaultXp = ApplyLevelMod | ShareWithFellows | AddFellowshipBonus | ShareWithAllegiance | ApplyToVitae | ReducedByDistance,
 	QuestXp = ShareWithFellows | ShareWithAllegiance | ApplyToVitae | ReducedByDistance,
 	QuestXpNoShare = ApplyToVitae,
-	PossibleItemXp = ShareWithFellows | ShareWithAllegiance | ApplyToVitae
+	PossibleItemXp = ShareWithFellows | ShareWithAllegiance | ApplyToVitae,
+	SkillUsageXp = NoUnassigned | ApplyToVitae
 };
 
 class ExperienceTable : public PackObj, public DBObj

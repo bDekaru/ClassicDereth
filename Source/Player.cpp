@@ -57,6 +57,8 @@ CPlayerWeenie::CPlayerWeenie(CClient *pClient, uint32_t dwGUID, WORD instance_ts
 	m_pClient = pClient;
 	SetID(dwGUID);
 
+	memset(skillTime, 0, sizeof(skillTime));
+
 	_instance_timestamp = instance_ts;
 
 	m_Qualities.SetInt(CREATION_TIMESTAMP_INT, (int)time(NULL));
@@ -247,6 +249,8 @@ void CPlayerWeenie::Tick()
 				Save();
 				m_NextSave = Timer::cur_time + PLAYER_SAVE_INTERVAL;
 			}
+
+			ExpireRecentlyAssessed(); //This is should be done infrequently, just do it here.
 		}
 	}
 
@@ -707,7 +711,7 @@ void CPlayerWeenie::OnGivenXP(int64_t amount, ExperienceHandlingType flags)
 {
 	if (m_Qualities.GetVitaeValue() < 1.0 && (flags & ExperienceHandlingType::ApplyToVitae))
 	{
-		uint64_t vitae_pool = InqIntQuality(VITAE_CP_POOL_INT, 0) + min((int64_t(amount * g_pConfig->VitaeXPMultiplier())), int64_t(1000000001));
+		uint64_t vitae_pool = InqIntQuality(VITAE_CP_POOL_INT, 0) + min((int64_t(amount * g_pConfig->VitaeXPMultiplier())), int64_t(1000000000l));
 		float new_vitae = 1.0;
 		bool has_new_vitae = VitaeSystem::DetermineNewVitaeLevel(m_Qualities.GetVitaeValue(), InqIntQuality(DEATH_LEVEL_INT, 1), &vitae_pool, &new_vitae);
 
@@ -926,7 +930,6 @@ void CPlayerWeenie::dropItems(CCorpseWeenie *pCorpse, float coinDropFraction, st
 
 void CPlayerWeenie::doNormalDeath(CCorpseWeenie *pCorpse, bool bPkKill)
 {
-	//todo: confirm this is correct
 	int level = InqIntQuality(LEVEL_INT, 1);
 	int maxItemsToDrop = 12; // Limit the amount of items that can be dropped + random adjustment
 	int amountOfItemsToDrop = 0;
@@ -1774,6 +1777,10 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 
 		if (successRoll <= successChance)
 		{
+
+			if(op->_skill != 0 && op->_difficulty > 0) {
+				this->MaybeGiveSkillUsageXP(op->_skill, (uint32_t)op->_difficulty);
+			}
 			// Results!
 			// Create item(s)
 			CWeenieObject *newItem = g_pWeenieFactory->CreateWeenieByClassID(op->_successWcid, NULL, false);
@@ -5087,6 +5094,9 @@ uint32_t CPlayerWeenie::GetTotalSkillCredits(bool removeCreditQuests) //Total cu
 			if (!m_Qualities.InqSkill(skillName, skill))
 				continue;
 
+			if (skillName == SALVAGING_SKILL) //No credit skill. Ignore.
+				continue;
+
 			//no spec cost for tinker skills.
 			if ((skill._sac == TRAINED_SKILL_ADVANCEMENT_CLASS || skill._sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS) &&
 				(skillName == WEAPON_APPRAISAL_SKILL ||
@@ -5094,7 +5104,8 @@ uint32_t CPlayerWeenie::GetTotalSkillCredits(bool removeCreditQuests) //Total cu
 					skillName == MAGIC_ITEM_APPRAISAL_SKILL ||
 					skillName == ITEM_APPRAISAL_SKILL))
 			{
-				totalCredits += pSkillBase->_trained_cost;
+				if (!(skillName == ITEM_APPRAISAL_SKILL && heritage == Gharundim_HeritageGroup)) //Gharundim get ITEM_APPRAISAL_SKILL for free
+					totalCredits += pSkillBase->_trained_cost;
 				continue;
 			}
 
@@ -6277,5 +6288,95 @@ void CPlayerWeenie::AllegianceOnlineAlert(uint32_t target, bool online) {
 		msg.Write<uint32_t>(id);
 		msg.Write<uint32_t>(online);
 		weenie->SendNetMessage(&msg, PRIVATE_MSG, TRUE, FALSE, true);
+	}
+}
+
+void CPlayerWeenie::MaybeGiveSkillUsageXP(STypeSkill skill, uint32_t resistance, double time) {
+	const double MIN_WAIT_PERIOD = 60.0;
+	const double MAX_WAIT_PERIOD = 15*60.0;	//15 minutes
+
+	assert(skill != STypeSkill::UNDEF_SKILL);
+	assert(m_Qualities._skillStatsTable); //DEBUG MODE: never should have player objects without skills.
+	Skill* skillObj = 0;
+
+	//Unlikely: player has no skill table
+	if(m_Qualities._skillStatsTable == NULL) {
+		return;
+	}
+	
+	Skill* pSkill = m_Qualities._skillStatsTable->lookup(skill);
+
+	//Ensure we have this skill trained.
+	if(pSkill == NULL || pSkill->_sac < SKILL_ADVANCEMENT_CLASS::TRAINED_SKILL_ADVANCEMENT_CLASS)
+		return;
+
+	//There are two ways to get XP grants.
+	//1) Trying something _harder_ than before.
+	//2) Waiting long enough
+	bool grantXP = false;
+	
+	if(pSkill->_resistance_of_last_check+2 < resistance) {
+		grantXP = true;
+	} else if(time - pSkill->_last_used_time > MIN_WAIT_PERIOD) {
+		double elapsed = (time - pSkill->_last_used_time - MIN_WAIT_PERIOD); //elapsed time, minus wait time
+
+		//Check if enough time elapsed that we can consider new XP grants
+		if(elapsed / MAX_WAIT_PERIOD > Random::GenFloat()) {
+			grantXP = true;
+		}
+	}
+
+	if(grantXP) {
+		uint32_t skill_amount = (uint32_t)(resistance * Random::GenFloat(0.75f, 1.25f));
+		uint32_t unassigned_amount = resistance / 10; //10% goes to unassigned.
+
+		GiveSkillXP(skill, skill_amount, true);
+		GiveXP(skill_amount, SkillUsageXp); //Just record in total XP, but don't give unassigned XP
+		GiveXP(unassigned_amount, DefaultXp);
+		pSkill->_last_used_time = time;
+		pSkill->_resistance_of_last_check = resistance;
+	}
+
+}
+
+bool CPlayerWeenie::CheckForRecentlyAssessed(uint32_t id, RecentlyAssessed& output) {
+	const auto& it = recentlyAssessed.find(id);
+	if(it != recentlyAssessed.end()) {
+		output = (*it).second;
+		return true;
+	}
+	return false;
+}
+
+void CPlayerWeenie::AddRecentlyAssessed(CWeenieObject* obj, bool success, bool showLevel, STypeSkill skill, uint32_t skill_level) {
+
+	double expiry = Timer::cur_time + 15.0 * 60.0; //15 minutes
+
+	RecentlyAssessed ra;
+	ra.time = expiry;
+	ra.successLevel = (success? 2 : (showLevel? 1 : 0));
+	ra.skill = skill;
+	ra.skill_level = skill_level;
+	recentlyAssessed.emplace(obj->GetID(), ra);
+}
+
+void CPlayerWeenie::ExpireRecentlyAssessed() {
+	const double now = Timer::cur_time;
+
+	for(auto it = recentlyAssessed.begin(); it != recentlyAssessed.end(); ) {
+		const RecentlyAssessed& ra = (*it).second;
+		if(ra.time <= now) {
+			it = recentlyAssessed.erase(it);
+		} else {
+			++it;
+		}
+	}
+
+}
+
+void CPlayerWeenie::RemoveRecentlyAssessed(uint32_t id) {
+	auto it = recentlyAssessed.find(id);
+	if(it != recentlyAssessed.end()) {
+		recentlyAssessed.erase(it);
 	}
 }

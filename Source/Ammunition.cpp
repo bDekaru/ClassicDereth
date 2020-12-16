@@ -127,9 +127,10 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 				bool bEvaded = false;
 
 				uint32_t missileDefense = 0;
+				uint32_t skill_level = 0;
 				if (pHit->InqSkill(MISSILE_DEFENSE_SKILL, missileDefense, FALSE) && missileDefense > 0)
 				{
-					if (pHit->TryAttackEvade((uint32_t)(_weaponSkillLevel * (_attackPower + 0.5f)), STypeSkill::MISSILE_DEFENSE_SKILL))
+					if (pHit->TryAttackEvade((uint32_t)(_weaponSkillLevel * (_attackPower + 0.5f)), STypeSkill::MISSILE_DEFENSE_SKILL, &skill_level))
 					{
 						pHit->OnEvadeAttack(pSource);
 
@@ -278,7 +279,11 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 
 					CalculateDamage(&dmgEvent);
 					if (pSource != nullptr)
+					{
 						pSource->TryToDealDamage(dmgEvent);
+						if(pSource->AsPlayer())
+							pSource->AsPlayer()->MaybeGiveSkillUsageXP((STypeSkill)dmgEvent.attackSkill, skill_level);
+					}
 				}
 			}
 		}
@@ -294,6 +299,13 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 
 BOOL CAmmunitionWeenie::DoCollision(const class ObjCollisionProfile &prof)
 {
+
+	//Sometimes instead of arrow colliding with monster, we see monster colliding with arrow.
+	//This produces TWO collisions. Ignore object collision when obj == target.
+	if(prof.id == this->_targetID) {
+		return FALSE;
+	}
+
 	HandleNonTargetCollision();
 	return CWeenieObject::DoCollision(prof);
 }

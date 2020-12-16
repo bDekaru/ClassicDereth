@@ -7,6 +7,19 @@
 #include "EmoteManager.h"
 #include "SpellcastingManager.h"
 
+#define VENDOR_PURGE_TIME	(30.0 * 60.0) //Purge vendor inventory every half-hour
+
+static Command GetRandomThanksMotion() {
+	static const Command cmd[3] ={
+		Motion_Wave,
+		Motion_Shrug,
+		Motion_BowDeep
+	};
+	const int max = sizeof(cmd) / sizeof(cmd[0]);
+
+	return cmd[Random::GenUInt(0, max-1)];
+}
+
 CVendorItem::CVendorItem()
 {
 }
@@ -20,6 +33,7 @@ CVendorItem::~CVendorItem()
 CVendor::CVendor()
 {
 	m_Qualities.m_WeenieType = Vendor_WeenieType;
+	m_NextPurgeTime = Timer::cur_time + VENDOR_PURGE_TIME;
 }
 
 CVendor::~CVendor()
@@ -29,24 +43,65 @@ CVendor::~CVendor()
 
 void CVendor::Tick()
 {
+	const double timeNow = Timer::cur_time;
 	if (m_EmoteManager)
 		m_EmoteManager->Tick();
 
-	if (m_VendorCycleTime <= Timer::cur_time)
+	if (m_VendorCycleTime <= timeNow)
 	{
 		CheckRange();
-		m_VendorCycleTime = (Timer::cur_time + 3);
+		m_VendorCycleTime = (timeNow + 3);
 	}
+
+	if(m_NextPurgeTime <= timeNow) {
+		PurgePlayerSoldItems();
+		m_NextPurgeTime = timeNow + VENDOR_PURGE_TIME;
+	}
+
+	switch(thankState) {
+		case 0: //idle, find something else to do.
+		{
+			//Try to find a buyer whom we haven't thanked yet.
+			while(!queuedThanks.empty()) {
+				uint32_t buyer = queuedThanks.front();
+
+				queuedThanks.pop_front(); //Remove this
+
+				//If the buyer is still here, then turn to them and thank them.
+				if(m_ActiveBuyers.find(buyer) != m_ActiveBuyers.end()) {
+					thankState = 1;
+					currentlyThanking = buyer;
+					MovementParameters mp;
+					TurnToObject(buyer, &mp);
+					break;
+				}
+			}
+			break;
+		}
+
+		case 1: //turning to buyer
+			if(IsCompletelyIdle()) {
+				DoForcedMotion(GetRandomThanksMotion());
+				thankState = 2;
+			}
+			break;
+		case 2: //performing some thanks motion
+		{
+			if(IsCompletelyIdle()) {
+				thankState = 0; //idle
+			}
+		}
+
+	}
+
 
 }
 
 void CVendor::ResetItems()
 {
-	for (auto item : m_Items)
-	{
+	for (auto item : m_Items) {
 		delete item;
 	}
-
 	m_Items.clear();
 }
 
@@ -97,14 +152,77 @@ void CVendor::AddVendorItem(uint32_t wcid, int amount)
 
 CVendorItem *CVendor::FindVendorItem(uint32_t item_id)
 {
-	for (auto item : m_Items)
-	{
+	for (auto item : m_Items) {
 		if (item->weenie->GetID() == item_id)
 			return item;
 	}
+	
 
 	return NULL;
 }
+
+void CVendor::ResellItemToPlayer(CPlayerWeenie* player, uint32_t item_id, uint32_t amount) {
+	auto iter = m_Items.begin();
+	CVendorItem* itemToBuy = NULL;
+
+	while(iter != m_Items.end() && amount > 0) {
+		CVendorItem* item = *iter;
+		if(item->isPlayerSold && item->weenie->GetID() == item_id) {
+			itemToBuy = item;
+			break;
+		} else { //Not matching item, try next;
+			++iter;
+		}
+	}
+
+	assert(itemToBuy); //Must be found.
+	//Two cases:
+	//1) Player is buying all of what the vendor has. We can just give the item to the player.
+	//2) Player is buying _some_ of what the vendor has. We need to clone it and give those cloned items to the player.
+
+	if(itemToBuy->amount <= amount) {
+		iter = m_Items.erase(iter);
+
+		//Buyer now owns this.
+		itemToBuy->weenie->SetWeenieContainer(player->GetID());
+
+		//Insert into buyer's inventory
+		player->Container_InsertInventoryItem(0, itemToBuy->weenie, 0);
+	} else {
+		itemToBuy->amount -= amount;
+		player->SpawnCloneInContainer(itemToBuy->weenie, amount);
+	}
+}
+
+void CVendor::AddPlayerSoldItem(CWeenieObject* weenie, uint32_t amount) {
+	//Don't resell trade notes
+	if(weenie->InqIntQuality(ITEM_TYPE_INT, TYPE_UNDEF) == TYPE_PROMISSORY_NOTE) {
+		weenie->Remove();
+		return;
+	}
+
+	//Remove items that are destroy on sell. TODO: Fix content so we can remove attuned/bonded as a proxy for destroy on sell.
+	if(weenie->InqBoolQuality(DESTROY_ON_SELL_BOOL, FALSE) || weenie->InqIntQuality(BONDED_INT, 0) || weenie->InqIntQuality(ATTUNED_INT, 0)) {
+		weenie->Remove();
+		return;
+	}
+
+	//Check if we can merge with existing inventory. If merging was successful, we can delete this.
+	if(MergeWithExistingInventory(weenie, amount)) {
+		weenie->Remove();
+		return;
+	}
+
+	weenie->SetWeenieContainer(this->GetID()); //vendor now owns this
+
+	CVendorItem* item = new CVendorItem();
+	item->amount = amount;
+	item->weenie = weenie;
+	item->isPlayerSold = true;
+	m_Items.push_back(item);
+}
+
+
 
 int CVendor::TrySellItemsToPlayer(CPlayerWeenie *buyer, const std::list<ItemProfile *> &desiredItems)
 {
@@ -190,10 +308,10 @@ int CVendor::TrySellItemsToPlayer(CPlayerWeenie *buyer, const std::list<ItemProf
 	}
 
 	buyer->EmitSound(Sound_PickUpItem, 1.0f);
-	// clone the weenie
 	for (auto desiredItem : desiredItems)
 	{
-		CWeenieObject *originalWeenie = FindVendorItem(desiredItem->iid)->weenie;
+		CVendorItem* vendorItem = FindVendorItem(desiredItem->iid);
+		CWeenieObject *originalWeenie = vendorItem->weenie;
 
 		if (originalWeenie->m_Qualities.GetInt(ITEM_TYPE_INT, 0) == TYPE_SERVICE)
 		{
@@ -203,11 +321,15 @@ int CVendor::TrySellItemsToPlayer(CPlayerWeenie *buyer, const std::list<ItemProf
 		}
 		else
 		{
-			originalWeenie->SetID(CWorld::GenerateGUID(eDynamicGUID));
-			buyer->SpawnCloneInContainer(originalWeenie, desiredItem->amount);
+			if(vendorItem->isPlayerSold) {
+				ResellItemToPlayer(buyer, desiredItem->iid, desiredItem->amount);
+			} else {
+				buyer->SpawnCloneInContainer(originalWeenie, desiredItem->amount);
+			}
 		}
 	}
 
+	queuedThanks.push_back(buyer->GetID());
 	DoVendorEmote(Buy_VendorTypeEmote, buyer->GetID());
 
 	if (profile.trade_id) {
@@ -246,9 +368,9 @@ int CVendor::TryBuyItemsFromPlayer(CPlayerWeenie *seller, const std::list<ItemPr
 			continue;
 
 		if(sellerItem->InqIntQuality(ITEM_TYPE_INT, TYPE_UNDEF) == TYPE_PROMISSORY_NOTE)
-			totalValue += (uint32_t)round(sellerItem->InqIntQuality(VALUE_INT, 0));
+			totalValue += (uint32_t)sellerItem->InqIntQuality(VALUE_INT, 0);
 		else
-			totalValue += (uint32_t)round(sellerItem->InqIntQuality(VALUE_INT, 0) * profile.buy_price);
+			totalValue += (uint32_t)(sellerItem->InqIntQuality(VALUE_INT, 0) * profile.buy_price);
 	}
 
 	if (totalValue >= MAX_COIN_PURCHASE)
@@ -288,12 +410,23 @@ int CVendor::TryBuyItemsFromPlayer(CPlayerWeenie *seller, const std::list<ItemPr
 		//will give the user an error message stating you can't sell partial stacks. So this makes it easier for us.
 
 		CWeenieObject *weenie = seller->FindContainedItem(desiredItem->iid);
-		if (!weenie)
+		if (!weenie || weenie->m_Qualities.GetID() == 0)
 			continue;
-		weenie->Remove(); //todo: maybe add vendors relisting loot items like they used to way back.
+
+		//If selling an item being wielded, unequip it first.
+		if(weenie->IsWielded()) {
+			seller->FinishMoveItemToContainer(weenie, seller, 0);
+		}
+
+		seller->ReleaseContainedItemRecursive(weenie);
+		seller->NotifyContainedItemRemoved(weenie->GetID(), false);
+		AddPlayerSoldItem(weenie, desiredItem->amount);
 	}
-	if (filteredItems.size()>0)
+
+	if(filteredItems.size()>0) {
+		queuedThanks.push_back(seller->GetID());
 		DoVendorEmote(Sell_VendorTypeEmote, seller->GetID());
+	}
 
 	//and add the coins.
 	seller->SpawnInContainer(W_COINSTACK_CLASS, totalValue);
@@ -335,31 +468,6 @@ const std::list<ItemProfile *> CVendor::GetFilteredItems(std::list<ItemProfile *
 	return desiredItems;
 }
 
-void CVendor::AddVendorItemByAllMatchingNames(const char *name)
-{
-	int index = 0;
-	uint32_t wcid;
-	
-	while (wcid = g_pWeenieFactory->GetWCIDByName(name, index++))
-	{
-		AddVendorItem(wcid, -1);
-	}
-}
-
-void CVendor::GenerateItems()
-{
-	ResetItems();
-}
-
-void CVendor::GenerateAllItems()
-{
-	ResetItems();
-}
-
-void CVendor::ValidateItems()
-{
-}
-
 void CVendor::PreSpawnCreate()
 {
 	CMonsterWeenie::PreSpawnCreate();
@@ -374,7 +482,7 @@ void CVendor::PreSpawnCreate()
 
 	if (m_Qualities._create_list)
 	{
-		for (auto i = m_Qualities._create_list->begin(); i != m_Qualities._create_list->end(); i++)
+		for (auto i = m_Qualities._create_list->begin(); i != m_Qualities._create_list->end(); ++i)
 		{
 			if (i->destination == DestinationType::Shop_DestinationType || i->destination == DestinationType::Contain_DestinationType)
 			{
@@ -395,15 +503,13 @@ void CVendor::PreSpawnCreate()
 
 void CVendor::SendVendorInventory(CWeenieObject *other)
 {
-	ValidateItems();
-
 	BinaryWriter vendorInfo;
 	vendorInfo.Write<uint32_t>(0x62);
 	vendorInfo.Write<uint32_t>(GetID());
 
 	profile.Pack(&vendorInfo);
 	
-	vendorInfo.Write<uint32_t>(m_Items.size());
+	vendorInfo.Write<uint32_t>((uint32_t)m_Items.size());
 	for (auto item : m_Items)
 	{
 		ItemProfile itemProfile;
@@ -417,7 +523,7 @@ void CVendor::SendVendorInventory(CWeenieObject *other)
 	other->SendNetMessage(&vendorInfo, PRIVATE_MSG, TRUE, FALSE);
 }
 
-void CVendor::DoVendorEmote(int type, uint32_t target_id)
+void CVendor::DoVendorEmote(VendorTypeEmote type, uint32_t target_id)
 {
 	if (m_Qualities._emote_table)
 	{
@@ -425,11 +531,11 @@ void CVendor::DoVendorEmote(int type, uint32_t target_id)
 
 		if (emoteSetList)
 		{
-			double dice = Random::GenFloat(0.0, 1.0);
+			float dice = Random::GenFloat(0.0f, 1.0f);
 
 			for (auto &emoteSet : *emoteSetList)
 			{
-				if (emoteSet.vendorType != type)
+				if (emoteSet.vendorType != (unsigned int)type)
 					continue;
 
 				if (dice < emoteSet.probability)
@@ -447,10 +553,12 @@ void CVendor::DoVendorEmote(int type, uint32_t target_id)
 
 int CVendor::DoUseResponse(CWeenieObject *player)
 {
-	if (IsCompletelyIdle())
-	{
-		MovementParameters params;
-		TurnToObject(player->GetID(), &params);
+	const uint32_t playerId = player->GetID();
+
+	//If this is the first time, then turn to the player and do a little gesture.
+	if(m_ActiveBuyers.find(playerId) == m_ActiveBuyers.end()) {
+		queuedThanks.push_back(playerId);
+		m_ActiveBuyers.insert(playerId);
 	}
 
 	if (profile.trade_id) {
@@ -461,8 +569,8 @@ int CVendor::DoUseResponse(CWeenieObject *player)
 	}
 		
 	SendVendorInventory(player);
-	DoVendorEmote(Open_VendorTypeEmote, player->GetID());
-	m_ActiveBuyers.insert(player->GetID());
+	DoVendorEmote(Open_VendorTypeEmote, playerId);
+	
 
 	return CWeenieObject::DoUseResponse(player);
 }
@@ -470,8 +578,6 @@ int CVendor::DoUseResponse(CWeenieObject *player)
 void CAvatarVendor::PreSpawnCreate()
 {
 	CVendor::PreSpawnCreate();
-
-	// ResetItems();
 
 	for (uint32_t i = 0; i < g_pWeenieFactory->m_NumAvatars; i++)
 	{
@@ -497,5 +603,48 @@ void CVendor::CheckRange()
 		}
 		else
 			i = m_ActiveBuyers.erase(i);
+	}
+}
+
+bool CVendor::MergeWithExistingInventory(CWeenieObject* weenie, uint32_t amount) {
+	const uint32_t wcid = weenie->m_Qualities.GetID();
+	int dummyMaterial;
+	int usesLeft;
+
+	//Items that have material types are probably not mergeable.
+	if(weenie->m_Qualities.InqInt(MATERIAL_TYPE_INT, dummyMaterial, FALSE)) {
+		return false;
+	}
+
+	usesLeft = weenie->InqIntQuality(STRUCTURE_INT, -1);
+
+
+	for(auto item : m_Items) {
+		CWeenieObject* vendorItemWeenie = item->weenie;
+		if(vendorItemWeenie->m_Qualities.GetID() != wcid) {
+			continue;
+		}
+
+		//Don't merge partially used items unless they have the same number of usages.
+		if(usesLeft != -1 && usesLeft != vendorItemWeenie->InqIntQuality(STRUCTURE_INT, -1))
+			continue;
+
+		//Vendor sells unlimited number, so "merge" just means delete.
+		if(item->amount != -1) {
+			item->amount += amount;
+		}
+		return true;
+	}
+	return false;
+}
+
+void CVendor::PurgePlayerSoldItems() {
+	for(auto iter = m_Items.begin(); iter != m_Items.end(); ) {
+		CVendorItem* vendorItem = *iter;
+		if(vendorItem->isPlayerSold) {
+			iter = m_Items.erase(iter);
+		} else {
+			++iter;
+		}
 	}
 }

@@ -1516,7 +1516,7 @@ uint32_t CContainerWeenie::ConsumeCoin(int amountToConsume, int currencyid)
 			return 0;
 	}
 
-	std::list<CWeenieObject *> removeList;
+	std::vector<CWeenieObject *> removeList;
 
 	uint32_t amountConsumed = 0;
 	for (auto item : m_Items)
@@ -1674,7 +1674,7 @@ uint32_t CContainerWeenie::ConsumeItem(int amountToConsume, int itemid)
 			return 0;
 	}
 
-	std::list<CWeenieObject *> removeList;
+	std::vector<CWeenieObject *> removeList;
 
 	uint32_t amountConsumed = 0;
 	for (auto item : m_Items)

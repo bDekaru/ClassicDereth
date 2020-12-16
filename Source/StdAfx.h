@@ -10,6 +10,7 @@
 #if defined(_WINDOWS)
 
 #define NOMINMAX
+#define _USE_MATH_DEFINES
 
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC

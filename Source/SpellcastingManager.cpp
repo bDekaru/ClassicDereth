@@ -854,8 +854,8 @@ int CSpellcastingManager::LaunchSpellEffect(bool bFizzled, bool silent)
 
 
 	// cast source is assumed to be valid at this point
-
-	if (m_pWeenie->AsPlayer() && m_SpellCastData.uses_mana)
+	CPlayerWeenie* player = m_pWeenie->AsPlayer();
+	if (player && m_SpellCastData.uses_mana)
 	{
 		double chance = GetMagicSkillChance(m_SpellCastData.current_skill, m_SpellCastData.spell->_power);
 		if (chance < Random::RollDice(0.0, 1.0))
@@ -923,6 +923,16 @@ int CSpellcastingManager::LaunchSpellEffect(bool bFizzled, bool silent)
 
 		if (bFizzled)
 			return WERROR_MAGIC_FIZZLE;
+
+		//Give skill XP for casting spell
+		if(m_SpellCastData.spell->_power > 0) {
+			player->MaybeGiveSkillUsageXP((STypeSkill)m_SpellCastData.spell->InqSkillForSpell(), m_SpellCastData.spell->_power);
+
+			//Give skill XP for mana conversion
+			int manaConversionDifficulty = round((((float)50 + m_SpellCastData.spell->_power / 50.0) + 1) * 25.0);
+			player->MaybeGiveSkillUsageXP(STypeSkill::MANA_CONVERSION_SKILL, manaConversionDifficulty);
+		}
+
 
 		m_pWeenie->AdjustMana(-GenerateManaCost());
 	}

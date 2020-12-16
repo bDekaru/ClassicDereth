@@ -1759,7 +1759,7 @@ void CClientEvents::ChangePlayerOption(PlayerOptions option, bool value)
 		break;
 
 	case IgnoreTradeRequests_PlayerOption:
-		changeCharOption(IgnoreAllegianceRequests_CharacterOption);
+		changeCharOption(IgnoreTradeRequests_PlayerOption);
 		break;
 
 	case DisableMostWeatherEffects_PlayerOption:

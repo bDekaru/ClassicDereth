@@ -35,7 +35,10 @@ void CMissileAttackEvent::Setup()
 	uint32_t attack_motion = 0;
 	uint32_t weapon_id = 0;
 
-	if (!_do_attack_animation)
+	bool exhausted = _weenie->GetStamina() == 0;
+
+	//Recalculate animation if exhausted because we have an effective attack power much lower than our actual attack power
+	if (exhausted || !_do_attack_animation)
 	{
 		switch (_attack_height)
 		{
@@ -426,52 +429,76 @@ void CMissileAttackEvent::FireMissile()
 	missile->_attackPower = _attack_power;
 	missile->_timeToRot = Timer::cur_time + 5.0;
 
-	CWeenieObject *shield = _weenie->GetWieldedCombat(COMBAT_USE::COMBAT_USE_SHIELD); //thrown weapons users can have a shield
+	/*
+		Sybex Strategy guide p247 gives the table for how stamina usage is calculated:
 
-	int burden = weapon->InqIntQuality(ENCUMB_VAL_INT, 0);
-	if (shield != NULL)
-		burden += shield->InqIntQuality(ENCUMB_VAL_INT, 0);
+		Fire Bow: 2 stam
+		Fire Crossbow: 3 stam
+		Throw Weapon: Weapon Burden / 140
 
-	int necessaryStamina;
-	if (_attack_power < 0.33)
-		necessaryStamina = max((int)round(burden / 900.0f), 1);
-	else if (_attack_power < 0.66)
-		necessaryStamina = max((int)round(burden / 600.0f), 1);
-	else
-		necessaryStamina = max((int)round(burden / 300.0f), 1);
-
-	if (_weenie->AsPlayer())
+		At the time of writing, thrown weapons did not have atlatls, but those
+		can be treated identically to crossbows. Additionally, thrown weapons
+		could not be paired with a shield. They can now, so we need to include
+		the standard shield burden in the calculation.
+	*/
+	float necessaryStaminaFloat;
+	if(isThrownWeapon)
 	{
-		//the higher a player's Endurance, the less stamina one uses while attacking. 
-		//This benefit is tied to Endurance only, and it caps out at around 50% less stamina used per attack. 
-		//The minimum stamina used per attack remains one. 
+		CWeenieObject* shield = _weenie->GetWieldedCombat(COMBAT_USE::COMBAT_USE_SHIELD); //thrown weapons users can have a shield
+		necessaryStaminaFloat = (float)weapon->InqIntQuality(STACK_UNIT_ENCUMB_INT, 0) / 140.0f;
 
-		uint32_t endurance = 0;
-		_weenie->m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
-		float necessaryStaminaMod = 1.0 - ((float)endurance - 100.0) / 600.0; //made up formula: 50% reduction at 400 endurance.
-		necessaryStaminaMod = min(max(necessaryStaminaMod, 0.5f), 1.0f);
-		necessaryStamina = round((float)necessaryStamina * necessaryStaminaMod);
+		if(shield != NULL)
+		{
+			int shieldBurden = shield->InqIntQuality(ENCUMB_VAL_INT, 0);
+			if(_attack_power < 0.33)
+				necessaryStaminaFloat += shieldBurden / 900.0f;
+			else if(_attack_power < 0.66)
+				necessaryStaminaFloat += shieldBurden / 600.0f;
+			else
+				necessaryStaminaFloat += shieldBurden / 300.0f;
+		}
 	}
-	necessaryStamina = max(necessaryStamina, 1);
+	else if(weapon->InqIntQuality(WEAPON_SKILL_INT, UNDEF_SKILL, false) == BOW_SKILL)
+		necessaryStaminaFloat = 2; //bow
+	else
+		necessaryStaminaFloat = 3; //crossbow or atlatl
+
+	//the higher a player's Endurance, the less stamina one uses while attacking. 
+	//This benefit is tied to Endurance only, and it caps out at around 50% less stamina used per attack. 
+	//The minimum stamina used per attack remains one. 
+
+	uint32_t endurance = 0;
+	float necStamMod = 1.0f;
+	_weenie->m_Qualities.InqAttribute(ENDURANCE_ATTRIBUTE, endurance, true);
+
+	if (endurance >= 50)
+	{
+		necStamMod = ((float)(endurance * endurance) * -0.000003175f) - ((float)endurance * 0.0008889f) + 1.052f;
+		necStamMod = min(max(necStamMod, 0.5f), 1.0f);
+		necessaryStaminaFloat = necessaryStaminaFloat * necStamMod + Random::RollDice(0.0f, 1.0f); // little sprinkle of luck 
+	}
+	int necessaryStam = max(1, (int)round(necessaryStaminaFloat));
+
 
 	bool hadEnoughStamina = true;
-	if (_weenie->GetStamina() < necessaryStamina)
-		hadEnoughStamina = false;
-
-	_weenie->AdjustStamina(-necessaryStamina);
-
-	missile->_weaponSkill = (STypeSkill)weapon->InqIntQuality(WEAPON_SKILL_INT, UNDEF_SKILL, false);
-	if (_weenie->InqSkill(missile->_weaponSkill, missile->_weaponSkillLevel, false))
+	if (_weenie->GetStamina() < necessaryStam)
 	{
-		//Missile weapons don't get offense mods.
-		//double offenseMod = weapon->GetOffenseMod();
-		//missile->_weaponSkillLevel = (uint32_t)(missile->_weaponSkillLevel * offenseMod);
+		hadEnoughStamina = false;
+		_attack_power = 0.00f;
+		_weenie->SetStamina(0, true); // you lose all current stam
+	}
+	else
+		_weenie->AdjustStamina(-necessaryStam);
 
-		if (!hadEnoughStamina)
-		{
-			_weenie->NotifyWeenieError(WERROR_STAMINA_TOO_LOW);
+	if (!hadEnoughStamina)
+	{
+		if (CPlayerWeenie *pPlayer = _weenie->AsPlayer())
+			pPlayer->SendText("You're exhausted!", LTT_ERROR);
+
+		missile->_attackPower = 0.00f;
+		missile->_weaponSkill = (STypeSkill)weapon->InqIntQuality(WEAPON_SKILL_INT, UNDEF_SKILL, false);
+		if (_weenie->InqSkill(missile->_weaponSkill, missile->_weaponSkillLevel, false))
 			missile->_weaponSkillLevel *= 0.5; //50% penalty to our attack skill when we don't have enough to perform it.
-		}
 	}
 
 	if (!g_pWorld->CreateEntity(missile))

@@ -47,7 +47,7 @@ public:
 	void combine(const Frame* a, const AFrame* b, const Vector* scale);
 	void rotate(const Vector& angles);
 	void grotate(Vector& angles);
-	void set_rotate(Quaternion angles);
+	void set_rotate(const Quaternion& angles);
 	void euler_set_rotate(Vector Angles, int order);
 	Vector globaltolocal(const Vector& point) const;
 	Vector globaltolocalvec(const Vector& point) const;
@@ -128,7 +128,7 @@ public:
 	float distance_squared(const Position& pos) const; // custom
 	float heading(const Position &p);
 	float heading_diff(const Position &p);
-	uint32_t determine_quadrant(float height, Position *p) const;
+	uint32_t determine_quadrant(float height, const Position& p) const;
 
 	void adjust_to_outside();
 

@@ -22,6 +22,14 @@ public:
 	int units = 0;
 };
 
+struct RecentlyAssessed {
+	double time;
+	int successLevel;		//0 = failure, 1 = see level, 2 = see stats
+	STypeSkill skill;		//Skill type of assess
+	uint32_t skill_level;	//Skill level of assess
+};
+
+
 class CPlayerWeenie : public CMonsterWeenie
 {
 public:
@@ -291,6 +299,27 @@ public:
 	void CombatPetsDisplayCombatDamage(bool show);
 	bool CombatPetsShowCombatDamage();
 
+	/**
+		Checks if the skill has recently received skill XP and gives XP towards
+		that skill.
+		@param relativeDiff How hard, relatively, was the skill check. i.e. 80 skill vs 100 diff = 20.
+		@param skill The skill to give XP to.
+	*/
+	void MaybeGiveSkillUsageXP(STypeSkill skill, uint32_t resistance, double time);
+	void MaybeGiveSkillUsageXP(STypeSkill skill, uint32_t resistance) { MaybeGiveSkillUsageXP(skill, resistance, Timer::cur_time); }
+
+	/**
+		Checks if the object has been recently assessed and copies the result
+		if it has.
+
+		@param[in] id The object id
+		@param[out] output The recent assessment data
+	*/
+	bool CheckForRecentlyAssessed(uint32_t id, RecentlyAssessed& output);
+	void AddRecentlyAssessed(CWeenieObject* obj, bool success, bool showLevel, STypeSkill skill, uint32_t skill_level);
+	void ExpireRecentlyAssessed();
+	void RemoveRecentlyAssessed(uint32_t id);
+	
 	bool HasSigils();
 	int32_t GetSigilLevels(int setid);
 	std::map<int, double> GetSigilProcRate(CWeenieObject* &caster);
@@ -322,9 +351,11 @@ protected:
 	std::vector<unsigned int> corpses;
 private:
 	int m_iPKActivity = 0;
-	bool m_bShowCombatPetDamage = false;
-	CWeenieObject* procSigil;
+	bool m_bShowCombatPetDamage = false;	
+	CWeenieObject* procSigil;	
 	std::map<int, double> _sigilProcs;
+	double skillTime[NUM_SKILL];
+	std::unordered_map<uint32_t, RecentlyAssessed> recentlyAssessed;
 };
 
 class CWandSpellUseEvent : public CUseEventData

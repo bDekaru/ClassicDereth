@@ -5,6 +5,7 @@
 #include "PhysicsObj.h"
 #include "Door.h"
 #include "Player.h"
+#include "World.h"
 
 #define DOOR_OPEN			0x0B
 #define DOOR_CLOSED			0x0C
@@ -99,8 +100,14 @@ int CBaseDoor::Activate(uint32_t activator_id)
 	{
 		if (IsLocked())
 		{
-			EmitSound(Sound_OpenFailDueToLock, 1.0f);
-			return WERROR_NONE;
+			//Locked doors can be opened from behind.
+			CWeenieObject* obj = g_pWorld->FindObject(activator_id);
+			if(obj && (DQ_BACK & this->m_Position.determine_quadrant(obj->GetHeight(), obj->m_Position))) {
+				this->SetLocked(false);
+			} else {
+				EmitSound(Sound_OpenFailDueToLock, 1.0f);
+				return WERROR_NONE;
+			}
 		}
 
 		OpenDoor();
