@@ -1087,6 +1087,15 @@ CWeenieObject *CWeenieFactory::CreateWeenie(CWeenieDefaults *defaults, const Pos
 	if (weenie->IsCreature())
 		weenie->SetMaxVitals();
 
+	//TODO: Lots of unlocked (i.e. normal) doors have 50 LP resistance.
+	//Need to fix the weenies, but this works for now.
+	if (weenie->AsDoor()) {
+		BOOL defaultLocked = weenie->InqBoolQuality(DEFAULT_LOCKED_BOOL, FALSE);
+		if (!defaultLocked && weenie->InqIntQuality(RESIST_LOCKPICK_INT, 0) == 50) {
+			weenie->m_Qualities.SetInt(RESIST_LOCKPICK_INT, 0);
+		}
+	}
+
 	if (pos)
 		weenie->SetInitialPosition(*pos);
 

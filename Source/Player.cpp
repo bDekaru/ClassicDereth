@@ -249,8 +249,6 @@ void CPlayerWeenie::Tick()
 				Save();
 				m_NextSave = Timer::cur_time + PLAYER_SAVE_INTERVAL;
 			}
-
-			ExpireRecentlyAssessed(); //This is should be done infrequently, just do it here.
 		}
 	}
 
@@ -293,6 +291,8 @@ void CPlayerWeenie::Tick()
 	//if (m_NextHealthUpdate <= Timer::cur_time)
 	if (m_Qualities.GetFloat(HEARTBEAT_TIMESTAMP_FLOAT, Timer::cur_time + 1.0) <= Timer::cur_time)
 	{
+		ExpireRecentlyAssessed();
+
 		fellowship_ptr_t fs = GetFellowship();
 		if (fs)
 		{
@@ -6350,7 +6350,11 @@ bool CPlayerWeenie::CheckForRecentlyAssessed(uint32_t id, RecentlyAssessed& outp
 
 void CPlayerWeenie::AddRecentlyAssessed(CWeenieObject* obj, bool success, bool showLevel, STypeSkill skill, uint32_t skill_level) {
 
-	double expiry = Timer::cur_time + 15.0 * 60.0; //15 minutes
+	double expiry;
+	if(success)
+		expiry = Timer::cur_time + 5.0 * 60.0; //5 minutes - success means you can assess it again without a skill check for this long.
+	else
+		expiry = Timer::cur_time + 5.0; //5 seconds - failure means you have to wait this long before trying to assess it again.
 
 	RecentlyAssessed ra;
 	ra.time = expiry;

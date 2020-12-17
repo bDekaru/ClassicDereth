@@ -929,7 +929,7 @@ int CSpellcastingManager::LaunchSpellEffect(bool bFizzled, bool silent)
 			player->MaybeGiveSkillUsageXP((STypeSkill)m_SpellCastData.spell->InqSkillForSpell(), m_SpellCastData.spell->_power);
 
 			//Give skill XP for mana conversion
-			int manaConversionDifficulty = round((((float)50 + m_SpellCastData.spell->_power / 50.0) + 1) * 25.0);
+			int manaConversionDifficulty = round((((50 + m_SpellCastData.spell->_power) / 50.0) + 1) * 25.0);
 			player->MaybeGiveSkillUsageXP(STypeSkill::MANA_CONVERSION_SKILL, manaConversionDifficulty);
 		}
 
