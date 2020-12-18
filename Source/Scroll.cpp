@@ -106,9 +106,9 @@ bool CScrollWeenie::AttemptSpellResearch(CPlayerWeenie *player, uint32_t target_
 		{
 			CWeenieObject *target = g_pWorld->FindObject(target_Id);
 			if (target == player)
-				componentString.append(" and targetting yourself.");
+				componentString.append(" while targetting yourself.");
 			else if(target)
-				componentString.append(csprintf(" and targetting %s.", target->GetName().c_str()));
+				componentString.append(csprintf(" while targetting %s.", target->GetName().c_str()));
 			else
 				componentString.append(" without an specific target.");
 			player->SendText(componentString.c_str(), LTT_DEFAULT);
