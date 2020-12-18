@@ -41,6 +41,8 @@ struct SpellCastData
 	WORD serial = 0;
 	double next_update = Timer::cur_time;
 	uint32_t set_id = 0;
+
+	CScrollWeenie *spellResearchScroll = NULL;
 };
 
 class CSpellcastingManager
@@ -64,6 +66,10 @@ public:
 		float min_time;
 	};
 
+	//these 2 are used as placeholders during spell research;
+	CSpellBase fakeSpell;
+	CSpellBaseEx fakeSpellEx;
+
 	CSpellcastingManager(class CWeenieObject *pWeenie);
 	virtual ~CSpellcastingManager();
 
@@ -71,6 +77,7 @@ public:
 	int CastSpellInstant(uint32_t target_id, uint32_t spell_id);
 	int CastSpellEquipped(uint32_t target_id, uint32_t spell_id, WORD serial, uint32_t set_id = 0, bool silent = false);
 	int TryBeginCast(uint32_t target_id, uint32_t spell_id);
+	int TryResearchCast(CScrollWeenie *researchScroll, uint32_t target_id, SpellFormula formula, uint32_t spell_id_if_real = 0); //used during spell research
 	void BeginCast();
 	void EndCast(int error);
 	bool MotionRequiresHeading();

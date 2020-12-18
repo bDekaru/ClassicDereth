@@ -207,6 +207,22 @@ void SpellFormula::CopyFrom(SpellFormula other)
 	}
 }
 
+uint64_t SpellFormula::GetComponentHash()
+{
+	uint64_t componentHash = 0;
+	for (int i = 0; i < 8; i++)
+	{
+		int comp = _comps[i];
+
+		if (comp > 62 && comp < 75) //tapers turn to 0 so as that's being replaced with the personal ones.
+			comp = 0;
+
+		componentHash |= (uint64_t)comp << (8 * i);
+	}
+
+	return componentHash;
+}
+
 DEFINE_PACK(Spell)
 {
 	UNFINISHED();
@@ -467,6 +483,7 @@ DEFINE_UNPACK(CSpellTable) // type 0x0E00000E
 
 #if PHATSDK_IS_SERVER
 	_categoryToResearchableSpellsMap.clear();
+	_componentsToResearchableSpellsMap.clear();
 
 	for (auto &entry : _spellBaseHash)
 	{
@@ -501,6 +518,9 @@ DEFINE_UNPACK(CSpellTable) // type 0x0E00000E
 				continue;
 		}
 
+		if (!(entry.second._bitfield & NonTrackingProjectile_SpellIndex)) //Arc spells use the same components as regular bolts so we have to pick one of them to be researchable, let's go with regular bolts.
+			_componentsToResearchableSpellsMap[entry.second.InqSpellFormula().GetComponentHash()] = (SpellID)entry.first;
+
 		if (auto entry1 = _categoryToResearchableSpellsMap.lookup(entry.second._category))
 		{
 			if (auto entry2 = entry1->lookup(entry.second._bitfield & (SelfTargeted_SpellIndex | FellowshipSpell_SpellIndex)))
@@ -513,7 +533,7 @@ DEFINE_UNPACK(CSpellTable) // type 0x0E00000E
 			}
 		}
 
-		_categoryToResearchableSpellsMap[entry.second._category][entry.second._bitfield & (SelfTargeted_SpellIndex|FellowshipSpell_SpellIndex)][spellLevel] = (SpellID) entry.first;
+		_categoryToResearchableSpellsMap[entry.second._category][entry.second._bitfield & (SelfTargeted_SpellIndex|FellowshipSpell_SpellIndex)][spellLevel] = (SpellID) entry.first;	
 	}
 
 #endif
@@ -522,6 +542,14 @@ DEFINE_UNPACK(CSpellTable) // type 0x0E00000E
 }
 
 #if PHATSDK_IS_SERVER
+uint32_t CSpellTable::GetSpellByComponentHash(uint64_t componentHash)
+{
+	SpellID *returnValue = _componentsToResearchableSpellsMap.lookup(componentHash);
+	if(returnValue == NULL)
+		return 0;
+	return *returnValue;
+}
+
 uint32_t CSpellTable::ChangeSpellToDifferentLevel(uint32_t spell_id, uint32_t spell_level)
 {
 	if (const CSpellBase *spell = GetSpellBase(spell_id))

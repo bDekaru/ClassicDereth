@@ -22,6 +22,10 @@ public:
 
 	virtual void ApplyQualityOverrides() override;
 	virtual int Use(CPlayerWeenie *player) override;
+	virtual int UseWith(CPlayerWeenie *player, CWeenieObject *with) override;
+
+	bool AttemptSpellResearch(CPlayerWeenie *player, uint32_t target_Id);
+	void ResearchAttemptFinished(CPlayerWeenie *player, uint32_t spellId, bool fizzled);
 
 	const CSpellBase *GetSpellBase();
 

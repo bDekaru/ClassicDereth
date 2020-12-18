@@ -1,6 +1,7 @@
 #include <StdAfx.h>
 #include "SpellcastingManager.h"
 #include "WeenieObject.h"
+#include "Scroll.h"
 #include "World.h"
 #include "SpellProjectile.h"
 #include "WeenieFactory.h"
@@ -25,6 +26,10 @@ const float CAST_UPDATE_RATE = 1.25f;
 CSpellcastingManager::CSpellcastingManager(CWeenieObject *pWeenie)
 {
 	m_pWeenie = pWeenie;
+
+	fakeSpell = CSpellBase();
+	fakeSpell._component_loss = 0.1f;
+	fakeSpellEx = CSpellBaseEx();
 }
 
 CSpellcastingManager::~CSpellcastingManager()
@@ -34,6 +39,11 @@ CSpellcastingManager::~CSpellcastingManager()
 
 void CSpellcastingManager::EndCast(int error)
 {
+	if (m_SpellCastData.spellResearchScroll)
+	{
+		m_SpellCastData.spellResearchScroll->ResearchAttemptFinished(m_pWeenie->AsPlayer(), m_SpellCastData.spell_id, error > 0);
+		m_SpellCastData.spellResearchScroll = NULL;
+	}
 	m_pWeenie->DoForcedStopCompletely();
 	m_pWeenie->NotifyUseDone(error);
 	m_bCasting = false;
@@ -829,6 +839,12 @@ int CSpellcastingManager::LaunchSpellEffect(bool bFizzled, bool silent)
 {
 	if (bFizzled)
 		return WERROR_NONE;
+
+	if (m_SpellCastData.spell_id == 0) //force fizzle if we're a fake spell.
+	{
+		bFizzled = true;
+		silent = true;
+	}
 
 	int targetError = 0;
 	if(!silent)
@@ -3430,6 +3446,109 @@ int CSpellcastingManager::TryBeginCast(uint32_t target_id, uint32_t spell_id)
 		int error = LaunchSpellEffect(FALSE);
 		EndCast(error);
 		return WERROR_NONE;
+	}
+
+	if (m_pWeenie->AsPlayer())
+		m_pWeenie->AsPlayer()->CancelLifestoneProtection();
+
+	BeginCast();
+	return WERROR_NONE;
+}
+
+int CSpellcastingManager::TryResearchCast(CScrollWeenie *researchScroll, uint32_t target_id, SpellFormula formula, uint32_t spell_id_if_real)
+{
+	if (m_bCasting)
+	{
+		// m_pWeenie->SendText(csprintf("DEBUG: Actions Locked, Casting = true, Turning = %s", m_bTurningToObject ? "true" : "false"), LTT_ALL_CHANNELS);
+		return WERROR_ACTIONS_LOCKED;
+	}
+	if (m_pWeenie->IsInPortalSpace())
+		return WERROR_ACTIONS_LOCKED;
+
+	if (m_pWeenie->get_minterp()->interpreted_state.actions.size())
+	{
+		// m_pWeenie->SendText(csprintf("DEBUG: Actions Locked, Interp state has %d actions.", m_pWeenie->get_minterp()->interpreted_state.actions.size()), LTT_ALL_CHANNELS);
+		return WERROR_ACTIONS_LOCKED;
+	}
+
+	if (Timer::cur_time < m_fNextCastTime)
+	{
+		// m_pWeenie->SendText(csprintf("DEBUG: Actions Locked, Can't cast for %.3f more seconds.", Timer::cur_time - m_fNextCastTime), LTT_ALL_CHANNELS);
+		return WERROR_ACTIONS_LOCKED;
+	}
+
+	m_SpellCastData = SpellCastData(); // reset
+	m_SpellCastData.caster_id = m_pWeenie->GetID();
+	m_SpellCastData.source_id = m_pWeenie->GetTopLevelID();
+	m_SpellCastData.target_id = target_id;
+	m_SpellCastData.spell_id = spell_id_if_real;
+	m_SpellCastData.wand_id = m_pWeenie->GetWieldedCasterID();
+	m_SpellCastData.cast_timeout = Timer::cur_time + 10.0f;
+	m_SpellCastData.initial_cast_position = m_pWeenie->m_Position;
+
+	if (spell_id_if_real && !ResolveSpellBeingCasted())
+	{
+		//m_pWeenie->SendText("Invalid: unknown spell.", LTT_MAGIC);
+		spell_id_if_real = 0;
+	}
+
+	if (spell_id_if_real && !m_SpellCastData.current_skill)
+	{
+		//m_pWeenie->SendText("Invalid: caster not trained in proper skill.", LTT_MAGIC);
+		spell_id_if_real = 0;
+	}
+
+	if (spell_id_if_real && CheckTargetValidity())
+	{
+		//m_pWeenie->SendText("Invalid: improper target.", LTT_MAGIC);
+		spell_id_if_real = 0;
+	}
+
+	if (!spell_id_if_real) //we're not a real spell or a spell the caster can't possibly cast, so fake it.
+	{
+		m_SpellCastData = SpellCastData(); // reset
+		m_SpellCastData.caster_id = m_pWeenie->GetID();
+		m_SpellCastData.source_id = m_pWeenie->GetTopLevelID();
+		m_SpellCastData.target_id = target_id;
+		m_SpellCastData.spell_id = spell_id_if_real;
+		m_SpellCastData.wand_id = m_pWeenie->GetWieldedCasterID();
+		m_SpellCastData.cast_timeout = Timer::cur_time + 10.0f;
+		m_SpellCastData.initial_cast_position = m_pWeenie->m_Position;
+		m_SpellCastData.spell_formula = formula;
+		m_SpellCastData.spell = &fakeSpell;
+		m_SpellCastData.spellEx = &fakeSpellEx;
+	}
+
+	m_SpellCastData.spellResearchScroll = researchScroll; //so we can be notified of the research results.
+
+	CContainerWeenie *caster = m_pWeenie->AsContainer();
+	//if (caster != NULL && caster->InqBoolQuality(SPELL_COMPONENTS_REQUIRED_BOOL, FALSE) == TRUE)
+	if (caster != NULL)
+	{
+		std::map<uint32_t, uint32_t> componentAmounts;
+		for (uint32_t componentId : formula._comps)
+		{
+			if (componentId == 0)
+				continue;
+			componentAmounts[componentId]++;
+		}
+
+		m_UsedComponents.clear(); // clear the list of left overs from previous interrupted spell attempts.
+		for (std::map<uint32_t, uint32_t>::iterator iter = componentAmounts.begin(); iter != componentAmounts.end(); ++iter)
+		{
+			uint32_t compId = iter->first;
+			uint32_t amount = iter->second;
+
+			std::map<uint32_t, uint32_t> components = FindComponentInContainer(caster, compId, amount);
+
+			if (!components.empty())
+			{
+				for (std::map<uint32_t, uint32_t>::iterator iter = components.begin(); iter != components.end(); ++iter)
+					m_UsedComponents[iter->first] += iter->second;
+			}
+			else
+				return WERROR_MAGIC_MISSING_COMPONENTS;
+		}
 	}
 
 	if (m_pWeenie->AsPlayer())

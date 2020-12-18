@@ -33,6 +33,7 @@ public:
 	virtual void Update();
 	virtual void Cancel(uint32_t error = 0);
 	virtual void Done(uint32_t error = 0);
+	virtual void Done(uint32_t error, bool silent);
 
 	virtual bool IsInventoryEvent() { return false; }
 
@@ -239,6 +240,7 @@ public:
 
 	void OnUseCancelled(uint32_t error = 0);
 	void OnUseDone(uint32_t error = 0);
+	void OnUseDone(uint32_t error, bool silent);
 
 	void OnDeath(uint32_t killer_id);
 	void HandleMoveToDone(uint32_t error);

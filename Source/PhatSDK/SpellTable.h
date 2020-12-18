@@ -19,8 +19,9 @@ public:
 	bool RandomizeVersion2(const char *accountName);
 	bool RandomizeVersion3(const char *accountName);
 	void CopyFrom(SpellFormula other);
+	uint64_t GetComponentHash();
 
-	unsigned int _comps[SPELLFORMULA_MAX_COMPS];
+	unsigned int _comps[SPELLFORMULA_MAX_COMPS] = {};
 };
 
 class Spell : public PackObj
@@ -361,7 +362,9 @@ public:
 
 #if PHATSDK_IS_SERVER
 	uint32_t ChangeSpellToDifferentLevel(uint32_t spell_id, uint32_t spell_level);
+	uint32_t GetSpellByComponentHash(uint64_t componentHash);
 
 	PackableHashTable<uint32_t, PackableHashTable<int, PackableHashTable<int, SpellID>>> _categoryToResearchableSpellsMap; // category->self targeted?->magic level->spell id
+	PackableHashTable<uint64_t, SpellID> _componentsToResearchableSpellsMap;
 #endif
 };

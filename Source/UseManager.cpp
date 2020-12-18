@@ -263,7 +263,12 @@ void CUseEventData::OnUseAnimSuccess(uint32_t motion)
 
 void CUseEventData::Done(uint32_t error)
 {
-	_manager->OnUseDone(error);
+	Done(error, false);
+}
+
+void CUseEventData::Done(uint32_t error, bool silent)
+{
+	_manager->OnUseDone(error, silent);
 }
 
 void CUseEventData::ExecuteUseAnimation(uint32_t motion, MovementParameters *params)
@@ -852,9 +857,14 @@ void UseManager::OnUseCancelled(uint32_t error)
 
 void UseManager::OnUseDone(uint32_t error)
 {
+	OnUseDone(error, false);
+}
+
+void UseManager::OnUseDone(uint32_t error, bool silent)
+{
 	if (_useData)
 	{
-		if (!_useData->IsInventoryEvent())
+		if (!_useData->IsInventoryEvent() && !silent)
 		{
 			_weenie->NotifyUseDone(error);
 		}
