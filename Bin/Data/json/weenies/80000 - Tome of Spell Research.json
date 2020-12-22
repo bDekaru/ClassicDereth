@@ -1,0 +1,32 @@
+{
+	"wcid": 80000,	"_comment": "Tome of Spell Research",
+	"weenieType": 34,	"_comment2": "Scroll",
+	"stringStats":[
+		{"key":  16,	"value": "When used, you will attempt to research a spell using up to 8 spell components. The components must be in order directly after the tome in your inventory.",	"_comment": "LongDesc"},
+		{"key":   1,	"value": "Tome of Spell Research",	"_comment": "Name"}
+	],
+	"intStats":[
+		{"key":   9,	"value":          0,	"_comment": "ValidLocations = None_Loc"},
+		{"key":   1,	"value":       8192,	"_comment": "ItemType = Type_Writable"},
+		{"key":  93,	"value":       1044,	"_comment": "PhysicsState = Ethereal_PS, Ignore_Collisions_PS, Gravity_PS"},
+		{"key":   5,	"value":         30,	"_comment": "EncumbranceVal"},
+		{"key":  16,	"value":    2228232,	"_comment": "ItemUseable = Useable_Source_Contained_Target_Remote_Or_Self"},
+		{"key":   8,	"value":        200,	"_comment": "Mass"},
+		{"key":  19,	"value":       1000,	"_comment": "Value"},
+		{"key":  94,	"value":      35103,	"_comment": "TargetType = Type_Jewelry, Type_Creature, Type_Gem, Type_Redirectable_Item_Enchantment_Target"}
+	],
+	"boolStats":[
+		{"key":  22,	"value":          1,	"_comment": "Inscribable"},
+		{"key":  23,	"value":          1,	"_comment": "DestroyOnSell"}
+	],
+	"floatStats":[
+		{"key":  39,	"value": 1.22000000,	"_comment": "DefaultScale"}
+	],
+	"didStats":[
+		{"key":   1,	"value":   33558254,	"_comment": "Setup"},
+		{"key":   3,	"value":  536870932,	"_comment": "SoundTable"},
+		{"key":  22,	"value":  872415275,	"_comment": "PhysicsEffectTable"},
+		{"key":   6,	"value":   67111092,	"_comment": "PaletteBase"},
+		{"key":   8,	"value":  100671237,	"_comment": "Icon"}
+	]
+}
