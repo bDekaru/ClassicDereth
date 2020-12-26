@@ -99,7 +99,7 @@ void CMonsterWeenie::ApplyQualityOverrides()
 				group = 4;
 		}
 		else
-			group = Random::GenInt(1, 3); //if the max value was set to 4 it would also allow Viamontians
+			group = Random::GenInt(1, 3); //if the max value was set to 4 it would also allow Viamontians but leave those out as generaly they stick to Sanamar.
 		m_Qualities.SetInt(HERITAGE_GROUP_INT, group);
 	}
 
@@ -146,7 +146,7 @@ void CMonsterWeenie::ApplyQualityOverrides()
 	}
 	else
 	{
-		max = sex->mHairStyleList.num_used - 1;
+		max = 8; //Changed to limit NPC hair styles to classic ones. previously sex->mHairStyleList.num_used - 1;
 		idx = Random::GenInt(0, max);
 		hair = &(sex->mHairStyleList.array_data[idx]);
 
@@ -157,7 +157,7 @@ void CMonsterWeenie::ApplyQualityOverrides()
 	}
 	if (!m_Qualities.InqDataID(HAIR_PALETTE_DID, tmp))
 	{
-		int hairColor = Random::GenInt(0, (int)sex->mHairColorList.num_used - 1);
+		int hairColor = Random::GenInt(0, (int)sex->mHairColorList.num_used - 1); 
 		PalSet *ps;
 		if (ps = PalSet::Get(sex->mHairColorList.array_data[hairColor]))
 		{
