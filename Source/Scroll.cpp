@@ -6,6 +6,7 @@
 #include "Client.h"
 #include "World.h"
 #include "SpellcastingManager.h"
+#include "InferredPortalData.h"
 
 CScrollWeenie::CScrollWeenie()
 {
@@ -114,14 +115,14 @@ bool CScrollWeenie::AttemptSpellResearch(CPlayerWeenie *player, uint32_t target_
 			player->SendText(componentString.c_str(), LTT_DEFAULT);
 		}
 
-		CSpellTable *pSpellTable = MagicSystem::GetSpellTable();
-		uint32_t spellId = pSpellTable->GetSpellByComponentHash(formula.GetComponentHash());
+		CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx();
+		uint32_t spellId = pSpellTableEx->GetSpellByComponentHash(formula.GetComponentHash());
 
 		if (spellId)
 		{
-			const CSpellBase *spellBase = pSpellTable->GetSpellBase(spellId);
+			const CSpellBaseEx *spellBase = pSpellTableEx->GetSpellBase(spellId);
 
-			SpellFormula randomizedComponents;
+			SpellFormulaEx randomizedComponents;
 			randomizedComponents.CopyFrom(spellBase->InqSpellFormula());
 
 			randomizedComponents.RandomizeForName(player->GetClient()->GetAccount(), spellBase->_formula_version);

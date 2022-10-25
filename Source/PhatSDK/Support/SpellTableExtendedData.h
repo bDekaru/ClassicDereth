@@ -17,6 +17,12 @@ public:
 
 	ITEM_TYPE GetTargetingType();
 	uint32_t GetPowerLevelOfPowerComponent();
+	uint64_t GetComponentHash();
+	bool RandomizeForName(const char* accountName, int spellVersion);
+	bool RandomizeVersion1(const char* accountName);
+	bool RandomizeVersion2(const char* accountName);
+	bool RandomizeVersion3(const char* accountName);
+	void CopyFrom(SpellFormulaEx other);
 
 	unsigned int _comps[SPELLFORMULA_MAX_COMPS];
 };
@@ -696,6 +702,13 @@ public:
 
 	PackableHashTableWithJson<uint32_t, CSpellBaseEx> _spellBaseHash;
 	// don't do this for now PHashTable<uint32_t, SpellSetEx> m_SpellSetHash;
+
+	void InitializeSpellResearchTables();
+	uint32_t ChangeSpellToDifferentLevel(uint32_t spell_id, uint32_t spell_level);
+	uint32_t GetSpellByComponentHash(uint64_t componentHash);
+
+	PackableHashTable<uint32_t, PackableHashTable<int, PackableHashTable<int, SpellID>>> _categoryToResearchableSpellsMap; // category->self targeted?->magic level->spell id
+	PackableHashTable<uint64_t, SpellID> _componentsToResearchableSpellsMap;
 };
 
 
