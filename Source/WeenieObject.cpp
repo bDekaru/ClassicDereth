@@ -670,9 +670,9 @@ void CWeenieObject::Revive()
 
 	Animation_Update();
 
-	SetHealth((int)(GetMaxHealth() * InqFloatQuality(HEALTH_UPON_RESURRECTION_FLOAT, 1.0f)));
-	SetStamina((int)(GetMaxStamina() * InqFloatQuality(STAMINA_UPON_RESURRECTION_FLOAT, 1.0f)));
-	SetMana((int)(GetMaxMana() * InqFloatQuality(MANA_UPON_RESURRECTION_FLOAT, 1.0f)));
+	SetHealth((int)(GetMaxHealth() * InqFloatQuality(HEALTH_UPON_RESURRECTION_FLOAT, 0.75f)));
+	SetStamina((int)(GetMaxStamina() * InqFloatQuality(STAMINA_UPON_RESURRECTION_FLOAT, 0.75f)));
+	SetMana((int)(GetMaxMana() * InqFloatQuality(MANA_UPON_RESURRECTION_FLOAT, 0.75f)));
 
 	m_Qualities.SetBool(UNDER_LIFESTONE_PROTECTION_BOOL, 1);
 	m_Qualities.SetFloat(LIFESTONE_PROTECTION_TIMESTAMP_FLOAT, (Timer::cur_time + 60.0));

@@ -933,14 +933,26 @@ void CPlayerWeenie::doNormalDeath(CCorpseWeenie *pCorpse, bool bPkKill)
 	int level = InqIntQuality(LEVEL_INT, 1);
 	int maxItemsToDrop = 12; // Limit the amount of items that can be dropped + random adjustment
 	int amountOfItemsToDrop = 0;
-	bool bWielded = true;
+	bool bWielded = false;
+	float coinDropFraction = 0.0;
 	
-	amountOfItemsToDrop = min(max(level / 10, 1), maxItemsToDrop);
-	if (level > 10)
-		amountOfItemsToDrop += Random::GenUInt(0, 2);
-		
 	if (!bPkKill)
 	{
+		if (level > 5)
+			coinDropFraction = 0.5;
+	
+		if (level <= 10)
+			amountOfItemsToDrop = 0;
+		else if (level <= 20)
+			amountOfItemsToDrop = 1;
+		else // character.Level > 20
+		{
+			amountOfItemsToDrop = min(max((int)floor(level / 10), 1), maxItemsToDrop) + Random::GenInt(0, 2);
+	
+			if (level >= 35)
+				bWielded = true;
+		}
+		
 		// take death item augs into consideration (assumes none for players level <= 20)
 		int augDropLess = InqIntQuality(AUGMENTATION_LESS_DEATH_ITEM_LOSS_INT, 0);
 		amountOfItemsToDrop = max(0, (amountOfItemsToDrop - (augDropLess * 5)));
@@ -948,12 +960,10 @@ void CPlayerWeenie::doNormalDeath(CCorpseWeenie *pCorpse, bool bPkKill)
 	else
 	{
 		bWielded = true;
-	}
-
-	float coinDropFraction = 0.0;
-	if (level > 0 || bPkKill)
-	{
 		coinDropFraction = 0.5;
+		amountOfItemsToDrop = min(max((int)floor(level / 10), 1), maxItemsToDrop);
+		if (level > 10)
+			amountOfItemsToDrop += Random::GenUInt(0, 2);
 	}
 
 	std::vector<CWeenieObject *> removeList;
@@ -2642,6 +2652,7 @@ void CPlayerWeenie::SetLoginPlayerQualities()
 
 	if (g_pConfig->FixOldChars())
 	{
+
 		//Refund Credits for those who lost them at Asheron's Castle.
 		AdjustSkillCredits(GetExpectedSkillCredits(), GetTotalSkillCredits(), true);
 
