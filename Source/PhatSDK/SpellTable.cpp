@@ -482,58 +482,19 @@ DEFINE_UNPACK(CSpellTable) // type 0x0E00000E
 
 
 #if PHATSDK_IS_SERVER
-	_categoryToResearchableSpellsMap.clear();
 	_componentsToResearchableSpellsMap.clear();
 
-	for (auto &entry : _spellBaseHash)
+	for (auto& entry : _spellBaseHash)
 	{
-		int spellLevel = entry.second.InqSpellFormula().GetPowerLevelOfPowerComponent();
-		if (spellLevel < 1 || spellLevel > 8)
+		if (entry.second._bitfield & NotResearchable_SpellIndex)
 			continue;
 
-		if (spellLevel < 7)
-		{
-			if (entry.second._bitfield & NotResearchable_SpellIndex)
-				continue;
+		uint64_t hash = entry.second.InqSpellFormula().GetComponentHash();
 
-			const char *suffix;
-			switch (spellLevel)
-			{
-			case 1: suffix = " I"; break;
-			case 2: suffix = " II"; break;
-			case 3: suffix = " III"; break;
-			case 4: suffix = " IV"; break;
-			case 5: suffix = " V"; break;
-			case 6: suffix = " VI"; break;
-			default: continue;
-			}
-
-			std::string spellName = entry.second._name;
-			const char *p = strstr(spellName.c_str(), suffix);
-			if (!p)
-				continue;
-
-			int suffixPos = p - spellName.c_str();
-			if (suffixPos != (spellName.length() - strlen(suffix)))
-				continue;
-		}
-
-		if (!(entry.second._bitfield & NonTrackingProjectile_SpellIndex)) //Arc spells use the same components as regular bolts so we have to pick one of them to be researchable, let's go with regular bolts.
-			_componentsToResearchableSpellsMap[entry.second.InqSpellFormula().GetComponentHash()] = (SpellID)entry.first;
-
-		if (auto entry1 = _categoryToResearchableSpellsMap.lookup(entry.second._category))
-		{
-			if (auto entry2 = entry1->lookup(entry.second._bitfield & (SelfTargeted_SpellIndex | FellowshipSpell_SpellIndex)))
-			{
-				if (auto entry3 = entry2->lookup(spellLevel))
-				{
-					// already have an entry
-					continue;
-				}
-			}
-		}
-
-		_categoryToResearchableSpellsMap[entry.second._category][entry.second._bitfield & (SelfTargeted_SpellIndex|FellowshipSpell_SpellIndex)][spellLevel] = (SpellID) entry.first;	
+		if (_componentsToResearchableSpellsMap.lookup(hash) == NULL)
+			_componentsToResearchableSpellsMap[hash] = (SpellID)entry.first;
+		//else
+		//	LOG_PRIVATE(Data, Normal, (std::to_string(entry.first) + "\t" + entry.second._name + "\n").c_str());  // Uncomment to log formula conflicts.
 	}
 
 #endif
@@ -548,25 +509,6 @@ uint32_t CSpellTable::GetSpellByComponentHash(uint64_t componentHash)
 	if(returnValue == NULL)
 		return 0;
 	return *returnValue;
-}
-
-uint32_t CSpellTable::ChangeSpellToDifferentLevel(uint32_t spell_id, uint32_t spell_level)
-{
-	if (const CSpellBase *spell = GetSpellBase(spell_id))
-	{
-		if (auto categoryMap = _categoryToResearchableSpellsMap.lookup(spell->_category))
-		{
-			if (auto levelMap = categoryMap->lookup(spell->_bitfield & (SelfTargeted_SpellIndex | FellowshipSpell_SpellIndex)))
-			{
-				if (auto levelEntry = levelMap->lookup(spell_level))
-				{
-					return (uint32_t) *levelEntry;
-				}
-			}
-		}
-	}
-
-	return 0;
 }
 #endif
 
